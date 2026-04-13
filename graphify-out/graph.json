@@ -8,16 +8,24 @@
       "file_type": "code",
       "source_file": "src\\lib\\utils.ts",
       "source_location": "L1",
-      "id": "utils",
-      "community": 0
+      "community": 0,
+      "id": "utils"
     },
     {
       "label": "cn()",
       "file_type": "code",
       "source_file": "src\\lib\\utils.ts",
       "source_location": "L4",
-      "id": "utils_cn",
-      "community": 0
+      "community": 0,
+      "id": "utils_cn"
+    },
+    {
+      "label": "prisma.config.ts",
+      "file_type": "code",
+      "source_file": "prisma.config.ts",
+      "source_location": "L1",
+      "id": "prisma_config",
+      "community": 1
     }
   ],
   "links": [
@@ -29,9 +37,9 @@
       "weight": 1.0,
       "_src": "utils",
       "_tgt": "utils_cn",
+      "confidence_score": 1.0,
       "source": "utils",
-      "target": "utils_cn",
-      "confidence_score": 1.0
+      "target": "utils_cn"
     }
   ],
   "hyperedges": []

@@ -23,7 +23,10 @@
       "Bash(git commit:*)",
       "Bash(npm install:*)",
       "Bash(npx shadcn@latest:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(node:*)",
+      "Bash(mkdir -p src/app/api/auth/\\\\[...nextauth\\\\])",
+      "Bash(cat)"
     ]
   },
   "enabledPlugins": {
