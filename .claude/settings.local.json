@@ -20,7 +20,9 @@
       "Bash(mv /tmp/.graphify_detect.json .)",
       "Bash(mv /tmp/PLANNING.md .)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest:*)"
     ]
   },
   "enabledPlugins": {
