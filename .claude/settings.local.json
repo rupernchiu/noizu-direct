@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(python -m graphify.hook install)",
+      "Bash(python -c \"from graphify.hook import install; install\\(\\)\")",
+      "Bash(chmod +x .git/hooks/post-commit)",
+      "Bash(npm uninstall:*)",
+      "Bash(omc:*)",
+      "Bash(npm list:*)",
+      "Bash(mkdir -p ~/.claude/skills/stop-slop)",
+      "Bash(curl -fsSL https://raw.githubusercontent.com/hardikpandya/stop-slop/main/SKILL.md -o ~/.claude/skills/stop-slop/SKILL.md)",
+      "Bash(npx get-shit-done-cc:*)",
+      "Bash(python3 \"C:/Users/ruper/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"dark anime pop culture creator marketplace doujin cosplay SEA\" --design-system -p \"NOIZU-DIRECT\" -f markdown)",
+      "Bash(py \"C:/Users/ruper/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"dark anime pop culture creator marketplace doujin cosplay SEA\" --design-system -p \"NOIZU-DIRECT\" -f markdown)",
+      "Bash(py \"C:/Users/ruper/.claude/plugins/cache/ui-ux-pro-max-skill/ui-ux-pro-max/2.5.0/cli/assets/scripts/search.py\" \"dark anime pop culture creator marketplace doujin cosplay SEA\" --design-system -p \"NOIZU-DIRECT\" -f markdown)",
+      "Bash(npx create-next-app@latest:*)",
+      "Bash(mv .graphify_detect.json /tmp/)",
+      "Bash(mv PLANNING.md /tmp/)",
+      "Bash(mv /tmp/.graphify_detect.json .)",
+      "Bash(mv /tmp/PLANNING.md .)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  },
+  "enabledPlugins": {
+    "ui-ux-pro-max@ui-ux-pro-max-skill": true
+  }
+}
