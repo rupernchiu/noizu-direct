@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("BUYER")
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  creatorProfile   CreatorProfile?
+  buyerOrders      Order[]          @relation("BuyerOrders")
+  creatorOrders    Order[]          @relation("CreatorOrders")
+  sentMessages     Message[]        @relation("SentMessages")
+  receivedMessages Message[]        @relation("ReceivedMessages")
+  buyerConvos      Conversation[]   @relation("BuyerConvos")
+  creatorConvos    Conversation[]   @relation("CreatorConvos")
+  payouts          Payout[]
+  invoices         Invoice[]
+  media            Media[]
+}
+
+model CreatorProfile {
+  id                  String  @id @default(cuid())
+  userId              String  @unique
+  username            String  @unique
+  displayName         String
+  bio                 String?
+  bannerImage         String?
+  avatar              String?
+  socialLinks         String  @default("{}")
+  categoryTags        String  @default("[]")
+  commissionStatus    String  @default("OPEN")
+  announcementText    String?
+  announcementActive  Boolean @default(false)
+  featuredProductIds  String  @default("[]")
+  isVerified          Boolean @default(false)
+  isTopCreator        Boolean @default(false)
+  totalSales          Int     @default(0)
+  absorbProcessingFee Boolean @default(false)
+  createdAt           DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  creatorId   String
+  title       String
+  description String
+  price       Int
+  category    String
+  type        String
+  images      String   @default("[]")
+  digitalFile String?
+  stock       Int?
+  isActive    Boolean  @default(true)
+  isPinned    Boolean  @default(false)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+  orders  Order[]
+}
+
+model Order {
+  id                String    @id @default(cuid())
+  buyerId           String
+  creatorId         String
+  productId         String
+  status            String    @default("PENDING")
+  amountUsd         Int
+  displayCurrency   String    @default("USD")
+  displayAmount     Int       @default(0)
+  exchangeRate      Float     @default(1.0)
+  exchangeRateAt    DateTime?
+  airwallexIntentId String?
+  trackingNumber    String?
+  shippingAddress   String?
+  downloadToken     String?
+  downloadExpiry    DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  buyer        User          @relation("BuyerOrders", fields: [buyerId], references: [id])
+  creator      User          @relation("CreatorOrders", fields: [creatorId], references: [id])
+  product      Product       @relation(fields: [productId], references: [id])
+  transactions Transaction[]
+  messages     Message[]
+  invoices     Invoice[]
+}
+
+model Transaction {
+  id                 String   @id @default(cuid())
+  orderId            String
+  buyerId            String
+  creatorId          String
+  grossAmountUsd     Int
+  processingFee      Int
+  platformFee        Int      @default(0)
+  withdrawalFee      Int      @default(0)
+  creatorAmount      Int
+  currency           String   @default("USD")
+  airwallexReference String?
+  status             String   @default("PENDING")
+  createdAt          DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+model Payout {
+  id                String    @id @default(cuid())
+  creatorId         String
+  amountUsd         Int
+  status            String    @default("PENDING")
+  airwallexPayoutId String?
+  requestedAt       DateTime  @default(now())
+  completedAt       DateTime?
+
+  creator User @relation(fields: [creatorId], references: [id])
+}
+
+model Invoice {
+  id              String   @id @default(cuid())
+  type            String
+  referenceNumber String   @unique
+  issuedToId      String
+  issuedToType    String
+  amountUsd       Int
+  items           String   @default("[]")
+  pdfPath         String?
+  orderId         String?
+  createdAt       DateTime @default(now())
+
+  issuedTo User   @relation(fields: [issuedToId], references: [id])
+  order    Order? @relation(fields: [orderId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  orderId    String?
+  content    String
+  imageUrl   String?
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  sender   User   @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  order    Order? @relation(fields: [orderId], references: [id])
+}
+
+model Conversation {
+  id            String   @id @default(cuid())
+  buyerId       String
+  creatorId     String
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  buyer   User @relation("BuyerConvos", fields: [buyerId], references: [id])
+  creator User @relation("CreatorConvos", fields: [creatorId], references: [id])
+
+  @@unique([buyerId, creatorId])
+}
+
+model Page {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  content        String?
+  status         String   @default("DRAFT")
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Section {
+  id       String   @id @default(cuid())
+  pageSlug String
+  type     String
+  order    Int      @default(0)
+  isActive Boolean  @default(true)
+  content  String   @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model Media {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String
+  uploadedBy String
+  createdAt  DateTime @default(now())
+
+  uploader User @relation(fields: [uploadedBy], references: [id])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  text      String
+  link      String?
+  color     String   @default("#7c3aed")
+  isActive  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model BuyerTag {
+  id        String   @id @default(cuid())
+  creatorId String
+  buyerId   String
+  tags      String   @default("[]")
+  notes     String?
+  updatedAt DateTime @updatedAt
+
+  @@unique([creatorId, buyerId])
+}
+
+model PlatformSettings {
+  id                   String @id @default(cuid())
+  processingFeePercent Float  @default(2.5)
+  platformFeePercent   Float  @default(0.0)
+  withdrawalFeePercent Float  @default(4.0)
+  topCreatorThreshold  Int    @default(100)
+}
