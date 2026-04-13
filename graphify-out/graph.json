@@ -24,8 +24,112 @@
       "file_type": "code",
       "source_file": "prisma.config.ts",
       "source_location": "L1",
-      "id": "prisma_config",
+      "community": 4,
+      "id": "prisma_config"
+    },
+    {
+      "label": "seed.ts",
+      "file_type": "code",
+      "source_file": "prisma\\seed.ts",
+      "source_location": "L1",
+      "id": "seed",
+      "community": 3
+    },
+    {
+      "label": "main()",
+      "file_type": "code",
+      "source_file": "prisma\\seed.ts",
+      "source_location": "L10",
+      "id": "seed_main",
+      "community": 3
+    },
+    {
+      "label": "route.ts",
+      "file_type": "code",
+      "source_file": "src\\app\\api\\auth\\[...nextauth]\\route.ts",
+      "source_location": "L1",
+      "id": "route",
+      "community": 5
+    },
+    {
+      "label": "auth.ts",
+      "file_type": "code",
+      "source_file": "src\\lib\\auth.ts",
+      "source_location": "L1",
+      "id": "auth",
+      "community": 2
+    },
+    {
+      "label": "fx.ts",
+      "file_type": "code",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L1",
+      "id": "fx",
       "community": 1
+    },
+    {
+      "label": "getFxRates()",
+      "file_type": "code",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L4",
+      "id": "fx_getfxrates",
+      "community": 1
+    },
+    {
+      "label": "convertFromUSD()",
+      "file_type": "code",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L17",
+      "id": "fx_convertfromusd",
+      "community": 1
+    },
+    {
+      "label": "formatWithCurrency()",
+      "file_type": "code",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L21",
+      "id": "fx_formatwithcurrency",
+      "community": 1
+    },
+    {
+      "label": "prisma.ts",
+      "file_type": "code",
+      "source_file": "src\\lib\\prisma.ts",
+      "source_location": "L1",
+      "id": "prisma",
+      "community": 2
+    },
+    {
+      "label": "createPrismaClient()",
+      "file_type": "code",
+      "source_file": "src\\lib\\prisma.ts",
+      "source_location": "L9",
+      "id": "prisma_createprismaclient",
+      "community": 2
+    },
+    {
+      "label": "formatPrice()",
+      "file_type": "code",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L8",
+      "id": "utils_formatprice",
+      "community": 0
+    },
+    {
+      "label": "generateInvoiceNumber()",
+      "file_type": "code",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L12",
+      "id": "utils_generateinvoicenumber",
+      "community": 0
+    },
+    {
+      "label": "formatDate()",
+      "file_type": "code",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L17",
+      "id": "utils_formatdate",
+      "community": 0
     }
   ],
   "links": [
@@ -40,6 +144,114 @@
       "confidence_score": 1.0,
       "source": "utils",
       "target": "utils_cn"
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L8",
+      "weight": 1.0,
+      "_src": "utils",
+      "_tgt": "utils_formatprice",
+      "source": "utils",
+      "target": "utils_formatprice",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_src": "utils",
+      "_tgt": "utils_generateinvoicenumber",
+      "source": "utils",
+      "target": "utils_generateinvoicenumber",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_src": "utils",
+      "_tgt": "utils_formatdate",
+      "source": "utils",
+      "target": "utils_formatdate",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "prisma\\seed.ts",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_src": "seed",
+      "_tgt": "seed_main",
+      "source": "seed",
+      "target": "seed_main",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\auth.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "auth",
+      "_tgt": "prisma",
+      "source": "auth",
+      "target": "prisma",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "fx",
+      "_tgt": "fx_getfxrates",
+      "source": "fx",
+      "target": "fx_getfxrates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L17",
+      "weight": 1.0,
+      "_src": "fx",
+      "_tgt": "fx_convertfromusd",
+      "source": "fx",
+      "target": "fx_convertfromusd",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\fx.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "_src": "fx",
+      "_tgt": "fx_formatwithcurrency",
+      "source": "fx",
+      "target": "fx_formatwithcurrency",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\prisma.ts",
+      "source_location": "L9",
+      "weight": 1.0,
+      "_src": "prisma",
+      "_tgt": "prisma_createprismaclient",
+      "source": "prisma",
+      "target": "prisma_createprismaclient",
+      "confidence_score": 1.0
     }
   ],
   "hyperedges": []

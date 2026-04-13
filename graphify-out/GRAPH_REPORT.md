@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-04-13)
 
 ## Corpus Check
-- 1 files · ~0 words
+- 7 files · ~0 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3 nodes · 1 edges · 2 communities detected
+- 16 nodes · 10 edges · 6 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -17,17 +17,35 @@
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 1.0
+Cohesion: 0.4
 Nodes (0): 
 
 ### Community 1 - "Community 1"
+Cohesion: 0.5
+Nodes (0): 
+
+### Community 2 - "Community 2"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 3 - "Community 3"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 4 - "Community 4"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 5 - "Community 5"
 Cohesion: 1.0
 Nodes (0): 
 
 ## Knowledge Gaps
-- **Thin community `Community 0`** (2 nodes): `utils.ts`, `cn()`
+- **Thin community `Community 3`** (2 nodes): `seed.ts`, `main()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 1`** (1 nodes): `prisma.config.ts`
+- **Thin community `Community 4`** (1 nodes): `prisma.config.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 5`** (1 nodes): `route.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
