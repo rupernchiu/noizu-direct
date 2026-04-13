@@ -1,0 +1,38 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "utils.ts",
+      "file_type": "code",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L1",
+      "id": "utils",
+      "community": 0
+    },
+    {
+      "label": "cn()",
+      "file_type": "code",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L4",
+      "id": "utils_cn",
+      "community": 0
+    }
+  ],
+  "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src\\lib\\utils.ts",
+      "source_location": "L4",
+      "weight": 1.0,
+      "_src": "utils",
+      "_tgt": "utils_cn",
+      "source": "utils",
+      "target": "utils_cn",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": []
+}
