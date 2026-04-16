@@ -9,6 +9,7 @@ import { FilterSelect } from '@/components/ui/FilterSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { getDisputeEligibility } from '@/lib/dispute-eligibility'
 import { STATUS_LABELS, TYPE_LABELS, CATEGORY_LABELS } from '@/lib/labels'
+import { OrderReviewButton } from '@/components/ui/OrderReviewButton'
 
 const PER_PAGE = 10
 
@@ -90,6 +91,7 @@ export default async function OrdersPage({
           select: { id: true, title: true, images: true, type: true, category: true, creator: { select: { displayName: true } } },
         },
         dispute: { select: { id: true } },
+        review: { select: { id: true } },
       },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
@@ -216,6 +218,12 @@ export default async function OrdersPage({
                             View →
                           </Link>
 
+                          {order.escrowStatus === 'RELEASED' && (
+                            order.review
+                              ? <span className="text-xs text-green-500 font-medium">✓ Reviewed</span>
+                              : <OrderReviewButton orderId={order.id} productId={order.product.id} productTitle={order.product.title} />
+                          )}
+
                           {canDownload && (
                             <Link
                               href={`/download/${order.downloadToken}`}
@@ -341,6 +349,12 @@ export default async function OrdersPage({
                   <Link href={`/account/orders/${order.id}`} className="inline-flex items-center px-2 py-1 rounded text-xs text-muted-foreground hover:text-primary transition-colors">
                     View →
                   </Link>
+
+                  {order.escrowStatus === 'RELEASED' && (
+                    order.review
+                      ? <span className="text-xs text-green-500 font-medium">✓ Reviewed</span>
+                      : <OrderReviewButton orderId={order.id} productId={order.product.id} productTitle={order.product.title} />
+                  )}
 
                   {canDownload && (
                     <Link

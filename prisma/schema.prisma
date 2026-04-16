@@ -49,6 +49,7 @@ model User {
   cartItems           CartItem[]
   creatorApplication  CreatorApplication?
   creatorAgreements   CreatorAgreement[]
+  reviews             ProductReview[]
 }
 
 model CreatorProfile {
@@ -161,6 +162,8 @@ model Product {
   trendingUpdatedAt    DateTime?
   manualBoost          Int      @default(0)
   isTrendingSuppressed Boolean  @default(false)
+  reviewCount          Int      @default(0)
+  averageRating        Float    @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -173,6 +176,7 @@ model Product {
   trendingScoreRecord ProductTrendingScore?
   sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
   targetRecommendations ProductRecommendation[] @relation("TargetProduct")
+  reviews             ProductReview[]
 }
 
 // ── Product View Tracking ──────────────────────────────────────────────────────
@@ -222,6 +226,29 @@ model ProductRecommendation {
   @@index([sourceProductId, score(sort: Desc)])
 }
 
+// ── Product Reviews ────────────────────────────────────────────────────────────
+
+model ProductReview {
+  id          String   @id @default(cuid())
+  productId   String
+  orderId     String   @unique
+  buyerId     String
+  rating      Int
+  title       String?
+  body        String?
+  isVerified  Boolean  @default(true)
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+  buyer   User    @relation(fields: [buyerId], references: [id])
+
+  @@index([productId, createdAt])
+  @@index([buyerId])
+}
+
 // ── Order ─────────────────────────────────────────────────────────────────────
 
 model Order {
@@ -264,6 +291,7 @@ model Order {
   invoices          Invoice[]
   dispute           Dispute?
   escrowTransactions EscrowTransaction[]
+  review            ProductReview?
 }
 
 // ── Dispute ───────────────────────────────────────────────────────────────────

@@ -87,6 +87,8 @@ export default async function AdminProductsPage({
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Created</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Trending</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Boost</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Rating</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Reviews</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
@@ -111,6 +113,14 @@ export default async function AdminProductsPage({
                     {product.isTrendingSuppressed && <span className="ml-1 text-[10px] text-yellow-500">suppressed</span>}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{product.manualBoost}</td>
+                  <td className="px-4 py-3 text-foreground text-xs">
+                    {product.averageRating > 0 ? `${product.averageRating.toFixed(1)} ★` : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    <a href={`/admin/reviews?productId=${product.id}`} className="text-primary hover:underline">
+                      {product.reviewCount > 0 ? `${product.reviewCount} review${product.reviewCount !== 1 ? 's' : ''}` : '—'}
+                    </a>
+                  </td>
                   <td className="px-4 py-3">
                     <ProductAdminActions
                       productId={product.id}
@@ -124,7 +134,7 @@ export default async function AdminProductsPage({
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
                     {q || category || type || status || creator
                       ? 'No products match your filters.'
                       : 'No products yet.'}

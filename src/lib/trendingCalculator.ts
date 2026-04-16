@@ -14,18 +14,20 @@ export async function calculateTrending() {
 
   for (const product of products) {
     const creatorUserId = product.creator.userId
-    const [orders_7d, wishlist_7d, cart_7d, views_7d] = await Promise.all([
+    const [orders_7d, wishlist_7d, cart_7d, views_7d, reviews_7d] = await Promise.all([
       prisma.order.count({ where: { productId: product.id, createdAt: { gte: windowStart }, escrowStatus: 'RELEASED' } }),
       prisma.wishlistItem.count({ where: { productId: product.id, addedAt: { gte: windowStart } } }),
       prisma.cartItem.count({ where: { productId: product.id, addedAt: { gte: windowStart } } }),
       prisma.productView.count({ where: { productId: product.id, createdAt: { gte: windowStart }, NOT: { userId: creatorUserId } } }),
+      prisma.productReview.count({ where: { productId: product.id, createdAt: { gte: windowStart } } }),
     ])
 
     const raw =
       orders_7d  * TRENDING_CONFIG.weights.orders +
       wishlist_7d * TRENDING_CONFIG.weights.wishlist +
       cart_7d    * TRENDING_CONFIG.weights.cart +
-      views_7d   * TRENDING_CONFIG.weights.views
+      views_7d   * TRENDING_CONFIG.weights.views +
+      reviews_7d * TRENDING_CONFIG.weights.reviews
 
     const [latestOrder, latestWishlist, latestCart, latestView] = await Promise.all([
       prisma.order.findFirst({ where: { productId: product.id }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
@@ -55,6 +57,7 @@ export async function calculateTrending() {
       wishlist_7d,
       cart_7d,
       views_7d,
+      reviews_7d,
       raw,
       decay_applied: daysSinceActivity,
       manualBoost,

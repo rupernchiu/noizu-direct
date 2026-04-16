@@ -24,6 +24,8 @@ interface ProductWithCreator {
   isPinned: boolean
   isNew?: boolean
   trendingScore?: number
+  reviewCount?: number
+  averageRating?: number
   creator: {
     username: string
     displayName: string
@@ -491,6 +493,12 @@ export function CreatorPageTabs({
                       </span>
                     )}
                     <ProductCard product={product} />
+                    {(product.reviewCount ?? 0) > 0 && (
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-yellow-400 text-xs">{'★'.repeat(Math.round(product.averageRating ?? 0))}{'☆'.repeat(5 - Math.round(product.averageRating ?? 0))}</span>
+                        <span className="text-[10px] text-muted-foreground">({product.reviewCount})</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -516,6 +524,12 @@ export function CreatorPageTabs({
                             </span>
                           )}
                           <ProductCard product={product} />
+                          {(product.reviewCount ?? 0) > 0 && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-yellow-400 text-xs">{'★'.repeat(Math.round(product.averageRating ?? 0))}{'☆'.repeat(5 - Math.round(product.averageRating ?? 0))}</span>
+                              <span className="text-[10px] text-muted-foreground">({product.reviewCount})</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -532,6 +546,12 @@ export function CreatorPageTabs({
                           </span>
                         )}
                         <ProductCard product={product} />
+                        {(product.reviewCount ?? 0) > 0 && (
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-yellow-400 text-xs">{'★'.repeat(Math.round(product.averageRating ?? 0))}{'☆'.repeat(5 - Math.round(product.averageRating ?? 0))}</span>
+                            <span className="text-[10px] text-muted-foreground">({product.reviewCount})</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

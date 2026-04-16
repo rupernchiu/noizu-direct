@@ -125,6 +125,25 @@ export default async function ProductPage({ params }: PageProps) {
     },
   })
 
+  const [reviewsData, reviewBreakdown] = await Promise.all([
+    prisma.productReview.findMany({
+      where: { productId: product.id, isVisible: true },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true, rating: true, title: true, body: true, isVerified: true, createdAt: true,
+        buyer: { select: { name: true, avatar: true } },
+      },
+    }),
+    prisma.productReview.groupBy({
+      by: ['rating'],
+      where: { productId: product.id, isVisible: true },
+      _count: { id: true },
+    }),
+  ])
+  const reviewTotal = product.reviewCount
+  const avgRating = product.averageRating
+
   const session = await auth()
 
   const images = parseImages(product.images)
@@ -207,6 +226,14 @@ export default async function ProductPage({ params }: PageProps) {
             <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
               {product.title}
             </h1>
+
+            {/* Rating display */}
+            {reviewTotal > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-yellow-400 text-sm">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</span>
+                <span className="text-sm text-muted-foreground">{avgRating.toFixed(1)} ({reviewTotal} review{reviewTotal !== 1 ? 's' : ''})</span>
+              </div>
+            )}
 
             {/* Price */}
             <div className="flex flex-col gap-1">
@@ -359,6 +386,73 @@ export default async function ProductPage({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      {/* Reviews */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-12">
+        <h2 className="text-lg font-bold text-foreground mb-4">
+          Reviews {reviewTotal > 0 && <span className="text-muted-foreground font-normal text-base">({reviewTotal})</span>}
+        </h2>
+
+        {reviewTotal === 0 ? (
+          <p className="text-muted-foreground text-sm py-6">No reviews yet. Be the first to review this product.</p>
+        ) : (
+          <>
+            {/* Rating summary */}
+            <div className="flex items-center gap-6 mb-6 bg-card border border-border rounded-xl p-4">
+              <div className="text-center">
+                <div className="text-4xl font-bold text-foreground">{avgRating.toFixed(1)}</div>
+                <div className="text-yellow-400 text-lg">{'★'.repeat(Math.round(avgRating))}{'☆'.repeat(5 - Math.round(avgRating))}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">{reviewTotal} review{reviewTotal !== 1 ? 's' : ''}</div>
+              </div>
+              <div className="flex-1 space-y-1">
+                {[5, 4, 3, 2, 1].map(star => {
+                  const count = reviewBreakdown.find(r => r.rating === star)?._count.id ?? 0
+                  const pct = reviewTotal > 0 ? Math.round((count / reviewTotal) * 100) : 0
+                  return (
+                    <div key={star} className="flex items-center gap-2 text-xs">
+                      <span className="text-muted-foreground w-4">{star}★</span>
+                      <div className="flex-1 h-2 rounded-full bg-border overflow-hidden">
+                        <div className="h-full rounded-full bg-yellow-400" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="text-muted-foreground w-8 text-right">{pct}%</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Review list */}
+            <div className="space-y-4">
+              {reviewsData.map(review => (
+                <div key={review.id} className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    {review.buyer.avatar ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={review.buyer.avatar} alt={review.buyer.name} className="w-9 h-9 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                        {review.buyer.name.slice(0, 1).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-foreground">{review.buyer.name}</span>
+                        {review.isVerified && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-500 font-medium">Verified Purchase</span>
+                        )}
+                        <span className="text-xs text-muted-foreground ml-auto">{new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                      <div className="text-yellow-400 text-sm mt-0.5">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
+                      {review.title && <p className="text-sm font-semibold text-foreground mt-1">{review.title}</p>}
+                      {review.body && <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{review.body}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Sticky mobile CTA bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">

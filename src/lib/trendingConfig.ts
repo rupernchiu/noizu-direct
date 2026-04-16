@@ -1,10 +1,11 @@
 export const TRENDING_CONFIG = {
-  version: 2,
+  version: 3,
   weights: {
     orders:   0.40,
     wishlist: 0.25,
     cart:     0.15,
-    views:    0.20,
+    views:    0.15,
+    reviews:  0.05,
   },
   decayFactor: 0.95,
   windowDays: 7,
