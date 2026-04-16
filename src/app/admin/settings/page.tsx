@@ -15,7 +15,7 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-[#f0f0f5]">Platform Settings</h2>
+      <h2 className="text-lg font-semibold text-foreground">Platform Settings</h2>
       <SettingsForm
         settings={{
           processingFeePercent: settings.processingFeePercent,

@@ -59,37 +59,37 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
   return (
     <div className="space-y-6">
       {/* Create Form */}
-      <div className="bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-[#f0f0f5]">New Announcement</h3>
+      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">New Announcement</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-[#8888aa] mb-1">Text *</label>
+            <label className="block text-xs text-muted-foreground mb-1">Text *</label>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Announcement text..."
-              className="w-full bg-[#0d0d12] text-[#f0f0f5] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#7c3aed] placeholder-[#8888aa]"
+              className="w-full bg-background text-foreground border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary placeholder-muted-foreground"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#8888aa] mb-1">Link (optional)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Link (optional)</label>
             <input
               type="url"
               value={link}
               onChange={(e) => setLink(e.target.value)}
               placeholder="https://..."
-              className="w-full bg-[#0d0d12] text-[#f0f0f5] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#7c3aed] placeholder-[#8888aa]"
+              className="w-full bg-background text-foreground border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary placeholder-muted-foreground"
             />
           </div>
           <div>
-            <label className="block text-xs text-[#8888aa] mb-2">Color</label>
+            <label className="block text-xs text-muted-foreground mb-2">Color</label>
             <div className="flex gap-2">
               {PRESET_COLORS.map((c) => (
                 <button
                   key={c}
                   onClick={() => setColor(c)}
-                  className={`w-7 h-7 rounded-full transition-all ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#1e1e2a]' : ''}`}
+                  className={`w-7 h-7 rounded-full transition-all ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-card' : ''}`}
                   style={{ backgroundColor: c }}
                 />
               ))}
@@ -103,12 +103,12 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
               onChange={(e) => setIsActive(e.target.checked)}
               className="rounded"
             />
-            <label htmlFor="isActive" className="text-sm text-[#f0f0f5]">Active immediately</label>
+            <label htmlFor="isActive" className="text-sm text-foreground">Active immediately</label>
           </div>
           <button
             onClick={create}
             disabled={creating || !text.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {creating ? 'Creating...' : 'Create Announcement'}
           </button>
@@ -118,12 +118,12 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
       {/* List */}
       <div className="space-y-2">
         {announcements.map((a) => (
-          <div key={a.id} className="bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] p-4 flex items-center gap-4">
+          <div key={a.id} className="bg-card rounded-xl border border-border p-4 flex items-center gap-4">
             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: a.color }} />
             <div className="flex-1 min-w-0">
-              <p className="text-[#f0f0f5] text-sm truncate">{a.text}</p>
-              {a.link && <p className="text-[#8888aa] text-xs truncate">{a.link}</p>}
-              <p className="text-[#8888aa] text-xs">{new Date(a.createdAt).toLocaleDateString()}</p>
+              <p className="text-foreground text-sm truncate">{a.text}</p>
+              {a.link && <p className="text-muted-foreground text-xs truncate">{a.link}</p>}
+              <p className="text-muted-foreground text-xs">{new Date(a.createdAt).toLocaleDateString()}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
@@ -131,7 +131,7 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
                 className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                   a.isActive
                     ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
-                    : 'bg-[#2a2a3a] text-[#8888aa] hover:bg-green-500/20 hover:text-green-400'
+                    : 'bg-border text-muted-foreground hover:bg-green-500/20 hover:text-green-400'
                 }`}
               >
                 {a.isActive ? 'Active' : 'Inactive'}
@@ -146,7 +146,7 @@ export function AnnouncementManager({ announcements }: { announcements: Announce
           </div>
         ))}
         {announcements.length === 0 && (
-          <div className="bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] p-6 text-center text-[#8888aa]">
+          <div className="bg-card rounded-xl border border-border p-6 text-center text-muted-foreground">
             No announcements yet
           </div>
         )}

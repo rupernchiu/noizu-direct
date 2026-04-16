@@ -33,19 +33,19 @@ export function EditNameForm({ currentName }: { currentName: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-sm font-medium text-[#f0f0f5] mb-1">Display Name</label>
+        <label className="block text-sm font-medium text-foreground mb-1">Display Name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] px-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+          className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
       {message && (
-        <p className="text-sm text-[#00d4aa]">{message}</p>
+        <p className="text-sm text-secondary">{message}</p>
       )}
-      <Button type="submit" disabled={loading} className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white">
+      <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90 text-white">
         {loading ? 'Saving…' : 'Save Name'}
       </Button>
     </form>

@@ -1,6 +1,19 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { EmptyState } from '@/components/ui/EmptyState'
+
+export const metadata: Metadata = {
+  title: 'Discover SEA Creators | NOIZU-DIRECT',
+  description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on NOIZU-DIRECT. Support independent SEA creators.',
+  alternates: { canonical: 'https://noizu.direct/creators' },
+  openGraph: {
+    title: 'Discover SEA Creators | NOIZU-DIRECT',
+    description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on NOIZU-DIRECT.',
+    url: 'https://noizu.direct/creators',
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'SEA Creators on NOIZU-DIRECT' }],
+  },
+}
 
 function getInitials(name: string): string {
   return name
@@ -21,9 +34,9 @@ function parseTags(raw: string): string[] {
 }
 
 const COMMISSION_STATUS: Record<string, { label: string; className: string }> = {
-  OPEN: { label: 'Open', className: 'bg-[#22c55e]/10 text-[#22c55e] border border-[#22c55e]/30' },
-  CLOSED: { label: 'Closed', className: 'bg-[#ef4444]/10 text-[#ef4444] border border-[#ef4444]/30' },
-  LIMITED: { label: 'Limited', className: 'bg-[#f59e0b]/10 text-[#f59e0b] border border-[#f59e0b]/30' },
+  OPEN: { label: 'Open', className: 'bg-success/10 text-success border border-success/30' },
+  CLOSED: { label: 'Closed', className: 'bg-destructive/10 text-destructive border border-destructive/30' },
+  LIMITED: { label: 'Limited', className: 'bg-warning/10 text-warning border border-warning/30' },
 }
 
 export default async function CreatorsPage() {
@@ -45,12 +58,12 @@ export default async function CreatorsPage() {
   })
 
   return (
-    <div className="min-h-screen bg-[#0d0d12] py-10">
+    <div className="min-h-screen bg-background py-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#f0f0f5]">Creators</h1>
-          <p className="mt-2 text-sm text-[#8888aa]">
+          <h1 className="text-3xl font-bold text-foreground">Creators</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
             Discover original creators from Southeast Asia
           </p>
         </div>
@@ -73,7 +86,7 @@ export default async function CreatorsPage() {
                 <Link
                   key={creator.id}
                   href={`/creator/${creator.username}`}
-                  className="group block overflow-hidden rounded-xl border border-[#2a2a3a] bg-[#1e1e2a] transition-all hover:border-[#7c3aed]/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]"
+                  className="group block overflow-hidden rounded-xl border border-border bg-card transition-all hover:border-primary/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)]"
                 >
                   {/* Banner */}
                   <div className="relative h-24">
@@ -81,16 +94,16 @@ export default async function CreatorsPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={creator.bannerImage!}
-                        alt=""
+                        alt={`${creator.displayName} — creator banner on NOIZU-DIRECT`}
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-[#7c3aed]/20 to-[#00d4aa]/20" />
+                      <div className="h-full w-full bg-gradient-to-br from-primary/20 to-secondary/20" />
                     )}
 
                     {/* Top Creator badge */}
                     {creator.isTopCreator && (
-                      <span className="absolute right-2 top-2 rounded-full bg-[#f59e0b] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#0d0d12]">
+                      <span className="absolute right-2 top-2 rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-background">
                         Top Creator
                       </span>
                     )}
@@ -98,17 +111,17 @@ export default async function CreatorsPage() {
 
                   {/* Card body */}
                   <div className="px-4 pb-4">
-                    {/* Avatar overlapping banner */}
-                    <div className="-mt-6 mb-3">
+                    {/* Avatar — top half over banner, bottom half below */}
+                    <div className="relative z-10 -mt-6 mb-3">
                       {hasAvatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={creator.avatar!}
                           alt={creator.displayName}
-                          className="size-12 rounded-full border-2 border-[#1e1e2a] object-cover"
+                          className="size-12 rounded-full border-2 border-background object-cover"
                         />
                       ) : (
-                        <div className="flex size-12 items-center justify-center rounded-full border-2 border-[#1e1e2a] bg-gradient-to-br from-[#7c3aed] to-[#00d4aa] text-sm font-bold text-white">
+                        <div className="flex size-12 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-primary to-secondary text-sm font-bold text-white">
                           {getInitials(creator.displayName)}
                         </div>
                       )}
@@ -116,12 +129,12 @@ export default async function CreatorsPage() {
 
                     {/* Name + verified */}
                     <div className="mb-1 flex items-center gap-1.5">
-                      <span className="truncate font-semibold text-[#f0f0f5]">
+                      <span className="truncate font-semibold text-foreground">
                         {creator.displayName}
                       </span>
                       {creator.isVerified && (
                         <svg
-                          className="size-4 shrink-0 text-[#00d4aa]"
+                          className="size-4 shrink-0 text-secondary"
                           viewBox="0 0 16 16"
                           fill="currentColor"
                           aria-label="Verified"
@@ -140,7 +153,7 @@ export default async function CreatorsPage() {
 
                     {/* Bio */}
                     {creator.bio && (
-                      <p className="mb-2 line-clamp-2 text-xs text-[#8888aa]">{creator.bio}</p>
+                      <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">{creator.bio}</p>
                     )}
 
                     {/* Tags */}
@@ -149,7 +162,7 @@ export default async function CreatorsPage() {
                         {tags.map((tag) => (
                           <span
                             key={tag}
-                            className="rounded-full bg-[#7c3aed]/10 px-2 py-0.5 text-[10px] font-medium text-[#a78bfa] border border-[#7c3aed]/20"
+                            className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary border border-primary/20"
                           >
                             {tag}
                           </span>

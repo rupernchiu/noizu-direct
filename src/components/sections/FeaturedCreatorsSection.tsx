@@ -48,17 +48,17 @@ export default async function FeaturedCreatorsSection({
   })
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0d0d12]">
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-[#f0f0f5]">{content.title}</h2>
-          <Link href="/marketplace" className="text-sm text-[#7c3aed] hover:underline">
+          <h2 className="text-2xl font-bold text-foreground">{content.title}</h2>
+          <Link href="/marketplace" className="text-sm text-primary hover:underline">
             View all →
           </Link>
         </div>
 
         {creators.length === 0 ? (
-          <p className="text-[#8888aa] text-center py-16">
+          <p className="text-muted-foreground text-center py-16">
             No featured creators yet — check back soon!
           </p>
         ) : (
@@ -72,7 +72,7 @@ export default async function FeaturedCreatorsSection({
                 <Link
                   key={creator.id}
                   href={`/creator/${creator.username}`}
-                  className="group block bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] overflow-hidden hover:border-[#7c3aed]/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)] transition-all"
+                  className="group block bg-card rounded-xl border border-border overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(124,58,237,0.15)] transition-all"
                 >
                   {/* Banner */}
                   <div className="relative h-24">
@@ -84,29 +84,29 @@ export default async function FeaturedCreatorsSection({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#7c3aed]/20 to-[#00d4aa]/20" />
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20" />
                     )}
 
                     {/* Top Creator badge */}
                     {creator.isTopCreator && (
-                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-[#f59e0b] text-[#0d0d12] text-[10px] font-bold uppercase tracking-wide">
+                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-warning text-background text-[10px] font-bold uppercase tracking-wide">
                         Top Creator
                       </span>
                     )}
                   </div>
 
-                  {/* Avatar overlapping banner */}
+                  {/* Avatar — top half over banner, bottom half below */}
                   <div className="px-4 pb-4">
-                    <div className="-mt-6 mb-3">
+                    <div className="relative z-10 -mt-6 mb-3">
                       {hasAvatar ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={creator.avatar!}
                           alt={creator.displayName}
-                          className="w-12 h-12 rounded-full border-2 border-[#1e1e2a] object-cover"
+                          className="w-12 h-12 rounded-full border-2 border-background object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full border-2 border-[#1e1e2a] bg-gradient-to-br from-[#7c3aed] to-[#00d4aa] flex items-center justify-center text-sm font-bold text-white">
+                        <div className="w-12 h-12 rounded-full border-2 border-background bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-bold text-white">
                           {getInitials(creator.displayName)}
                         </div>
                       )}
@@ -114,12 +114,12 @@ export default async function FeaturedCreatorsSection({
 
                     {/* Name + verified */}
                     <div className="flex items-center gap-1.5 mb-1">
-                      <span className="font-semibold text-[#f0f0f5] truncate">
+                      <span className="font-semibold text-foreground truncate">
                         {creator.displayName}
                       </span>
                       {creator.isVerified && (
                         <svg
-                          className="w-4 h-4 shrink-0 text-[#00d4aa]"
+                          className="w-4 h-4 shrink-0 text-secondary"
                           viewBox="0 0 16 16"
                           fill="currentColor"
                           aria-label="Verified"
@@ -131,7 +131,7 @@ export default async function FeaturedCreatorsSection({
 
                     {/* Bio */}
                     {creator.bio && (
-                      <p className="text-xs text-[#8888aa] line-clamp-1 mb-2">{creator.bio}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-1 mb-2">{creator.bio}</p>
                     )}
 
                     {/* Category tags */}
@@ -140,7 +140,7 @@ export default async function FeaturedCreatorsSection({
                         {tags.map((tag) => (
                           <span
                             key={tag}
-                            className="px-2 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#a78bfa] text-[10px] font-medium border border-[#7c3aed]/20"
+                            className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium border border-primary/20"
                           >
                             {tag}
                           </span>

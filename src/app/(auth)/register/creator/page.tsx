@@ -117,20 +117,20 @@ export default function CreatorRegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d12] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-[#1e1e2a] rounded-2xl border border-[#2a2a3a] p-8 space-y-6">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md bg-card rounded-2xl border border-border p-8 space-y-6">
         {/* Logo */}
         <div className="text-center">
           <Link href="/">
             <span className="text-2xl font-bold text-white">NOIZU</span>
-            <span className="text-2xl font-bold text-[#00d4aa]">-DIRECT</span>
+            <span className="text-2xl font-bold text-secondary">-DIRECT</span>
           </Link>
         </div>
 
         {/* Heading */}
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-[#f0f0f5]">Become a creator</h1>
-          <p className="text-sm text-[#8888aa]">
+          <h1 className="text-2xl font-bold text-foreground">Become a creator</h1>
+          <p className="text-sm text-muted-foreground">
             Step {currentStep} of 2 —{' '}
             {currentStep === 1 ? 'Account details' : 'Creator profile'}
           </p>
@@ -142,7 +142,7 @@ export default function CreatorRegisterPage() {
             <div
               key={step}
               className={`flex-1 h-1 rounded-full transition-colors ${
-                step <= currentStep ? 'bg-[#7c3aed]' : 'bg-[#2a2a3a]'
+                step <= currentStep ? 'bg-primary' : 'bg-border'
               }`}
             />
           ))}
@@ -152,7 +152,7 @@ export default function CreatorRegisterPage() {
         {currentStep === 1 && (
           <form onSubmit={handleStep1Submit(onStep1Valid)} className="space-y-4">
             <div className="space-y-1">
-              <label htmlFor="name" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="name" className="text-sm font-medium text-foreground">
                 Name
               </label>
               <input
@@ -161,15 +161,15 @@ export default function CreatorRegisterPage() {
                 autoComplete="name"
                 placeholder="Your name"
                 {...registerStep1('name')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.name && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors1.name.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors1.name.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="email" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
                 Email
               </label>
               <input
@@ -178,15 +178,15 @@ export default function CreatorRegisterPage() {
                 autoComplete="email"
                 placeholder="you@example.com"
                 {...registerStep1('email')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.email && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors1.email.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors1.email.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="password" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
                 Password
               </label>
               <input
@@ -195,15 +195,15 @@ export default function CreatorRegisterPage() {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 {...registerStep1('password')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.password && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors1.password.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors1.password.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="confirmPassword" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
                 Confirm Password
               </label>
               <input
@@ -212,17 +212,17 @@ export default function CreatorRegisterPage() {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 {...registerStep1('confirmPassword')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.confirmPassword && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors1.confirmPassword.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors1.confirmPassword.message}</p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isStep1Submitting}
-              className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Continue
             </button>
@@ -233,7 +233,7 @@ export default function CreatorRegisterPage() {
         {currentStep === 2 && (
           <form onSubmit={handleStep2Submit(onStep2Valid)} className="space-y-4">
             <div className="space-y-1">
-              <label htmlFor="username" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="username" className="text-sm font-medium text-foreground">
                 Username
               </label>
               <input
@@ -242,15 +242,15 @@ export default function CreatorRegisterPage() {
                 autoComplete="username"
                 placeholder="your_handle"
                 {...registerStep2('username')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors2.username && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors2.username.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors2.username.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="displayName" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="displayName" className="text-sm font-medium text-foreground">
                 Display Name
               </label>
               <input
@@ -258,32 +258,32 @@ export default function CreatorRegisterPage() {
                 type="text"
                 placeholder="The name fans will see"
                 {...registerStep2('displayName')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors2.displayName && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors2.displayName.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors2.displayName.message}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label htmlFor="bio" className="text-sm font-medium text-[#f0f0f5]">
+              <label htmlFor="bio" className="text-sm font-medium text-foreground">
                 Bio{' '}
-                <span className="text-[#8888aa] font-normal">(optional)</span>
+                <span className="text-muted-foreground font-normal">(optional)</span>
               </label>
               <textarea
                 id="bio"
                 rows={3}
                 placeholder="Tell fans about yourself…"
                 {...registerStep2('bio')}
-                className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors resize-none"
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors resize-none"
               />
               {errors2.bio && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors2.bio.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors2.bio.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <p className="text-sm font-medium text-[#f0f0f5]">Categories</p>
+              <p className="text-sm font-medium text-foreground">Categories</p>
               <div className="flex flex-wrap gap-2">
                 {CATEGORY_OPTIONS.map((cat) => {
                   const selected = watchedTags.includes(cat)
@@ -294,8 +294,8 @@ export default function CreatorRegisterPage() {
                       onClick={() => toggleCategory(cat)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
                         selected
-                          ? 'bg-[#7c3aed] border-[#7c3aed] text-white'
-                          : 'bg-transparent border-[#2a2a3a] text-[#8888aa] hover:border-[#7c3aed] hover:text-[#f0f0f5]'
+                          ? 'bg-primary border-primary text-white'
+                          : 'bg-transparent border-border text-muted-foreground hover:border-primary hover:text-foreground'
                       }`}
                     >
                       {cat}
@@ -304,7 +304,7 @@ export default function CreatorRegisterPage() {
                 })}
               </div>
               {errors2.categoryTags && (
-                <p className="text-sm text-[#ef4444] mt-1">{errors2.categoryTags.message}</p>
+                <p className="text-sm text-destructive mt-1">{errors2.categoryTags.message}</p>
               )}
             </div>
 
@@ -312,14 +312,14 @@ export default function CreatorRegisterPage() {
               <button
                 type="button"
                 onClick={() => setCurrentStep(1)}
-                className="flex-1 border border-[#2a2a3a] text-[#8888aa] hover:text-[#f0f0f5] hover:border-[#7c3aed] font-semibold py-2.5 rounded-lg transition-colors"
+                className="flex-1 border border-border text-muted-foreground hover:text-foreground hover:border-primary font-semibold py-2.5 rounded-lg transition-colors"
               >
                 Back
               </button>
               <button
                 type="submit"
                 disabled={isStep2Submitting}
-                className="flex-1 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isStep2Submitting ? 'Creating…' : 'Create profile'}
               </button>
@@ -327,9 +327,9 @@ export default function CreatorRegisterPage() {
           </form>
         )}
 
-        <div className="text-center text-sm text-[#8888aa]">
+        <div className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link href="/login" className="text-[#7c3aed] hover:text-[#6d28d9] font-medium transition-colors">
+          <Link href="/login" className="text-primary hover:text-primary/80 font-medium transition-colors">
             Log in
           </Link>
         </div>

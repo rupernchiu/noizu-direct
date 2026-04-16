@@ -1,58 +1,90 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { Suspense } from 'react'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { Pagination } from '@/components/ui/Pagination'
 
-export default async function FansPage() {
+const PER_PAGE = 10
+
+export default async function FansPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>
+}) {
   const session = await auth()
   if (!session) redirect('/login')
   if ((session.user as any).role !== 'CREATOR') redirect('/')
   const userId = (session.user as any).id
 
-  // Get all distinct buyers who have purchased from this creator
-  const orders = await prisma.order.findMany({
-    where: { creatorId: userId, status: { in: ['PAID', 'COMPLETED'] } },
-    distinct: ['buyerId'],
-    include: { buyer: { select: { id: true, name: true, email: true } } },
-  })
+  const params = await searchParams
+  const q = params.q?.trim() ?? ''
+  const page = Math.max(1, parseInt(params.page ?? '1') || 1)
 
-  const buyerIds = orders.map((o) => o.buyerId)
-
-  // Total spent per buyer
+  // Get aggregates for all buyers of this creator
   const spendAgg = await prisma.order.groupBy({
     by: ['buyerId'],
-    where: { creatorId: userId, status: { in: ['PAID', 'COMPLETED'] }, buyerId: { in: buyerIds } },
+    where: { creatorId: userId, status: { in: ['PAID', 'COMPLETED'] } },
     _sum: { amountUsd: true },
     _count: { id: true },
   })
+
+  const buyerIds = spendAgg.map((s) => s.buyerId)
+
+  // Fetch buyer details with optional name/email search
+  const buyerWhere: any = { id: { in: buyerIds } }
+  if (q) {
+    buyerWhere.OR = [
+      { name: { contains: q } },
+      { email: { contains: q } },
+    ]
+  }
+
+  const [buyerTotal, buyers] = await Promise.all([
+    prisma.user.count({ where: buyerWhere }),
+    prisma.user.findMany({
+      where: buyerWhere,
+      select: { id: true, name: true, email: true },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+  ])
 
   const spendMap = new Map(
     spendAgg.map((s) => [s.buyerId, { total: s._sum.amountUsd ?? 0, orders: s._count.id }])
   )
 
-  // Merge
-  const fans = orders.map((o) => ({
-    buyer: o.buyer,
-    total: spendMap.get(o.buyerId)?.total ?? 0,
-    orderCount: spendMap.get(o.buyerId)?.orders ?? 0,
-  })).sort((a, b) => b.total - a.total)
+  const fans = buyers
+    .map((buyer) => ({
+      buyer,
+      total: spendMap.get(buyer.id)?.total ?? 0,
+      orderCount: spendMap.get(buyer.id)?.orders ?? 0,
+    }))
+    .sort((a, b) => b.total - a.total)
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#f0f0f5]">Fans</h1>
-        <p className="text-sm text-[#8888aa] mt-1">{fans.length} fan{fans.length !== 1 ? 's' : ''}</p>
+        <h1 className="text-2xl font-bold text-foreground">Fans</h1>
+        <p className="text-sm text-muted-foreground mt-1">{buyerTotal} fan{buyerTotal !== 1 ? 's' : ''}</p>
       </div>
 
+      <Suspense fallback={null}>
+        <SearchBar placeholder="Search by name or email..." className="max-w-sm" />
+      </Suspense>
+
       {fans.length === 0 ? (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] px-5 py-12 text-center">
-          <p className="text-[#8888aa] text-sm">No fans yet. Fans appear when buyers purchase from you.</p>
+        <div className="bg-surface rounded-xl border border-border px-5 py-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            {q ? 'No fans match your search.' : 'No fans yet. Fans appear when buyers purchase from you.'}
+          </p>
         </div>
       ) : (
-        <div className="bg-[#16161f] rounded-xl border border-[#2a2a3a] overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-xs text-[#8888aa] border-b border-[#2a2a3a]">
+                <tr className="text-xs text-muted-foreground border-b border-border">
                   <th className="px-5 py-3 text-left font-medium">Fan</th>
                   <th className="px-5 py-3 text-left font-medium">Email</th>
                   <th className="px-5 py-3 text-left font-medium">Orders</th>
@@ -61,18 +93,18 @@ export default async function FansPage() {
               </thead>
               <tbody>
                 {fans.map(({ buyer, total, orderCount }) => (
-                  <tr key={buyer.id} className="border-b border-[#2a2a3a] last:border-0 hover:bg-[#1e1e2a]/50">
+                  <tr key={buyer.id} className="border-b border-border last:border-0 hover:bg-card/50">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#7c3aed]/30 flex items-center justify-center text-xs font-bold text-[#7c3aed] shrink-0">
+                        <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
                           {buyer.name?.[0]?.toUpperCase() ?? '?'}
                         </div>
-                        <span className="font-medium text-[#f0f0f5]">{buyer.name ?? 'Unknown'}</span>
+                        <span className="font-medium text-foreground">{buyer.name ?? 'Unknown'}</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3 text-[#8888aa]">{buyer.email ?? '—'}</td>
-                    <td className="px-5 py-3 text-[#f0f0f5]">{orderCount}</td>
-                    <td className="px-5 py-3 text-[#00d4aa] font-medium">${total.toFixed(2)}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{buyer.email ?? '—'}</td>
+                    <td className="px-5 py-3 text-foreground">{orderCount}</td>
+                    <td className="px-5 py-3 text-secondary font-medium">${(total / 100).toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -80,6 +112,10 @@ export default async function FansPage() {
           </div>
         </div>
       )}
+
+      <Suspense fallback={null}>
+        <Pagination total={buyerTotal} page={page} perPage={PER_PAGE} />
+      </Suspense>
     </div>
   )
 }

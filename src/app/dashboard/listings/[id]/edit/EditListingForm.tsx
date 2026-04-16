@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
 
 const schema = z.object({
   title: z.string().min(3).max(100),
@@ -40,7 +41,6 @@ export function EditListingForm({ product }: { product: Product }) {
   const [images, setImages] = useState<string[]>(() => {
     try { return JSON.parse(product.images) as string[] } catch { return [] }
   })
-  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -63,37 +63,6 @@ export function EditListingForm({ product }: { product: Product }) {
 
   const type = watch('type')
 
-  async function uploadImage(file: File) {
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('subdir', 'products')
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    if (!res.ok) throw new Error('Upload failed')
-    const data = await res.json() as { url: string }
-    return data.url
-  }
-
-  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    if (files.length + images.length > 5) {
-      setError('Maximum 5 images allowed')
-      return
-    }
-    setUploading(true)
-    setError(null)
-    try {
-      const urls = await Promise.all(files.map(uploadImage))
-      setImages((prev) => [...prev, ...urls])
-    } catch {
-      setError('Failed to upload image')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  function removeImage(idx: number) {
-    setImages((prev) => prev.filter((_, i) => i !== idx))
-  }
 
   async function onSubmit(data: FormData) {
     setError(null)
@@ -125,21 +94,21 @@ export function EditListingForm({ product }: { product: Product }) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Title */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Title</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Title</label>
           <input
             {...register('title')}
-            className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] px-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+            className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {errors.title && <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>}
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Description</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Description</label>
           <textarea
             {...register('description')}
             rows={4}
-            className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] px-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed] resize-none"
+            className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
           {errors.description && (
             <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
@@ -148,16 +117,16 @@ export function EditListingForm({ product }: { product: Product }) {
 
         {/* Price */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Price (USD)</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Price (USD)</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8888aa] text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
             <input
               {...register('price', { valueAsNumber: true })}
               type="number"
               step="0.01"
               min="0.50"
               max="9999"
-              className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] pl-7 pr-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              className="w-full rounded-lg bg-card border border-border pl-7 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           {errors.price && <p className="mt-1 text-xs text-red-400">{errors.price.message}</p>}
@@ -165,10 +134,10 @@ export function EditListingForm({ product }: { product: Product }) {
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Category</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
           <select
             {...register('category')}
-            className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] px-3 py-2 text-sm text-[#f0f0f5] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+            className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
@@ -183,7 +152,7 @@ export function EditListingForm({ product }: { product: Product }) {
 
         {/* Type toggle */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Type</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Type</label>
           <div className="flex gap-2">
             {(['DIGITAL', 'PHYSICAL'] as const).map((t) => (
               <button
@@ -192,8 +161,8 @@ export function EditListingForm({ product }: { product: Product }) {
                 onClick={() => setValue('type', t)}
                 className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
                   type === t
-                    ? 'bg-[#7c3aed] text-white'
-                    : 'bg-[#1e1e2a] border border-[#2a2a3a] text-[#8888aa] hover:text-[#f0f0f5]'
+                    ? 'bg-primary text-white'
+                    : 'bg-card border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {t}
@@ -205,13 +174,13 @@ export function EditListingForm({ product }: { product: Product }) {
         {/* Stock */}
         {type === 'PHYSICAL' && (
           <div>
-            <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Stock</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Stock</label>
             <input
               {...register('stock', { valueAsNumber: true })}
               type="number"
               min="0"
               placeholder="0 = unlimited"
-              className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] px-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
             {errors.stock && <p className="mt-1 text-xs text-red-400">{errors.stock.message}</p>}
           </div>
@@ -219,51 +188,24 @@ export function EditListingForm({ product }: { product: Product }) {
 
         {/* Images */}
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">
-            Images <span className="text-[#8888aa] font-normal">(up to 5)</span>
+          <label className="block text-sm font-medium text-foreground mb-1.5">
+            Images <span className="text-muted-foreground font-normal">(up to 6)</span>
           </label>
-          <div className="flex flex-wrap gap-3 mb-3">
-            {images.map((url, idx) => (
-              <div key={idx} className="relative w-20 h-20 rounded-lg overflow-hidden bg-[#1e1e2a] border border-[#2a2a3a]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={url} alt="" className="w-full h-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(idx)}
-                  className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center hover:bg-red-600"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          {images.length < 5 && (
-            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] text-sm text-[#8888aa] hover:text-[#f0f0f5] cursor-pointer transition-colors">
-              {uploading ? 'Uploading...' : '+ Add image'}
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                disabled={uploading}
-                className="hidden"
-              />
-            </label>
-          )}
+          <MultiImageUpload images={images} onChange={setImages} maxImages={6} disabled={isSubmitting} />
         </div>
 
         {/* Submit */}
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            disabled={isSubmitting || uploading}
-            className="px-6 py-2.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Saving...' : 'Save Changes'}
           </button>
           <a
             href="/dashboard/listings"
-            className="px-6 py-2.5 rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] text-[#8888aa] hover:text-[#f0f0f5] text-sm font-medium transition-colors"
+            className="px-6 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
           >
             Cancel
           </a>

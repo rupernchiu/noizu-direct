@@ -1,3 +1,4 @@
+// schema updated: post model + page showInFooter/footerColumn/footerOrder added
 import { PrismaClient } from '@/generated/prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 

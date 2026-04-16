@@ -18,7 +18,7 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-[#f0f0f5]">Announcements</h2>
+      <h2 className="text-lg font-semibold text-foreground">Announcements</h2>
       <AnnouncementManager announcements={serialized} />
     </div>
   )

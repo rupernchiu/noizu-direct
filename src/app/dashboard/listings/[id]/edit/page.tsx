@@ -28,8 +28,8 @@ export default async function EditListingPage({
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-[#f0f0f5]">Edit Listing</h1>
-        <p className="text-sm text-[#8888aa] mt-1">Update your product details</p>
+        <h1 className="text-2xl font-bold text-foreground">Edit Listing</h1>
+        <p className="text-sm text-muted-foreground mt-1">Update your product details</p>
       </div>
       <EditListingForm product={product} />
     </div>

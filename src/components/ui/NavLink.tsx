@@ -12,8 +12,8 @@ export function NavLink({ href, children }: { href: string; children: React.Reac
       className={cn(
         'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap',
         active
-          ? 'bg-[#7c3aed] text-white'
-          : 'text-[#8888aa] hover:bg-[#1e1e2a] hover:text-[#f0f0f5]'
+          ? 'bg-primary text-white'
+          : 'text-muted-foreground hover:bg-card hover:text-foreground'
       )}
     >
       {children}

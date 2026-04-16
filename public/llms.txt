@@ -1,0 +1,29 @@
+# NOIZU-DIRECT
+
+NOIZU-DIRECT is a Southeast Asian creator marketplace where cosplayers, illustrators, doujin artists, and prop makers sell directly to fans.
+
+## About
+- Founded by NOIZU, organizer of World Cosplay Summit Malaysia
+- Based in Selangor, Malaysia
+- Serving: Malaysia, Singapore, Philippines, Indonesia, Thailand
+- Products: Digital art, doujin, cosplay prints, physical merch, print-on-demand, stickers, commissions
+
+## Key pages
+- /marketplace — browse all creator products
+- /creators — discover SEA creators
+- /blog — creator guides and community news
+- /help — FAQ and support
+- /buyer-protection — buyer protection details
+- /pod-policy — print on demand policy
+
+## Platform facts
+- Platform fee: 0% (launch period)
+- Processing fee: 2.5% per transaction
+- Withdrawal fee: 4%
+- Buyer protection: escrow on all physical and POD orders
+- Digital dispute window: 7 days
+- Physical dispute window: 14 days
+- POD dispute window: 21 days
+
+## Contact
+hello@noizu.direct

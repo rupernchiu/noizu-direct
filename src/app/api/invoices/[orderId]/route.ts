@@ -6,16 +6,17 @@ import { NextResponse } from 'next/server'
 
 export async function GET(
   _req: Request,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   const session = await auth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userId = (session.user as { id: string; role?: string }).id
   const role = (session.user as { id: string; role?: string }).role
+  const { orderId } = await params
 
   const invoice = await prisma.invoice.findFirst({
-    where: { orderId: params.orderId },
+    where: { orderId },
     include: { order: true },
   })
 

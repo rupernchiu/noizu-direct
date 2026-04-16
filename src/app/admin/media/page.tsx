@@ -1,64 +1,101 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { MediaDeleteButton } from './MediaDeleteButton'
-import Image from 'next/image'
+import { Suspense } from 'react'
+import { MediaUploadZone } from './MediaUploadZone'
+import { MediaGrid } from './MediaGrid'
+import { SearchBar } from '@/components/ui/SearchBar'
+import { FilterSelect } from '@/components/ui/FilterSelect'
+import { Pagination } from '@/components/ui/Pagination'
 
-const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif']
+const PER_PAGE = 20
 
-function isImage(filename: string) {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  return IMAGE_EXTS.includes(ext)
+const IMAGE_EXTS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'])
+
+function getExt(filename: string) {
+  return filename.split('.').pop()?.toLowerCase() ?? ''
 }
 
-export default async function AdminMediaPage() {
+function isImage(filename: string) {
+  return IMAGE_EXTS.has(getExt(filename))
+}
+
+const TYPE_OPTIONS = [
+  { value: 'IMAGE', label: 'Images' },
+  { value: 'OTHER', label: 'Other files' },
+]
+
+export default async function AdminMediaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string; type?: string }>
+}) {
   const session = await auth()
   if (!session || (session.user as any).role !== 'ADMIN') redirect('/')
 
-  const media = await prisma.media.findMany({
-    include: { uploader: { select: { name: true } } },
-    orderBy: { createdAt: 'desc' },
-  })
+  const params = await searchParams
+  const q = params.q?.trim() ?? ''
+  const page = Math.max(1, parseInt(params.page ?? '1') || 1)
+  const typeFilter = params.type ?? ''
+
+  const where: any = {}
+  if (q) where.filename = { contains: q }
+
+  const [total, media] = await Promise.all([
+    prisma.media.count({ where }),
+    prisma.media.findMany({
+      where,
+      include: { uploader: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+  ])
+
+  // Apply type filter in-memory after fetch (SQLite doesn't support suffix matching)
+  const filtered = typeFilter === 'IMAGE'
+    ? media.filter((m) => isImage(m.filename))
+    : typeFilter === 'OTHER'
+    ? media.filter((m) => !isImage(m.filename))
+    : media
+
+  // Serialize dates for client component
+  const items = filtered.map((m) => ({
+    id: m.id,
+    filename: m.filename,
+    url: m.url,
+    fileSize: m.fileSize,
+    width: m.width,
+    height: m.height,
+    mimeType: m.mimeType,
+    createdAt: m.createdAt.toISOString(),
+    uploader: m.uploader,
+  }))
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-semibold text-[#f0f0f5]">Media Library ({media.length})</h2>
+    <div className="space-y-5">
+      <h2 className="text-lg font-semibold text-foreground">Media Library</h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {media.map((item) => (
-          <div key={item.id} className="bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] overflow-hidden group">
-            <div className="aspect-square bg-[#0d0d12] flex items-center justify-center relative">
-              {isImage(item.filename) ? (
-                <Image
-                  src={item.url}
-                  alt={item.filename}
-                  fill
-                  className="object-cover"
-                  sizes="200px"
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-[#8888aa]">
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span className="text-xs uppercase">{item.filename.split('.').pop()}</span>
-                </div>
-              )}
-            </div>
-            <div className="p-2 space-y-1">
-              <p className="text-[#f0f0f5] text-xs font-medium truncate" title={item.filename}>{item.filename}</p>
-              <p className="text-[#8888aa] text-xs">{item.uploader.name}</p>
-              <p className="text-[#8888aa] text-xs">{new Date(item.createdAt).toLocaleDateString()}</p>
-              <MediaDeleteButton mediaId={item.id} />
-            </div>
-          </div>
-        ))}
-        {media.length === 0 && (
-          <div className="col-span-full bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] p-6 text-center text-[#8888aa]">
-            No media uploaded yet
-          </div>
-        )}
+      <MediaUploadZone />
+
+      <div className="flex flex-wrap gap-3">
+        <Suspense fallback={null}>
+          <SearchBar placeholder="Search by filename..." className="min-w-52 flex-1" />
+          <FilterSelect paramName="type" options={TYPE_OPTIONS} allLabel="All Types" className="w-36" />
+        </Suspense>
       </div>
+
+      {items.length === 0 ? (
+        <div className="bg-card rounded-xl border border-border p-8 text-center text-muted-foreground">
+          {q || typeFilter ? 'No media matches your filters.' : 'No media uploaded yet.'}
+        </div>
+      ) : (
+        <MediaGrid items={items} />
+      )}
+
+      <Suspense fallback={null}>
+        <Pagination total={total} page={page} perPage={PER_PAGE} />
+      </Suspense>
     </div>
   )
 }

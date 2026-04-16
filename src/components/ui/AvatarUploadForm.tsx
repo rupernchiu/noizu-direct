@@ -39,12 +39,12 @@ export function AvatarUploadForm() {
         ref={inputRef}
         type="file"
         accept="image/*"
-        className="text-sm text-[#8888aa] file:mr-3 file:rounded-lg file:border-0 file:bg-[#2a2a3a] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[#f0f0f5] hover:file:bg-[#3a3a4a]"
+        className="text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-border file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-foreground hover:file:bg-card"
       />
-      <Button type="submit" disabled={loading} size="sm" className="bg-[#7c3aed] hover:bg-[#6d28d9] text-white">
+      <Button type="submit" disabled={loading} size="sm" className="bg-primary hover:bg-primary/90 text-white">
         {loading ? 'Uploading…' : 'Upload'}
       </Button>
-      {message && <span className="text-xs text-[#00d4aa]">{message}</span>}
+      {message && <span className="text-xs text-secondary">{message}</span>}
     </form>
   )
 }

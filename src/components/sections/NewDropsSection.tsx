@@ -34,17 +34,17 @@ export default async function NewDropsSection({ content }: { content: NewDropsCo
   })
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0d0d12]">
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-[#f0f0f5]">{content.title}</h2>
-          <Link href="/marketplace" className="text-sm text-[#7c3aed] hover:underline">
+          <h2 className="text-2xl font-bold text-foreground">{content.title}</h2>
+          <Link href="/marketplace" className="text-sm text-primary hover:underline">
             View all →
           </Link>
         </div>
 
         {products.length === 0 ? (
-          <p className="text-[#8888aa] text-center py-16">No products yet — check back soon!</p>
+          <p className="text-muted-foreground text-center py-16">No products yet — check back soon!</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((p) => (

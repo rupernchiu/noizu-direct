@@ -45,17 +45,17 @@ export function SettingsForm({ settings }: { settings: PlatformSettings }) {
   ]
 
   return (
-    <div className="bg-[#1e1e2a] rounded-xl border border-[#2a2a3a] p-6 space-y-4 max-w-lg">
+    <div className="bg-card rounded-xl border border-border p-6 space-y-4 max-w-lg">
       {fields.map(({ key, label, isInt }) => (
         <div key={key}>
-          <label className="block text-sm text-[#8888aa] mb-1">{label}</label>
+          <label className="block text-sm text-muted-foreground mb-1">{label}</label>
           <input
             type="number"
             value={form[key]}
             onChange={(e) => handleChange(key, e.target.value)}
             step={isInt ? 1 : 0.1}
             min={0}
-            className="w-full bg-[#0d0d12] text-[#f0f0f5] border border-[#2a2a3a] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#7c3aed]"
+            className="w-full bg-background text-foreground border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
           />
         </div>
       ))}
@@ -63,7 +63,7 @@ export function SettingsForm({ settings }: { settings: PlatformSettings }) {
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
+          className="px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Settings'}
         </button>

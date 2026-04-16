@@ -1,7 +1,12 @@
+import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { CheckoutClient } from '@/components/checkout/CheckoutClient'
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 interface PageProps {
   params: Promise<{ orderId: string }>
@@ -34,12 +39,12 @@ export default async function CheckoutPage({ params }: PageProps) {
   const total = order.amountUsd + processingFee
 
   return (
-    <div className="min-h-screen bg-[#0d0d12] py-12">
+    <div className="min-h-screen bg-background py-12">
       <div className="mx-auto max-w-lg px-4 sm:px-6">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#f0f0f5]">Complete your order</h1>
-          <p className="mt-1 text-sm text-[#8888aa]">
-            From <span className="text-[#f0f0f5]">{order.creator.name}</span>
+          <h1 className="text-2xl font-bold text-foreground">Complete your order</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            From <span className="text-foreground">{order.creator.name}</span>
           </p>
         </div>
 

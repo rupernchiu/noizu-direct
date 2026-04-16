@@ -18,6 +18,10 @@ export async function PATCH(
   const allowed: Record<string, unknown> = {}
   if (typeof body.isVerified === 'boolean') allowed.isVerified = body.isVerified
   if (typeof body.isTopCreator === 'boolean') allowed.isTopCreator = body.isTopCreator
+  if (typeof body.isSuspended === 'boolean') allowed.isSuspended = body.isSuspended
+  if (Array.isArray(body.badges) && body.badges.every((b: unknown) => typeof b === 'string')) {
+    allowed.badges = JSON.stringify(body.badges)
+  }
 
   const creator = await prisma.creatorProfile.update({
     where: { id },

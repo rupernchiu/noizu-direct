@@ -21,8 +21,14 @@ export async function PATCH(req: Request) {
     absorbProcessingFee?: boolean
     avatar?: string
     bannerImage?: string
+    logoImage?: string
     categoryTags?: string[]
     socialLinks?: Record<string, string>
+    portfolioItems?: Array<{ id: string; title: string; description: string; category: string; imageUrl: string; isPublic: boolean }>
+    commissionSlots?: number | null
+    commissionDescription?: string | null
+    commissionTerms?: string | null
+    commissionPricing?: Array<{ tier: string; price: number; description: string }>
   }
 
   const updated = await prisma.creatorProfile.update({
@@ -36,8 +42,14 @@ export async function PATCH(req: Request) {
       ...(body.absorbProcessingFee !== undefined && { absorbProcessingFee: body.absorbProcessingFee }),
       ...(body.avatar !== undefined && { avatar: body.avatar }),
       ...(body.bannerImage !== undefined && { bannerImage: body.bannerImage }),
+      ...(body.logoImage !== undefined && { logoImage: body.logoImage }),
       ...(body.categoryTags !== undefined && { categoryTags: JSON.stringify(body.categoryTags) }),
       ...(body.socialLinks !== undefined && { socialLinks: JSON.stringify(body.socialLinks) }),
+      ...(body.portfolioItems !== undefined && { portfolioItems: JSON.stringify(body.portfolioItems) }),
+      ...(body.commissionSlots !== undefined && { commissionSlots: body.commissionSlots }),
+      ...(body.commissionDescription !== undefined && { commissionDescription: body.commissionDescription }),
+      ...(body.commissionTerms !== undefined && { commissionTerms: body.commissionTerms }),
+      ...(body.commissionPricing !== undefined && { commissionPricing: JSON.stringify(body.commissionPricing) }),
     },
   })
 

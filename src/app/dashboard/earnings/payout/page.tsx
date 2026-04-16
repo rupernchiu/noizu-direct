@@ -50,13 +50,13 @@ export default function PayoutRequestPage() {
   return (
     <div className="max-w-md space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-[#f0f0f5]">Request Payout</h1>
-        <p className="text-sm text-[#8888aa] mt-1">Withdraw your available balance</p>
+        <h1 className="text-2xl font-bold text-foreground">Request Payout</h1>
+        <p className="text-sm text-muted-foreground mt-1">Withdraw your available balance</p>
       </div>
 
-      <div className="rounded-xl bg-[#00d4aa]/10 border border-[#00d4aa]/30 px-4 py-3">
-        <p className="text-xs text-[#8888aa]">Available Balance</p>
-        <p className="text-2xl font-bold text-[#00d4aa]">
+      <div className="rounded-xl bg-secondary/10 border border-secondary/30 px-4 py-3">
+        <p className="text-xs text-muted-foreground">Available Balance</p>
+        <p className="text-2xl font-bold text-secondary">
           {available === null ? '...' : `$${available.toFixed(2)}`}
         </p>
       </div>
@@ -69,9 +69,9 @@ export default function PayoutRequestPage() {
 
       <form onSubmit={submit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-[#f0f0f5] mb-1.5">Amount (USD)</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Amount (USD)</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8888aa] text-sm">$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
             <input
               type="number"
               step="0.01"
@@ -79,24 +79,24 @@ export default function PayoutRequestPage() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className="w-full rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] pl-7 pr-3 py-2 text-sm text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-2 focus:ring-[#7c3aed]"
+              className="w-full rounded-lg bg-card border border-border pl-7 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
 
         {numAmount > 0 && (
-          <div className="rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] p-4 space-y-2 text-sm">
+          <div className="rounded-lg bg-card border border-border p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-[#8888aa]">Amount</span>
-              <span className="text-[#f0f0f5]">${numAmount.toFixed(2)}</span>
+              <span className="text-muted-foreground">Amount</span>
+              <span className="text-foreground">${numAmount.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#8888aa]">Withdrawal fee (4%)</span>
+              <span className="text-muted-foreground">Withdrawal fee (4%)</span>
               <span className="text-red-400">-${fee.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between border-t border-[#2a2a3a] pt-2 font-medium">
-              <span className="text-[#f0f0f5]">You receive</span>
-              <span className="text-[#00d4aa]">${net.toFixed(2)}</span>
+            <div className="flex justify-between border-t border-border pt-2 font-medium">
+              <span className="text-foreground">You receive</span>
+              <span className="text-secondary">${net.toFixed(2)}</span>
             </div>
           </div>
         )}
@@ -105,13 +105,13 @@ export default function PayoutRequestPage() {
           <button
             type="submit"
             disabled={loading || numAmount <= 0}
-            className="px-6 py-2.5 rounded-lg bg-[#7c3aed] hover:bg-[#6d28d9] text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Submitting...' : 'Submit Request'}
           </button>
           <a
             href="/dashboard/earnings"
-            className="px-6 py-2.5 rounded-lg bg-[#1e1e2a] border border-[#2a2a3a] text-[#8888aa] hover:text-[#f0f0f5] text-sm font-medium transition-colors"
+            className="px-6 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
           >
             Cancel
           </a>

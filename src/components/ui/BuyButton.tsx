@@ -2,8 +2,14 @@
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { cn } from '@/lib/utils'
 
-export function BuyButton({ productId }: { productId: string }) {
+interface Props {
+  productId: string
+  className?: string
+}
+
+export function BuyButton({ productId, className }: Props) {
   const { data: session } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -28,9 +34,10 @@ export function BuyButton({ productId }: { productId: string }) {
 
   return (
     <button
+      suppressHydrationWarning
       onClick={handleBuy}
       disabled={loading}
-      className="w-full py-3.5 bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:opacity-60 text-lg"
+      className={cn('w-full py-3.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:opacity-60 text-lg', className)}
     >
       {loading ? 'Processing...' : 'Buy Now'}
     </button>

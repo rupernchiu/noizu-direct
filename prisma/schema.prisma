@@ -8,98 +8,241 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("BUYER")
-  avatar    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  password           String
+  name               String
+  role               String   @default("BUYER")
+  avatar             String?
+  warningCount       Int      @default(0)
+  isFlaggedForReview Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  creatorProfile   CreatorProfile?
-  buyerOrders      Order[]          @relation("BuyerOrders")
-  creatorOrders    Order[]          @relation("CreatorOrders")
-  sentMessages     Message[]        @relation("SentMessages")
-  receivedMessages Message[]        @relation("ReceivedMessages")
-  buyerConvos      Conversation[]   @relation("BuyerConvos")
-  creatorConvos    Conversation[]   @relation("CreatorConvos")
-  payouts          Payout[]
-  invoices         Invoice[]
-  media            Media[]
+  creatorProfile      CreatorProfile?
+  buyerOrders         Order[]              @relation("BuyerOrders")
+  creatorOrders       Order[]              @relation("CreatorOrders")
+  sentMessages        Message[]            @relation("SentMessages")
+  receivedMessages    Message[]            @relation("ReceivedMessages")
+  buyerConvos         Conversation[]       @relation("BuyerConvos")
+  creatorConvos       Conversation[]       @relation("CreatorConvos")
+  payouts             Payout[]
+  invoices            Invoice[]
+  media               Media[]
+  posts               Post[]               @relation("PostAuthor")
+  notifications       Notification[]
+  raisedDisputes      Dispute[]            @relation("DisputeRaisedBy")
+  resolvedDisputes    Dispute[]            @relation("DisputeResolvedBy")
+  escrowTransactions  EscrowTransaction[]
+  wishlistItems       WishlistItem[]
+  following           CreatorFollow[]
 }
 
 model CreatorProfile {
-  id                  String  @id @default(cuid())
-  userId              String  @unique
-  username            String  @unique
-  displayName         String
-  bio                 String?
-  bannerImage         String?
-  avatar              String?
-  socialLinks         String  @default("{}")
-  categoryTags        String  @default("[]")
-  commissionStatus    String  @default("OPEN")
-  announcementText    String?
-  announcementActive  Boolean @default(false)
-  featuredProductIds  String  @default("[]")
-  isVerified          Boolean @default(false)
-  isTopCreator        Boolean @default(false)
-  totalSales          Int     @default(0)
-  absorbProcessingFee Boolean @default(false)
-  createdAt           DateTime @default(now())
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  username             String  @unique
+  displayName          String
+  bio                  String?
+  bannerImage          String?
+  avatar               String?
+  socialLinks          String  @default("{}")
+  categoryTags         String  @default("[]")
+  commissionStatus     String  @default("OPEN")
+  announcementText     String?
+  announcementActive   Boolean @default(false)
+  featuredProductIds   String  @default("[]")
+  isVerified           Boolean @default(false)
+  isTopCreator         Boolean @default(false)
+  totalSales           Int     @default(0)
+  absorbProcessingFee  Boolean @default(false)
+  portfolioItems       String  @default("[]")
+  isSuspended          Boolean @default(false)
+  badges               String  @default("[]")
+  commissionSlots      Int?
+  commissionTerms      String?
+  commissionPricing    String  @default("[]")
+  commissionDescription String?
+  logoImage            String?
+  popupEnabled         Boolean  @default(false)
+  popupTitle           String?
+  popupDescription     String?
+  popupCtaText         String?
+  popupCtaLink         String?
+  popupBadgeText       String?
+  popupImageUrl        String?
+  createdAt            DateTime @default(now())
 
-  user     User      @relation(fields: [userId], references: [id])
+  user                User               @relation(fields: [userId], references: [id])
+  products            Product[]
+  videos              Video[]
+  supportTiers        SupportTier[]
+  supportGoals        SupportGoal[]
+  supportGift         SupportGift?
+  supportTransactions SupportTransaction[]
+  podProviders        CreatorPodProvider[]
+  followers           CreatorFollow[]
+}
+
+// ── POD Provider ──────────────────────────────────────────────────────────────
+
+model CreatorPodProvider {
+  id                    String   @id @default(cuid())
+  creatorId             String
+  name                  String   // PRINTIFY|PRINTFUL|MERCHIZE|CJ_DROPSHIPPING|GOOTEN|LOCAL_PRINT_SHOP|SELF_FULFILLED|OTHER
+  customName            String?
+  storeUrl              String?
+  notes                 String?
+  isDefault             Boolean  @default(false)
+  defaultProductionDays Int      @default(5)
+  shippingMY            Int      @default(5)
+  shippingSG            Int      @default(7)
+  shippingPH            Int      @default(10)
+  shippingIntl          Int      @default(14)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  creator  CreatorProfile @relation(fields: [creatorId], references: [id])
   products Product[]
 }
 
-model Product {
-  id          String   @id @default(cuid())
-  creatorId   String
-  title       String
-  description String
-  price       Int
-  category    String
-  type        String
-  images      String   @default("[]")
-  digitalFile String?
-  stock       Int?
-  isActive    Boolean  @default(true)
-  isPinned    Boolean  @default(false)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ── Product ───────────────────────────────────────────────────────────────────
 
-  creator CreatorProfile @relation(fields: [creatorId], references: [id])
-  orders  Order[]
+model Product {
+  id               String   @id @default(cuid())
+  creatorId        String
+  title            String
+  description      String
+  price            Int
+  category         String
+  type             String   // DIGITAL | PHYSICAL | POD
+  images           String   @default("[]")
+  digitalFile      String?
+  stock            Int?
+  isActive         Boolean  @default(true)
+  isPinned         Boolean  @default(false)
+  order            Int      @default(0)
+  // POD fields
+  podProviderId    String?
+  baseCost         Int?
+  productionDays   Int?
+  shippingMY       Int?
+  shippingSG       Int?
+  shippingPH       Int?
+  shippingIntl     Int?
+  showProviderPublic Boolean @default(false)
+  podExternalUrl   String?
+  sizeVariants     String?  // JSON array of size strings
+  colorVariants    String?  // JSON array of {name, mockupImage}
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  creator       CreatorProfile      @relation(fields: [creatorId], references: [id])
+  podProvider   CreatorPodProvider? @relation(fields: [podProviderId], references: [id])
+  orders        Order[]
+  wishlistItems WishlistItem[]
 }
+
+// ── Order ─────────────────────────────────────────────────────────────────────
 
 model Order {
-  id                String    @id @default(cuid())
-  buyerId           String
-  creatorId         String
-  productId         String
-  status            String    @default("PENDING")
-  amountUsd         Int
-  displayCurrency   String    @default("USD")
-  displayAmount     Int       @default(0)
-  exchangeRate      Float     @default(1.0)
-  exchangeRateAt    DateTime?
-  airwallexIntentId String?
-  trackingNumber    String?
-  shippingAddress   String?
-  downloadToken     String?
-  downloadExpiry    DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                       String    @id @default(cuid())
+  buyerId                  String
+  creatorId                String
+  productId                String
+  status                   String    @default("PENDING")
+  amountUsd                Int
+  displayCurrency          String    @default("USD")
+  displayAmount            Int       @default(0)
+  exchangeRate             Float     @default(1.0)
+  exchangeRateAt           DateTime?
+  airwallexIntentId        String?
+  trackingNumber           String?
+  courierName              String?
+  courierCode              String?
+  trackingAddedAt          DateTime?
+  estimatedDelivery        DateTime?
+  shippingAddress          String?
+  downloadToken            String?
+  downloadExpiry           DateTime?
+  // Escrow
+  escrowStatus             String    @default("HELD")  // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
+  escrowHeldAt             DateTime?
+  escrowReleasedAt         DateTime?
+  escrowAutoReleaseAt      DateTime?
+  fulfillmentDeadline      DateTime?
+  fulfillmentWarningsSent  Int       @default(0)
+  buyerConfirmedAt         DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
-  buyer        User          @relation("BuyerOrders", fields: [buyerId], references: [id])
-  creator      User          @relation("CreatorOrders", fields: [creatorId], references: [id])
-  product      Product       @relation(fields: [productId], references: [id])
-  transactions Transaction[]
-  messages     Message[]
-  invoices     Invoice[]
+  buyer             User               @relation("BuyerOrders", fields: [buyerId], references: [id])
+  creator           User               @relation("CreatorOrders", fields: [creatorId], references: [id])
+  product           Product            @relation(fields: [productId], references: [id])
+  transactions      Transaction[]
+  messages          Message[]
+  invoices          Invoice[]
+  dispute           Dispute?
+  escrowTransactions EscrowTransaction[]
 }
+
+// ── Dispute ───────────────────────────────────────────────────────────────────
+
+model Dispute {
+  id                  String    @id @default(cuid())
+  orderId             String    @unique
+  raisedBy            String
+  reason              String    // NEVER_ARRIVED|WRONG_ITEM|PRINT_QUALITY|WRONG_SIZE|DAMAGED|OTHER
+  description         String
+  evidence            String    @default("[]")  // JSON array of image URLs
+  creatorResponse     String?
+  creatorEvidence     String?   // JSON array
+  creatorRespondedAt  DateTime?
+  status              String    @default("OPEN")  // OPEN|UNDER_REVIEW|RESOLVED_REFUND|RESOLVED_RELEASE|CLOSED
+  adminNote           String?
+  resolvedBy          String?
+  resolvedAt          DateTime?
+  refundAmount        Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  order        Order  @relation(fields: [orderId], references: [id])
+  raiser       User   @relation("DisputeRaisedBy", fields: [raisedBy], references: [id])
+  resolver     User?  @relation("DisputeResolvedBy", fields: [resolvedBy], references: [id])
+}
+
+// ── Escrow Transaction ────────────────────────────────────────────────────────
+
+model EscrowTransaction {
+  id          String   @id @default(cuid())
+  orderId     String
+  type        String   // HOLD|RELEASE|REFUND|PARTIAL_REFUND|ADMIN_RELEASE
+  amount      Int
+  note        String?
+  performedBy String?
+  createdAt   DateTime @default(now())
+
+  order     Order  @relation(fields: [orderId], references: [id])
+  performer User?  @relation(fields: [performedBy], references: [id])
+}
+
+// ── Notification ──────────────────────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // NEW_ORDER|FULFILLMENT_REMINDER|FULFILLMENT_WARNING|FULFILLMENT_FINAL_WARNING|ORDER_CANCELLED|ESCROW_RELEASED|NEW_MESSAGE|DISPUTE_RAISED|DISPUTE_RESOLVED|PAYOUT_PROCESSED|ORDER_CONFIRMED|ORDER_SHIPPED|DOWNLOAD_READY|REFUND_ISSUED
+  title     String
+  message   String
+  orderId   String?
+  isRead    Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+// ── Transaction ───────────────────────────────────────────────────────────────
 
 model Transaction {
   id                 String   @id @default(cuid())
@@ -148,14 +291,15 @@ model Invoice {
 }
 
 model Message {
-  id         String   @id @default(cuid())
-  senderId   String
-  receiverId String
-  orderId    String?
-  content    String
-  imageUrl   String?
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  orderId     String?
+  content     String
+  imageUrl    String?
+  attachments String   @default("[]") // JSON: [{url, type, name, size}]
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
 
   sender   User   @relation("SentMessages", fields: [senderId], references: [id])
   receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
@@ -181,19 +325,43 @@ model Page {
   title          String
   content        String?
   status         String   @default("DRAFT")
+  showInFooter   Boolean  @default(false)
+  footerColumn   String?
+  footerOrder    Int?
   seoTitle       String?
   seoDescription String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
+model Post {
+  id             String    @id @default(cuid())
+  slug           String    @unique
+  title          String
+  excerpt        String?
+  content        String?
+  coverImage     String?
+  authorId       String
+  status         String    @default("DRAFT")
+  publishedAt    DateTime?
+  scheduledAt    DateTime?
+  tags           String    @default("[]")
+  seoTitle       String?
+  seoDescription String?
+  viewCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  author User @relation("PostAuthor", fields: [authorId], references: [id])
+}
+
 model Section {
-  id       String   @id @default(cuid())
-  pageSlug String
-  type     String
-  order    Int      @default(0)
-  isActive Boolean  @default(true)
-  content  String   @default("{}")
+  id        String   @id @default(cuid())
+  pageSlug  String
+  type      String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  content   String   @default("{}")
   updatedAt DateTime @updatedAt
 }
 
@@ -202,6 +370,10 @@ model Media {
   filename   String
   url        String
   uploadedBy String
+  fileSize   Int?
+  width      Int?
+  height     Int?
+  mimeType   String?
   createdAt  DateTime @default(now())
 
   uploader User @relation(fields: [uploadedBy], references: [id])
@@ -227,10 +399,149 @@ model BuyerTag {
   @@unique([creatorId, buyerId])
 }
 
+model Video {
+  id          String   @id @default(cuid())
+  creatorId   String
+  title       String
+  description String?
+  platform    String   @default("YOUTUBE")
+  url         String
+  embedId     String
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model SupportTier {
+  id              String   @id @default(cuid())
+  creatorId       String
+  name            String
+  description     String?
+  priceUsd        Int
+  perks           String   @default("[]")
+  isActive        Boolean  @default(true)
+  subscriberCount Int      @default(0)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model SupportGoal {
+  id               String    @id @default(cuid())
+  creatorId        String
+  title            String
+  description      String?
+  targetAmountUsd  Int
+  currentAmountUsd Int       @default(0)
+  deadline         DateTime?
+  status           String    @default("ACTIVE")
+  coverImage       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model SupportGift {
+  id                 String  @id @default(cuid())
+  creatorId          String  @unique
+  isActive           Boolean @default(true)
+  presetAmounts      String  @default("[3,5,10,25]")
+  thankYouMessage    String  @default("Thank you for your support!")
+  totalReceived      Int     @default(0)
+  giftCount          Int     @default(0)
+  monthlyGiftCount   Int     @default(0)
+  monthlyGifterCount Int     @default(0)
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model SupportTransaction {
+  id          String   @id @default(cuid())
+  creatorId   String
+  supporterId String?
+  type        String
+  amountUsd   Int
+  tierId      String?
+  goalId      String?
+  message     String?
+  isAnonymous Boolean  @default(false)
+  isMonthly   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model PopupAd {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  ctaText     String
+  ctaLink     String
+  isActive    Boolean   @default(false)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
 model PlatformSettings {
   id                   String @id @default(cuid())
   processingFeePercent Float  @default(2.5)
   platformFeePercent   Float  @default(0.0)
   withdrawalFeePercent Float  @default(4.0)
   topCreatorThreshold  Int    @default(100)
+}
+
+model NavItem {
+  id              String   @id @default(cuid())
+  label           String
+  url             String   @default("#")
+  navType         String   @default("SECONDARY")
+  position        String   @default("LEFT")
+  order           Int      @default(0)
+  dropdownType    String   @default("NONE")
+  dropdownContent String   @default("{}")
+  openInNewTab    Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ── Wishlist ──────────────────────────────────────────────────────────────────
+
+model WishlistItem {
+  id                String   @id @default(cuid())
+  buyerId           String
+  productId         String
+  notifyPriceChange Boolean  @default(true)
+  notifyRestock     Boolean  @default(true)
+  notifyNewDrop     Boolean  @default(false)
+  addedAt           DateTime @default(now())
+
+  buyer   User    @relation(fields: [buyerId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([buyerId, productId])
+}
+
+// ── Creator Follow ────────────────────────────────────────────────────────────
+
+model CreatorFollow {
+  id                   String   @id @default(cuid())
+  buyerId              String
+  creatorId            String
+  notifyNewProduct     Boolean  @default(true)
+  notifyCommissionOpen Boolean  @default(true)
+  notifyNewPost        Boolean  @default(false)
+  followedAt           DateTime @default(now())
+
+  buyer   User           @relation(fields: [buyerId], references: [id])
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+
+  @@unique([buyerId, creatorId])
 }

@@ -47,12 +47,12 @@ export function OrdersActions({ orderId, status, productType }: OrdersActionsPro
           value={tracking}
           onChange={(e) => setTracking(e.target.value)}
           placeholder="Tracking #"
-          className="w-28 rounded-md bg-[#0d0d12] border border-[#2a2a3a] px-2 py-1 text-xs text-[#f0f0f5] placeholder-[#8888aa] focus:outline-none focus:ring-1 focus:ring-[#7c3aed]"
+          className="w-28 rounded-md bg-background border border-border px-2 py-1 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
         <button
           onClick={() => updateOrder({ status: 'SHIPPED', trackingNumber: tracking })}
           disabled={loading || !tracking.trim()}
-          className="text-xs px-2 py-1 rounded-md bg-[#7c3aed] hover:bg-[#6d28d9] text-white disabled:opacity-50 transition-colors"
+          className="text-xs px-2 py-1 rounded-md bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors"
         >
           Ship
         </button>
@@ -60,5 +60,5 @@ export function OrdersActions({ orderId, status, productType }: OrdersActionsPro
     )
   }
 
-  return <span className="text-xs text-[#8888aa]">—</span>
+  return <span className="text-xs text-muted-foreground">—</span>
 }

@@ -53,23 +53,23 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d12] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md bg-[#1e1e2a] rounded-2xl border border-[#2a2a3a] p-8 space-y-6">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md bg-card rounded-2xl border border-border p-8 space-y-6">
         <div className="text-center">
           <Link href="/">
             <span className="text-2xl font-bold text-white">NOIZU</span>
-            <span className="text-2xl font-bold text-[#00d4aa]">-DIRECT</span>
+            <span className="text-2xl font-bold text-secondary">-DIRECT</span>
           </Link>
         </div>
 
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-bold text-[#f0f0f5]">Create an account</h1>
-          <p className="text-sm text-[#8888aa]">Join NOIZU-DIRECT as a buyer</p>
+          <h1 className="text-2xl font-bold text-foreground">Create an account</h1>
+          <p className="text-sm text-muted-foreground">Join NOIZU-DIRECT as a buyer</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1">
-            <label htmlFor="name" className="text-sm font-medium text-[#f0f0f5]">
+            <label htmlFor="name" className="text-sm font-medium text-foreground">
               Name
             </label>
             <input
@@ -78,15 +78,15 @@ export default function RegisterPage() {
               autoComplete="name"
               placeholder="Your name"
               {...register('name')}
-              className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.name && (
-              <p className="text-sm text-[#ef4444] mt-1">{errors.name.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
             )}
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="email" className="text-sm font-medium text-[#f0f0f5]">
+            <label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
             </label>
             <input
@@ -95,15 +95,15 @@ export default function RegisterPage() {
               autoComplete="email"
               placeholder="you@example.com"
               {...register('email')}
-              className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.email && (
-              <p className="text-sm text-[#ef4444] mt-1">{errors.email.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-sm font-medium text-[#f0f0f5]">
+            <label htmlFor="password" className="text-sm font-medium text-foreground">
               Password
             </label>
             <input
@@ -112,15 +112,15 @@ export default function RegisterPage() {
               autoComplete="new-password"
               placeholder="••••••••"
               {...register('password')}
-              className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.password && (
-              <p className="text-sm text-[#ef4444] mt-1">{errors.password.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
             )}
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="confirmPassword" className="text-sm font-medium text-[#f0f0f5]">
+            <label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">
               Confirm Password
             </label>
             <input
@@ -129,25 +129,25 @@ export default function RegisterPage() {
               autoComplete="new-password"
               placeholder="••••••••"
               {...register('confirmPassword')}
-              className="w-full px-3 py-2 rounded-lg bg-[#16161f] border border-[#2a2a3a] text-[#f0f0f5] placeholder:text-[#8888aa] focus-visible:border-[#7c3aed] outline-none transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-[#ef4444] mt-1">{errors.confirmPassword.message}</p>
+              <p className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <div className="text-center text-sm text-[#8888aa]">
+        <div className="text-center text-sm text-muted-foreground">
           Already have an account?{' '}
-          <Link href="/login" className="text-[#7c3aed] hover:text-[#6d28d9] font-medium transition-colors">
+          <Link href="/login" className="text-primary hover:text-primary/80 font-medium transition-colors">
             Log in
           </Link>
         </div>

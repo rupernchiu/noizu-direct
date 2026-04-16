@@ -45,8 +45,8 @@ export function ListingsActions({ productId, isActive, isPinned, mode }: Listing
         disabled={loading}
         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium transition-colors disabled:opacity-50 ${
           isActive
-            ? 'bg-[#00d4aa]/20 text-[#00d4aa] hover:bg-red-500/20 hover:text-red-400'
-            : 'bg-[#8888aa]/20 text-[#8888aa] hover:bg-[#00d4aa]/20 hover:text-[#00d4aa]'
+            ? 'bg-secondary/20 text-secondary hover:bg-red-500/20 hover:text-red-400'
+            : 'bg-muted-foreground/20 text-muted-foreground hover:bg-secondary/20 hover:text-secondary'
         }`}
       >
         {isActive ? 'Active' : 'Inactive'}
@@ -60,7 +60,7 @@ export function ListingsActions({ productId, isActive, isPinned, mode }: Listing
         onClick={() => toggle('isPinned', !isPinned)}
         disabled={loading}
         className={`text-xs transition-colors disabled:opacity-50 ${
-          isPinned ? 'text-[#7c3aed]' : 'text-[#8888aa] hover:text-[#f0f0f5]'
+          isPinned ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
         }`}
         title={isPinned ? 'Unpin' : 'Pin to top'}
       >

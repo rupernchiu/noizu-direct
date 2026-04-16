@@ -58,14 +58,14 @@ export function SectionToggle({ sectionId, isActive, content }: SectionTogglePro
           className={`px-2 py-0.5 rounded text-xs font-medium transition-colors disabled:opacity-50 ${
             isActive
               ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
-              : 'bg-[#2a2a3a] text-[#8888aa] hover:bg-green-500/20 hover:text-green-400'
+              : 'bg-border text-muted-foreground hover:bg-green-500/20 hover:text-green-400'
           }`}
         >
           {isActive ? 'Active' : 'Inactive'}
         </button>
         <button
           onClick={() => setEditing(!editing)}
-          className="px-2 py-0.5 rounded text-xs font-medium bg-[#7c3aed]/20 text-[#7c3aed] hover:bg-[#7c3aed]/30 transition-colors"
+          className="px-2 py-0.5 rounded text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
         >
           Edit Content
         </button>
@@ -76,19 +76,19 @@ export function SectionToggle({ sectionId, isActive, content }: SectionTogglePro
             value={editContent}
             onChange={(e) => setEditContent(e.target.value)}
             rows={8}
-            className="w-full bg-[#0d0d12] text-[#f0f0f5] border border-[#2a2a3a] rounded-lg px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-[#7c3aed]"
+            className="w-full bg-background text-foreground border border-border rounded-lg px-3 py-2 text-xs font-mono resize-y focus:outline-none focus:border-primary"
           />
           <div className="flex gap-2">
             <button
               onClick={saveContent}
               disabled={saving}
-              className="px-3 py-1 rounded text-xs font-medium bg-[#7c3aed] text-white hover:bg-[#6d28d9] transition-colors disabled:opacity-50"
+              className="px-3 py-1 rounded text-xs font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={() => { setEditing(false); setEditContent(content) }}
-              className="px-3 py-1 rounded text-xs font-medium bg-[#2a2a3a] text-[#8888aa] hover:text-[#f0f0f5] transition-colors"
+              className="px-3 py-1 rounded text-xs font-medium bg-border text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel
             </button>
