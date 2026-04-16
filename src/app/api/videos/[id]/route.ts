@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireCreator, getOwnedByCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 
 function extractEmbedId(platform: string, url: string): string {
@@ -19,19 +19,13 @@ function extractEmbedId(platform: string, url: string): string {
   return url
 }
 
-async function getOwnedVideo(id: string, userId: string) {
-  const profile = await prisma.creatorProfile.findUnique({ where: { userId } })
-  if (!profile) return null
-  return prisma.video.findFirst({ where: { id, creatorId: profile.id } })
-}
-
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session || (session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const video = await getOwnedVideo(id, (session.user as any).id)
+  const video = await getOwnedByCreator((session.user as any).id, (creatorId) =>
+    prisma.video.findFirst({ where: { id, creatorId } })
+  )
   if (!video) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await req.json() as Partial<{ title: string; platform: string; url: string; description: string; order: number; isActive: boolean }>
@@ -59,12 +53,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session || (session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
-  const video = await getOwnedVideo(id, (session.user as any).id)
+  const video = await getOwnedByCreator((session.user as any).id, (creatorId) =>
+    prisma.video.findFirst({ where: { id, creatorId } })
+  )
   if (!video) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   await prisma.video.delete({ where: { id } })

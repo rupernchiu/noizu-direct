@@ -1,29 +1,17 @@
 import { NextResponse } from 'next/server'
+import { requireCreator, verifyProductOwnership } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@/lib/auth'
-
-async function verifyOwnership(productId: string, userId: string) {
-  const product = await prisma.product.findUnique({
-    where: { id: productId },
-    include: { creator: true },
-  })
-  if (!product) return null
-  if (product.creator.userId !== userId) return null
-  return product
-}
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session || (session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
   const { id } = await params
 
-  const product = await verifyOwnership(id, userId)
+  const product = await verifyProductOwnership(id, userId)
   if (!product) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
@@ -52,14 +40,12 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session || (session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
   const { id } = await params
 
-  const product = await verifyOwnership(id, userId)
+  const product = await verifyProductOwnership(id, userId)
   if (!product) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }

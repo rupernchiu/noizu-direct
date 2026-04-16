@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { requireAuth } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
@@ -8,7 +8,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ orderId: string }> }
 ) {
-  const session = await auth()
+  const session = await requireAuth()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userId = (session.user as { id: string; role?: string }).id

@@ -1,13 +1,10 @@
-import { auth } from '@/lib/auth'
+import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  if ((session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
 
   const conversations = await prisma.conversation.findMany({

@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 
 export async function PATCH(req: Request) {
-  const session = await auth()
-  if (!session || (session.user as any).role !== 'CREATOR') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const session = await requireCreator()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
 
   const profile = await prisma.creatorProfile.findUnique({ where: { userId } })
