@@ -314,6 +314,43 @@ export default async function CreatorPage({ params }: PageProps) {
     )
   }
 
+  // Fetch creator recommendations (fans also bought from)
+  const creatorProductIds = creator.products.map(p => p.id)
+  const creatorRecs = creatorProductIds.length > 0
+    ? await prisma.productRecommendation.findMany({
+        where: { sourceProductId: { in: creatorProductIds } },
+        orderBy: { score: 'desc' },
+        take: 50,
+        select: {
+          score: true,
+          recommendedProduct: {
+            select: {
+              creatorId: true,
+              creator: { select: { id: true, username: true, displayName: true, avatar: true, isVerified: true } },
+            },
+          },
+        },
+      })
+    : []
+
+  // Deduplicate by creatorId, average score, exclude this creator, take top 4
+  const otherCreatorMap = new Map<string, { score: number; count: number; creator: { username: string; displayName: string; avatar: string | null; isVerified: boolean } }>()
+  for (const rec of creatorRecs) {
+    const rCreatorId = rec.recommendedProduct.creatorId
+    if (rCreatorId === creator.id) continue
+    const existing = otherCreatorMap.get(rCreatorId)
+    if (existing) {
+      existing.score += rec.score
+      existing.count += 1
+    } else {
+      otherCreatorMap.set(rCreatorId, { score: rec.score, count: 1, creator: rec.recommendedProduct.creator })
+    }
+  }
+  const relatedCreators = [...otherCreatorMap.values()]
+    .map(v => ({ ...v.creator, avgScore: v.score / v.count }))
+    .sort((a, b) => b.avgScore - a.avgScore)
+    .slice(0, 4)
+
   const session = await auth()
   const isLoggedIn = Boolean(session?.user)
 
@@ -615,6 +652,35 @@ export default async function CreatorPage({ params }: PageProps) {
           discoverySupport={discoverySupport}
         />
       </div>
+
+      {relatedCreators.length >= 2 && (
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-10">
+          <h2 className="text-lg font-bold text-foreground mb-5">Fans of this store also love</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {relatedCreators.map(c => (
+              <a key={c.username} href={`/creator/${c.username}`} className="group flex flex-col items-center gap-2 p-4 rounded-xl bg-card border border-border hover:border-primary/40 transition-colors text-center">
+                {c.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.avatar} alt={c.displayName} className="size-14 rounded-full object-cover border-2 border-border group-hover:border-primary transition-colors" />
+                ) : (
+                  <div className="size-14 rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-primary">
+                    {c.displayName.slice(0, 1)}
+                  </div>
+                )}
+                <div>
+                  <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {c.displayName}{c.isVerified && <span className="ml-1 text-xs text-secondary">✓</span>}
+                  </p>
+                  <p className="text-xs text-muted-foreground">@{c.username}</p>
+                </div>
+                <span className="mt-auto text-xs font-medium text-primary border border-primary/30 rounded-lg px-3 py-1 group-hover:bg-primary/10 transition-colors">
+                  View Store
+                </span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Creator popup — only when popupEnabled */}
       {creator.popupEnabled && creator.popupTitle && creator.popupCtaText && creator.popupCtaLink && (

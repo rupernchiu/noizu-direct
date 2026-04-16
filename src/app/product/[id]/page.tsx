@@ -10,6 +10,7 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { SEO_CONFIG } from '@/lib/seo-config'
 import { auth } from '@/lib/auth'
 import { ProductViewTracker } from '@/components/ui/ProductViewTracker'
+import { ProductCard } from '@/components/ui/ProductCard'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -107,6 +108,22 @@ export default async function ProductPage({ params }: PageProps) {
   })
 
   if (!product) notFound()
+
+  const recommendations = await prisma.productRecommendation.findMany({
+    where: { sourceProductId: product.id },
+    orderBy: { score: 'desc' },
+    take: 6,
+    select: {
+      score: true,
+      recommendedProduct: {
+        select: {
+          id: true, title: true, price: true, images: true,
+          description: true, category: true, type: true,
+          creator: { select: { username: true, displayName: true, avatar: true, isVerified: true, isTopCreator: true } },
+        },
+      },
+    },
+  })
 
   const session = await auth()
 
@@ -329,6 +346,19 @@ export default async function ProductPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {recommendations.length >= 2 && (
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-12 mb-8">
+          <h2 className="text-lg font-bold text-foreground mb-4">Buyers also purchased</h2>
+          <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+            {recommendations.map(({ recommendedProduct: p }) => (
+              <div key={p.id} className="shrink-0 w-48">
+                <ProductCard product={p} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sticky mobile CTA bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">

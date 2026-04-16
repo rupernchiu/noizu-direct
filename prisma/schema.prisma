@@ -171,6 +171,8 @@ model Product {
   cartItems           CartItem[]
   views               ProductView[]
   trendingScoreRecord ProductTrendingScore?
+  sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
+  targetRecommendations ProductRecommendation[] @relation("TargetProduct")
 }
 
 // ── Product View Tracking ──────────────────────────────────────────────────────
@@ -201,6 +203,23 @@ model ProductTrendingScore {
   calculatedAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ── Product Recommendations ────────────────────────────────────────────────────
+
+model ProductRecommendation {
+  id                   String   @id @default(cuid())
+  sourceProductId      String
+  recommendedProductId String
+  score                Float
+  sharedBuyers         Int
+  computedAt           DateTime @default(now())
+
+  sourceProduct      Product @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  recommendedProduct Product @relation("TargetProduct", fields: [recommendedProductId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceProductId, recommendedProductId])
+  @@index([sourceProductId, score(sort: Desc)])
 }
 
 // ── Order ─────────────────────────────────────────────────────────────────────

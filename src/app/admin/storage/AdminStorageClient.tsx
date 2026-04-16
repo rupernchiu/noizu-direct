@@ -51,6 +51,8 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
   const [selected, setSelected]       = useState<Set<string>>(new Set())
   const [trendingRunning, setTrendingRunning] = useState(false)
   const [trendingResult, setTrendingResult]   = useState<string | null>(null)
+  const [recsRunning, setRecsRunning]         = useState(false)
+  const [recsResult, setRecsResult]           = useState<string | null>(null)
 
   const currentPage = Math.max(1, Number(searchParams.get('page') ?? '1'))
 
@@ -96,6 +98,20 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
       setTrendingResult('Error')
     } finally {
       setTrendingRunning(false)
+    }
+  }
+
+  async function runRecsCron() {
+    setRecsRunning(true)
+    setRecsResult(null)
+    try {
+      const res = await fetch('/api/cron/recommendations', { method: 'POST' })
+      const data = await res.json()
+      setRecsResult(`${data.pairs} pairs computed across ${data.productsProcessed} products`)
+    } catch {
+      setRecsResult('Error')
+    } finally {
+      setRecsRunning(false)
     }
   }
 
@@ -358,6 +374,25 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
         {trendingResult && (
           <div className="rounded-xl bg-border/30 p-4">
             <p className="text-xs text-muted-foreground">✅ {trendingResult}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Recommendations Recomputation */}
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-2"><Play className="size-4" /> Recommendations Recomputation</h3>
+        <p className="text-xs text-muted-foreground">Recomputes co-purchase pairs using Jaccard similarity across all completed orders.</p>
+        <button
+          onClick={runRecsCron}
+          disabled={recsRunning}
+          className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-card disabled:opacity-50 transition-colors"
+        >
+          <Play className={`size-4 ${recsRunning ? 'animate-pulse text-primary' : 'text-muted-foreground'}`} />
+          {recsRunning ? 'Running…' : '▶ Recompute Recommendations'}
+        </button>
+        {recsResult && (
+          <div className="rounded-xl bg-border/30 p-4">
+            <p className="text-xs text-muted-foreground">✅ {recsResult}</p>
           </div>
         )}
       </div>

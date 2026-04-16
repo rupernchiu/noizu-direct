@@ -3,13 +3,14 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { TrendingRecalcButton } from './TrendingRecalcButton'
+import { RecommendationsRecomputeButton } from './RecommendationsRecomputeButton'
 import { TRENDING_CONFIG } from '@/lib/trendingConfig'
 
 export default async function AdminOverviewPage() {
   const session = await auth()
   if (!session || (session.user as any).role !== 'ADMIN') redirect('/')
 
-  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders, topTrendingProducts] = await Promise.all([
+  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders, topTrendingProducts, recPairCount, topRecPairs] = await Promise.all([
     prisma.user.count(),
     prisma.creatorProfile.count(),
     prisma.transaction.aggregate({ where: { status: 'COMPLETED' }, _sum: { grossAmountUsd: true } }),
@@ -27,6 +28,18 @@ export default async function AdminOverviewPage() {
       orderBy: { trendingScore: 'desc' },
       take: 10,
       select: { id: true, title: true, trendingScore: true, trendingUpdatedAt: true, trendingScoreRecord: { select: { breakdown: true, calculatedAt: true } } },
+    }),
+    prisma.productRecommendation.count(),
+    prisma.productRecommendation.findMany({
+      orderBy: { score: 'desc' },
+      take: 10,
+      select: {
+        score: true,
+        sharedBuyers: true,
+        computedAt: true,
+        sourceProduct: { select: { title: true } },
+        recommendedProduct: { select: { title: true } },
+      },
     }),
   ])
 
@@ -144,6 +157,48 @@ export default async function AdminOverviewPage() {
               {topTrendingProducts.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No trending data yet. Run recalculation.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Recommendations */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Co-Purchase Recommendations</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{recPairCount.toLocaleString()} pairs computed</p>
+          </div>
+          <RecommendationsRecomputeButton />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Source</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Recommended</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Score</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Shared Buyers</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Computed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topRecPairs.map((pair, i) => (
+                <tr key={i} className="border-b border-border last:border-0 hover:bg-surface">
+                  <td className="px-4 py-2 text-foreground text-xs truncate max-w-[160px]">{pair.sourceProduct.title}</td>
+                  <td className="px-4 py-2 text-foreground text-xs truncate max-w-[160px]">{pair.recommendedProduct.title}</td>
+                  <td className="px-4 py-2 text-foreground font-mono text-xs">{pair.score.toFixed(3)}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">{pair.sharedBuyers}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">
+                    {new Date(pair.computedAt).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+              {topRecPairs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No recommendation data yet. Run recomputation.</td>
                 </tr>
               )}
             </tbody>
