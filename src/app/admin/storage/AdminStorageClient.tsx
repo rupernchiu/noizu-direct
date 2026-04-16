@@ -49,6 +49,8 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
   const [cronResults, setCronResults] = useState<Record<string, string> | null>(null)
   const [cronRunning, setCronRunning] = useState<string | null>(null)
   const [selected, setSelected]       = useState<Set<string>>(new Set())
+  const [trendingRunning, setTrendingRunning] = useState(false)
+  const [trendingResult, setTrendingResult]   = useState<string | null>(null)
 
   const currentPage = Math.max(1, Number(searchParams.get('page') ?? '1'))
 
@@ -82,6 +84,20 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
   const from          = totalFiltered === 0 ? 0 : (safePage - 1) * PER_PAGE + 1
   const to            = Math.min(safePage * PER_PAGE, totalFiltered)
   const pageRows      = filteredRows.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE)
+
+  async function runTrendingCron() {
+    setTrendingRunning(true)
+    setTrendingResult(null)
+    try {
+      const res = await fetch('/api/cron/trending', { method: 'POST' })
+      const data = await res.json()
+      setTrendingResult(`${data.updated} products updated, algorithm v${data.version}, calculated at ${new Date(data.calculatedAt).toLocaleTimeString()}`)
+    } catch {
+      setTrendingResult('Error')
+    } finally {
+      setTrendingRunning(false)
+    }
+  }
 
   async function runCron(job: string) {
     setCronRunning(job)
@@ -324,6 +340,24 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
             {Object.entries(cronResults).map(([key, msg]) => (
               <p key={key} className="text-xs text-muted-foreground">✅ {msg}</p>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Trending Recalculation */}
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <h3 className="text-base font-semibold text-foreground flex items-center gap-2"><Play className="size-4" /> Trending Recalculation</h3>
+        <button
+          onClick={runTrendingCron}
+          disabled={trendingRunning}
+          className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-border text-foreground hover:bg-card disabled:opacity-50 transition-colors"
+        >
+          <Play className={`size-4 ${trendingRunning ? 'animate-pulse text-primary' : 'text-muted-foreground'}`} />
+          {trendingRunning ? 'Running…' : '▶ Recalculate Trending'}
+        </button>
+        {trendingResult && (
+          <div className="rounded-xl bg-border/30 p-4">
+            <p className="text-xs text-muted-foreground">✅ {trendingResult}</p>
           </div>
         )}
       </div>

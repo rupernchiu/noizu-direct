@@ -156,14 +156,51 @@ model Product {
   podExternalUrl   String?
   sizeVariants     String?  // JSON array of size strings
   colorVariants    String?  // JSON array of {name, mockupImage}
+  trendingScore        Float    @default(0)
+  trendingVersion      Int      @default(1)
+  trendingUpdatedAt    DateTime?
+  manualBoost          Int      @default(0)
+  isTrendingSuppressed Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  creator       CreatorProfile      @relation(fields: [creatorId], references: [id])
-  podProvider   CreatorPodProvider? @relation(fields: [podProviderId], references: [id])
-  orders        Order[]
-  wishlistItems WishlistItem[]
-  cartItems     CartItem[]
+  creator             CreatorProfile       @relation(fields: [creatorId], references: [id])
+  podProvider         CreatorPodProvider?  @relation(fields: [podProviderId], references: [id])
+  orders              Order[]
+  wishlistItems       WishlistItem[]
+  cartItems           CartItem[]
+  views               ProductView[]
+  trendingScoreRecord ProductTrendingScore?
+}
+
+// ── Product View Tracking ──────────────────────────────────────────────────────
+
+model ProductView {
+  id         String   @id @default(cuid())
+  productId  String
+  sessionId  String
+  userId     String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@index([ipAddress, productId, createdAt])
+  @@index([sessionId, productId, createdAt])
+}
+
+// ── Trending Score Shadow Table ────────────────────────────────────────────────
+
+model ProductTrendingScore {
+  id           String   @id @default(cuid())
+  productId    String   @unique
+  version      Int
+  score        Float
+  breakdown    String   // JSON: { orders_7d, wishlist_7d, cart_7d, views_7d, raw, decay_applied, manualBoost, final, version }
+  calculatedAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
 // ── Order ─────────────────────────────────────────────────────────────────────

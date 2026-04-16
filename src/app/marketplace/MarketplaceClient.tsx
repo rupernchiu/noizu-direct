@@ -57,6 +57,7 @@ const SORT_OPTIONS = [
   { value: 'PRICE_ASC', label: 'Price: Low to High' },
   { value: 'PRICE_DESC', label: 'Price: High to Low' },
   { value: 'POPULAR', label: 'Most Popular' },
+  { value: 'TRENDING', label: 'Trending' },
 ] as const
 
 const TYPE_FILTERS = [

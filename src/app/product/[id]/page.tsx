@@ -8,6 +8,8 @@ import { ShareButton } from '@/components/ui/ShareButton'
 import { ImageGallery } from '@/components/ui/ImageGallery'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { SEO_CONFIG } from '@/lib/seo-config'
+import { auth } from '@/lib/auth'
+import { ProductViewTracker } from '@/components/ui/ProductViewTracker'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -106,6 +108,8 @@ export default async function ProductPage({ params }: PageProps) {
 
   if (!product) notFound()
 
+  const session = await auth()
+
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
   const inStock = !isPhysical || (product.stock != null && product.stock > 0)
@@ -155,6 +159,7 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background py-8 pb-24 md:pb-8">
       <JsonLd data={[productSchema, productBreadcrumbSchema]} />
+      <ProductViewTracker productId={product.id} userId={(session?.user as any)?.id} />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
         <nav className="mb-6 flex items-center gap-2 text-sm text-muted-foreground">

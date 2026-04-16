@@ -45,7 +45,10 @@ export default async function AdminProductsPage({
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
-      include: { creator: { select: { id: true, displayName: true } } },
+      include: {
+        creator: { select: { id: true, displayName: true } },
+        trendingScoreRecord: true,
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
@@ -82,6 +85,8 @@ export default async function AdminProductsPage({
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Category</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Created</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Trending</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Boost</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
@@ -101,14 +106,25 @@ export default async function AdminProductsPage({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(product.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-foreground text-xs">
+                    {product.trendingScore.toFixed(2)}
+                    {product.isTrendingSuppressed && <span className="ml-1 text-[10px] text-yellow-500">suppressed</span>}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">{product.manualBoost}</td>
                   <td className="px-4 py-3">
-                    <ProductAdminActions productId={product.id} isActive={product.isActive} />
+                    <ProductAdminActions
+                      productId={product.id}
+                      isActive={product.isActive}
+                      manualBoost={product.manualBoost}
+                      isTrendingSuppressed={product.isTrendingSuppressed}
+                      breakdown={product.trendingScoreRecord?.breakdown ?? null}
+                    />
                   </td>
                 </tr>
               ))}
               {products.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
                     {q || category || type || status || creator
                       ? 'No products match your filters.'
                       : 'No products yet.'}

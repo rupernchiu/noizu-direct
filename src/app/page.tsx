@@ -18,6 +18,7 @@ import FeaturedCreatorsSection from '@/components/sections/FeaturedCreatorsSecti
 import CategoriesSection from '@/components/sections/CategoriesSection'
 import NewDropsSection from '@/components/sections/NewDropsSection'
 import HowItWorksSection from '@/components/sections/HowItWorksSection'
+import TrendingSection from '@/components/sections/TrendingSection'
 import { AdminPopup } from '@/components/ui/AdminPopup'
 
 export default async function HomePage() {
@@ -101,6 +102,7 @@ export default async function HomePage() {
             return null
         }
       })}
+      <TrendingSection />
       <HowItWorksSection />
     </div>
   )

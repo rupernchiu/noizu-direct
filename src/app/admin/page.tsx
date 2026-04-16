@@ -2,12 +2,14 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { TrendingRecalcButton } from './TrendingRecalcButton'
+import { TRENDING_CONFIG } from '@/lib/trendingConfig'
 
 export default async function AdminOverviewPage() {
   const session = await auth()
   if (!session || (session.user as any).role !== 'ADMIN') redirect('/')
 
-  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders] = await Promise.all([
+  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders, topTrendingProducts] = await Promise.all([
     prisma.user.count(),
     prisma.creatorProfile.count(),
     prisma.transaction.aggregate({ where: { status: 'COMPLETED' }, _sum: { grossAmountUsd: true } }),
@@ -19,6 +21,12 @@ export default async function AdminOverviewPage() {
       },
       orderBy: { createdAt: 'desc' },
       take: 10,
+    }),
+    prisma.product.findMany({
+      where: { isActive: true, isTrendingSuppressed: false },
+      orderBy: { trendingScore: 'desc' },
+      take: 10,
+      select: { id: true, title: true, trendingScore: true, trendingUpdatedAt: true, trendingScoreRecord: { select: { breakdown: true, calculatedAt: true } } },
     }),
   ])
 
@@ -93,6 +101,49 @@ export default async function AdminOverviewPage() {
               {recentOrders.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No orders yet</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* Trending Products */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Trending Products</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Algorithm v{TRENDING_CONFIG.version} · Window: {TRENDING_CONFIG.windowDays}d · Decay: {TRENDING_CONFIG.decayFactor}
+            </p>
+          </div>
+          <TrendingRecalcButton />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Rank</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Title</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Score</th>
+                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Last Calculated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topTrendingProducts.map((product, i) => (
+                <tr key={product.id} className="border-b border-border last:border-0 hover:bg-surface">
+                  <td className="px-4 py-2 text-muted-foreground font-mono text-xs">#{i + 1}</td>
+                  <td className="px-4 py-2 text-foreground">{product.title}</td>
+                  <td className="px-4 py-2 text-foreground font-mono text-xs">{product.trendingScore.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-muted-foreground text-xs">
+                    {product.trendingScoreRecord?.calculatedAt
+                      ? new Date(product.trendingScoreRecord.calculatedAt).toLocaleString()
+                      : '—'}
+                  </td>
+                </tr>
+              ))}
+              {topTrendingProducts.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No trending data yet. Run recalculation.</td>
                 </tr>
               )}
             </tbody>

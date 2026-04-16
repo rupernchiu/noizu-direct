@@ -46,6 +46,9 @@ export async function GET(req: NextRequest) {
     case 'POPULAR':
       orderBy = [{ isPinned: 'desc' }, { order: 'asc' }, { createdAt: 'desc' }]
       break
+    case 'TRENDING':
+      orderBy = [{ isTrendingSuppressed: 'asc' }, { trendingScore: 'desc' }, { createdAt: 'desc' }]
+      break
     case 'NEWEST':
     default:
       orderBy = { createdAt: 'desc' }

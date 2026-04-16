@@ -23,6 +23,7 @@ interface ProductWithCreator {
   images: string
   isPinned: boolean
   isNew?: boolean
+  trendingScore?: number
   creator: {
     username: string
     displayName: string
@@ -392,6 +393,7 @@ export function CreatorPageTabs({
   ]
 
   const [activeTab, setActiveTab]       = useState<Tab>('shop')
+  const [shopSort, setShopSort]         = useState<'default' | 'popular'>('default')
   const [lightboxIdx, setLightboxIdx]   = useState<number | null>(null)
   const [loadedVideos, setLoadedVideos] = useState<Set<string>>(new Set())
   const [comingSoon, setComingSoon]     = useState(false)
@@ -406,6 +408,9 @@ export function CreatorPageTabs({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const sortedProducts   = shopSort === 'popular'
+    ? [...products].sort((a, b) => (b.trendingScore ?? 0) - (a.trendingScore ?? 0))
+    : products
   const pinnedProducts   = products.filter((p) =>  p.isPinned)
   const unpinnedProducts = products.filter((p) => !p.isPinned)
   const commissionInfo   = COMMISSION_STATUS_STYLES[commissionStatus] ?? COMMISSION_STATUS_STYLES.OPEN
@@ -449,13 +454,46 @@ export function CreatorPageTabs({
         {/* SHOP ────────────────────────────────────────────────────────────── */}
         {activeTab === 'shop' && (
           <section className="pt-10 animate-in fade-in duration-200">
-            <h2 className="mb-6 text-xl font-bold text-foreground">Shop</h2>
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-foreground">Shop</h2>
+              {products.length > 0 && (
+                <div className="flex rounded-lg border border-border bg-card p-0.5">
+                  {(['default', 'popular'] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      onClick={() => setShopSort(opt)}
+                      className={[
+                        'rounded-md px-3 py-1 text-xs font-medium transition-colors',
+                        shopSort === opt
+                          ? 'bg-primary text-white'
+                          : 'text-muted-foreground hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      {opt === 'default' ? 'Default' : 'Popular'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {products.length === 0 ? (
               <EmptyState
                 title="No products yet"
                 description="This creator hasn't listed any products yet. Check back soon!"
               />
+            ) : shopSort === 'popular' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                {sortedProducts.map((product) => (
+                  <div key={product.id} className="relative">
+                    {product.isNew && (
+                      <span className="absolute top-2 left-2 z-10 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                        NEW
+                      </span>
+                    )}
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
             ) : (
               <>
                 {pinnedProducts.length > 0 && (
