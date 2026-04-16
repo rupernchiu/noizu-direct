@@ -222,7 +222,7 @@ export function PostEditor({ post }: PostEditorProps) {
             />
             {coverImage && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={coverImage} alt={`${title} cover image`} className="w-full aspect-video object-cover rounded-lg" />
+              <img src={coverImage} alt="" className="w-full aspect-video object-cover rounded-lg" />
             )}
           </div>
 

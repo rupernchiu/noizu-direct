@@ -887,7 +887,7 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
           />
           <div>
             <span className="text-sm font-medium text-foreground">Absorb processing fee</span>
-            <p className="text-xs text-muted-foreground mt-0.5">Buyers won't see extra charges — the fee comes out of your payout instead.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Members won't see extra charges — the fee comes out of your payout instead.</p>
           </div>
         </label>
       </div>

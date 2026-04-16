@@ -159,8 +159,8 @@ export default function DisputeFormClient({
           <p className="text-sm font-semibold text-foreground mb-1">What went wrong?</p>
           {availableReasons.map(r => (
             <button
-              key={r.value}
               suppressHydrationWarning
+              key={r.value}
               onClick={() => setReason(r.value)}
               style={{
                 display: 'flex', alignItems: 'flex-start', gap: '12px',
@@ -185,7 +185,7 @@ export default function DisputeFormClient({
           ))}
           <div className="flex justify-end mt-2">
             <button
-              suppressHydrationWarning
+             suppressHydrationWarning
               onClick={() => setStep(2)}
               disabled={!reason}
               style={{ background: P, color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: 600, cursor: reason ? 'pointer' : 'not-allowed', opacity: reason ? 1 : 0.45 }}
@@ -203,7 +203,7 @@ export default function DisputeFormClient({
             <label className="text-sm font-semibold text-foreground block mb-1">Describe the issue</label>
             <p className="text-xs text-muted-foreground mb-3">Include what you expected vs what you received</p>
             <textarea
-              suppressHydrationWarning
+             suppressHydrationWarning
               value={description}
               onChange={e => setDescription(e.target.value.slice(0, 1000))}
               rows={6}
@@ -225,7 +225,7 @@ export default function DisputeFormClient({
           <div className="flex justify-between">
             <button suppressHydrationWarning onClick={() => setStep(1)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer', color: 'var(--foreground)' }}>← Back</button>
             <button
-              suppressHydrationWarning
+             suppressHydrationWarning
               onClick={() => setStep(3)}
               disabled={description.length < 50}
               style={{ background: P, color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: 600, cursor: description.length >= 50 ? 'pointer' : 'not-allowed', opacity: description.length >= 50 ? 1 : 0.45 }}
@@ -272,6 +272,7 @@ export default function DisputeFormClient({
               </p>
             </div>
             <input
+              suppressHydrationWarning
               ref={fileInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -288,7 +289,7 @@ export default function DisputeFormClient({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={ev.url} alt={ev.name} style={{ width: 72, height: 72, borderRadius: '8px', objectFit: 'cover', border: '1px solid var(--border)', display: 'block' }} />
                     <button
-                      suppressHydrationWarning
+                     suppressHydrationWarning
                       onClick={e => { e.stopPropagation(); setEvidence(prev => prev.filter((_, j) => j !== i)) }}
                       style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%', background: RED, border: 'none', color: '#fff', fontSize: '9px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, lineHeight: 1 }}
                     >✕</button>
@@ -303,7 +304,7 @@ export default function DisputeFormClient({
           <div className="flex justify-between">
             <button suppressHydrationWarning onClick={() => setStep(2)} style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer', color: 'var(--foreground)' }}>← Back</button>
             <button
-              suppressHydrationWarning
+             suppressHydrationWarning
               onClick={() => setStep(4)}
               style={{ background: P, color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
             >
@@ -365,7 +366,7 @@ export default function DisputeFormClient({
           {submitError && <p className="text-sm text-red-400">{submitError}</p>}
 
           <button
-            suppressHydrationWarning
+           suppressHydrationWarning
             onClick={() => void handleSubmit()}
             disabled={submitting}
             style={{ background: RED, color: '#fff', border: 'none', borderRadius: '10px', padding: '13px 24px', fontSize: '15px', fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}
@@ -375,7 +376,7 @@ export default function DisputeFormClient({
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <button
-              suppressHydrationWarning
+             suppressHydrationWarning
               onClick={() => setStep(3)}
               style={{ background: 'transparent', border: 'none', fontSize: '14px', cursor: 'pointer', color: 'var(--muted-foreground)', padding: 0 }}
             >

@@ -35,6 +35,7 @@ export function EditNameForm({ currentName }: { currentName: string }) {
       <div>
         <label className="block text-sm font-medium text-foreground mb-1">Display Name</label>
         <input
+          suppressHydrationWarning
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}

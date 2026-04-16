@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 
+const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/
+
 export async function PATCH(req: Request) {
   const session = await requireCreator()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -27,6 +29,25 @@ export async function PATCH(req: Request) {
     commissionDescription?: string | null
     commissionTerms?: string | null
     commissionPricing?: Array<{ tier: string; price: number; description: string }>
+    username?: string
+    themeColor?: string | null
+    notifPrefs?: Record<string, unknown>
+    sectionOrder?: Array<{ name: string; visible: boolean }>
+    featuredProductIds?: string[]
+  }
+
+  // Validate username if changing
+  if (body.username !== undefined) {
+    if (!USERNAME_REGEX.test(body.username)) {
+      return NextResponse.json(
+        { error: 'Username must be 3–30 characters: lowercase letters, numbers, underscores only' },
+        { status: 400 }
+      )
+    }
+    const existing = await prisma.creatorProfile.findFirst({ where: { username: body.username } })
+    if (existing && existing.userId !== userId) {
+      return NextResponse.json({ error: 'Username is already taken' }, { status: 409 })
+    }
   }
 
   const updated = await prisma.creatorProfile.update({
@@ -48,6 +69,11 @@ export async function PATCH(req: Request) {
       ...(body.commissionDescription !== undefined && { commissionDescription: body.commissionDescription }),
       ...(body.commissionTerms !== undefined && { commissionTerms: body.commissionTerms }),
       ...(body.commissionPricing !== undefined && { commissionPricing: JSON.stringify(body.commissionPricing) }),
+      ...(body.username !== undefined && { username: body.username }),
+      ...(body.themeColor !== undefined && { themeColor: body.themeColor }),
+      ...(body.notifPrefs !== undefined && { notifPrefs: JSON.stringify(body.notifPrefs) }),
+      ...(body.sectionOrder !== undefined && { sectionOrder: JSON.stringify(body.sectionOrder) }),
+      ...(body.featuredProductIds !== undefined && { featuredProductIds: JSON.stringify(body.featuredProductIds) }),
     },
   })
 

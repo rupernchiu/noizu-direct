@@ -36,6 +36,7 @@ export function AvatarUploadForm() {
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-3">
       <input
+        suppressHydrationWarning
         ref={inputRef}
         type="file"
         accept="image/*"

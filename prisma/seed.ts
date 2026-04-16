@@ -751,6 +751,61 @@ async function main() {
   });
   console.log('✅ Static pages created');
 
+  // ── CartItem seed data ─────────────────────────────────────────────────────
+  // Add sample cart for buyer1@test.com to demonstrate multi-creator checkout
+  const buyer1Cart = await prisma.user.findUnique({ where: { email: 'buyer1@test.com' } })
+  if (buyer1Cart) {
+    // Find products by creator
+    const sakuraProfileCart = await prisma.creatorProfile.findUnique({ where: { username: 'sakura_arts' } })
+    const otomeProfile = await prisma.creatorProfile.findUnique({ where: { username: 'otome_prints' } })
+
+    if (sakuraProfileCart) {
+      const sakuraProducts = await prisma.product.findMany({
+        where: { creatorId: sakuraProfileCart.id, isActive: true },
+        take: 2,
+        orderBy: { createdAt: 'asc' }
+      })
+      for (const product of sakuraProducts) {
+        await prisma.cartItem.upsert({
+          where: {
+            id: `cart_seed_${buyer1Cart.id}_${product.id}`
+          },
+          update: {},
+          create: {
+            id: `cart_seed_${buyer1Cart.id}_${product.id}`,
+            buyerId: buyer1Cart.id,
+            productId: product.id,
+            quantity: 1,
+          }
+        })
+      }
+      console.log(`✅ Cart: added ${Math.min(2, sakuraProducts.length)} items from sakura_arts`)
+    }
+
+    if (otomeProfile) {
+      const otomeProducts = await prisma.product.findMany({
+        where: { creatorId: otomeProfile.id, isActive: true },
+        take: 1,
+        orderBy: { createdAt: 'asc' }
+      })
+      for (const product of otomeProducts) {
+        await prisma.cartItem.upsert({
+          where: {
+            id: `cart_seed_${buyer1Cart.id}_${product.id}`
+          },
+          update: {},
+          create: {
+            id: `cart_seed_${buyer1Cart.id}_${product.id}`,
+            buyerId: buyer1Cart.id,
+            productId: product.id,
+            quantity: 1,
+          }
+        })
+      }
+      console.log(`✅ Cart: added ${Math.min(1, otomeProducts.length)} items from otome_prints`)
+    }
+  }
+
   // Active announcement
   const announcementCount = await prisma.announcement.count();
   if (announcementCount === 0) {
@@ -764,6 +819,71 @@ async function main() {
     });
   }
   console.log('✅ Announcement created');
+
+  // Storage pricing config
+  await prisma.storagePricingConfig.upsert({
+    where: { id: 'config' },
+    create: { id: 'config' },
+    update: {},
+  });
+  console.log('✅ StoragePricingConfig seeded');
+
+  // Storage policy CMS page
+  await prisma.page.upsert({
+    where: { slug: 'storage-policy' },
+    create: {
+      slug: 'storage-policy',
+      title: 'Storage Policy',
+      status: 'PUBLISHED',
+      showInFooter: true,
+      footerColumn: 'Support',
+      footerOrder: 99,
+      content: `# NOIZU-DIRECT STORAGE POLICY
+
+Last updated: April 2026
+
+## 1. Storage Allocations
+
+Every creator account includes 500MB free storage.
+
+- **Free Plan**: 500MB — included with all creator accounts
+- **Pro Plan**: 5GB — USD 9.99/month
+- **Studio Plan**: 20GB — USD 19.99/month
+
+One-time top-ups: +1GB (USD 2.99), +5GB (USD 9.99), +10GB (USD 17.99)
+
+## 2. What Counts Toward Storage
+
+Counts: product images, portfolio images, profile assets, message attachments, PDF uploads.
+Does NOT count: video embeds, digital product files sold to members, external URLs.
+
+## 3. Warnings & Enforcement
+
+You are notified at 80%, 95%, and 100% usage. At 100%, new uploads are blocked.
+
+## 4. Grace Period
+
+A 7-day grace period begins if storage remains over quota. Orphaned files may be auto-deleted after a 48-hour final warning. Active product images, portfolio, avatar, banner, logo, and files attached to orders are never auto-deleted.
+
+## 5. Outstanding Fees
+
+Day 1–7: Grace period. Day 7+: Payout requests blocked. Day 14+: New listings blocked. Day 30+: Account suspended.
+
+## 6. Plan Changes
+
+Upgrading takes effect immediately. Downgrading takes effect at end of billing period.
+
+## 7. Refunds
+
+Storage plan fees and one-time top-ups are non-refundable.
+
+## 8. Contact
+
+hello@noizu.direct`,
+    },
+    update: {},
+  });
+  console.log('✅ Storage policy page seeded');
 
   console.log('\n🎉 Seed complete!');
   console.log('   Admin:   admin@noizu.direct / admin123');

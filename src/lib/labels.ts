@@ -40,7 +40,7 @@ export const ESCROW_LABELS: Record<string, string> = {
 }
 
 export const ROLE_LABELS: Record<string, string> = {
-  BUYER: 'Buyer',
+  BUYER: 'Member',
   CREATOR: 'Creator',
   ADMIN: 'Admin',
 }

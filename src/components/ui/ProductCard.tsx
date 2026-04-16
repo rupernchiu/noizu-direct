@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Heart } from 'lucide-react'
+
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -133,33 +133,6 @@ export function ProductCard({ product, initialInWishlist }: ProductCardProps) {
             {TYPE_LABELS[product.type] ?? product.type}
           </span>
 
-          {/* Wishlist heart */}
-          <button
-            suppressHydrationWarning
-            type="button"
-            onClick={toggleWishlist}
-            disabled={wishlistLoading}
-            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
-            style={{
-              position: 'absolute', top: '8px', right: '8px',
-              width: '44px', height: '44px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'rgba(0,0,0,0.5)',
-              border: 'none', borderRadius: '50%',
-              cursor: 'pointer', backdropFilter: 'blur(4px)',
-              transition: 'transform 0.15s',
-              zIndex: 10,
-            }}
-            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.15)')}
-            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-          >
-            <Heart
-              size={15}
-              fill={inWishlist ? '#ef4444' : 'transparent'}
-              color={inWishlist ? '#ef4444' : '#fff'}
-            />
-          </button>
-
           {/* Buy Now overlay on hover (hidden on mobile — always shown) */}
           <div className="absolute inset-x-0 bottom-0 translate-y-full bg-gradient-to-t from-primary to-primary/80 py-2 text-center text-sm font-semibold text-white transition-transform duration-200 group-hover:translate-y-0 sm:block hidden">
             Buy Now
@@ -201,6 +174,23 @@ export function ProductCard({ product, initialInWishlist }: ProductCardProps) {
               </svg>
             )}
           </div>
+
+          {/* Wishlist pill */}
+          <button
+            suppressHydrationWarning
+            type="button"
+            onClick={toggleWishlist}
+            disabled={wishlistLoading}
+            aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+            className={cn(
+              'self-start rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors',
+              inWishlist
+                ? 'border-primary/50 bg-primary/10 text-primary'
+                : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground'
+            )}
+          >
+            {inWishlist ? '✓ Wishlisted' : '+ Wishlist'}
+          </button>
 
           {/* Price + mobile buy button */}
           <div className="mt-auto flex items-center justify-between pt-1">

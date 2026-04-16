@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { CreatorActions } from './CreatorActions'
+import { HealthActions } from './HealthActions'
 import { Pagination } from '@/components/ui/Pagination'
 
 export interface CreatorRow {
@@ -12,6 +13,8 @@ export interface CreatorRow {
   isVerified: boolean
   isTopCreator: boolean
   isSuspended: boolean
+  storeStatus: string
+  storeStatusReason: string | null
   badges: string[]
   totalSales: number   // stale stored count — not displayed; use orderCount instead
   orderCount: number   // live: fulfilled orders (PAID/COMPLETED/SHIPPED/PROCESSING)
@@ -31,9 +34,10 @@ interface AdminCreatorTableProps {
   total: number
   page: number
   perPage: number
+  healthTab: string
 }
 
-type BulkAction = 'verify' | 'suspend' | 'unsuspend'
+type BulkAction = 'verify' | 'suspend' | 'unsuspend' | 'archive'
 
 function getInitials(name: string): string {
   return name
@@ -43,7 +47,14 @@ function getInitials(name: string): string {
     .join('')
 }
 
-export function AdminCreatorTable({ creators, total, page, perPage }: AdminCreatorTableProps) {
+const HEALTH_BADGE: Record<string, { label: string; className: string }> = {
+  ACTIVE:  { label: 'Active',   className: 'bg-green-500/20 text-green-400' },
+  IDLE:    { label: 'Idle',     className: 'bg-border text-muted-foreground' },
+  HIATUS:  { label: 'Hiatus',   className: 'bg-amber-500/20 text-amber-400' },
+  FLAGGED: { label: 'Flagged',  className: 'bg-destructive/20 text-destructive' },
+}
+
+export function AdminCreatorTable({ creators, total, page, perPage, healthTab }: AdminCreatorTableProps) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -115,6 +126,15 @@ export function AdminCreatorTable({ creators, total, page, perPage }: AdminCreat
             >
               Unsuspend All
             </button>
+            {(healthTab === 'IDLE' || healthTab === 'HIATUS') && (
+              <button
+                onClick={() => runBulkAction('archive')}
+                disabled={bulkLoading}
+                className="px-3 py-1 rounded text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+              >
+                Archive Selected
+              </button>
+            )}
           </div>
           <button
             onClick={() => setSelected(new Set())}
@@ -191,9 +211,26 @@ export function AdminCreatorTable({ creators, total, page, perPage }: AdminCreat
                     </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{creator.user.email}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${creator.isSuspended ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                        {creator.isSuspended ? 'Suspended' : 'Active'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        {creator.isSuspended && (
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 w-fit">
+                            Suspended
+                          </span>
+                        )}
+                        {(() => {
+                          const badge = HEALTH_BADGE[creator.storeStatus] ?? HEALTH_BADGE.ACTIVE
+                          return (
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium w-fit ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          )
+                        })()}
+                        {creator.storeStatusReason && (
+                          <p className="text-muted-foreground text-[11px] max-w-[140px] truncate" title={creator.storeStatusReason}>
+                            {creator.storeStatusReason}
+                          </p>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-foreground">{creator._count.products}</td>
                     <td className="px-4 py-3 text-foreground text-right">{creator.orderCount}</td>
@@ -202,14 +239,21 @@ export function AdminCreatorTable({ creators, total, page, perPage }: AdminCreat
                       {new Date(creator.user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3">
-                      <CreatorActions
-                        creatorId={creator.id}
-                        isVerified={creator.isVerified}
-                        isTopCreator={creator.isTopCreator}
-                        isSuspended={creator.isSuspended}
-                        username={creator.username}
-                        badges={parsedBadges}
-                      />
+                      <div className="flex flex-col gap-2">
+                        <CreatorActions
+                          creatorId={creator.id}
+                          isVerified={creator.isVerified}
+                          isTopCreator={creator.isTopCreator}
+                          isSuspended={creator.isSuspended}
+                          username={creator.username}
+                          badges={parsedBadges}
+                        />
+                        <HealthActions
+                          creatorId={creator.id}
+                          displayName={creator.displayName}
+                          storeStatus={creator.storeStatus}
+                        />
+                      </div>
                     </td>
                   </tr>
                 )

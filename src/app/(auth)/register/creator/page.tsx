@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { Logo } from '@/components/ui/Logo'
 
 const CATEGORY_OPTIONS = [
   'Digital Art',
@@ -120,10 +121,9 @@ export default function CreatorRegisterPage() {
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-card rounded-2xl border border-border p-8 space-y-6">
         {/* Logo */}
-        <div className="text-center">
+        <div className="flex justify-center">
           <Link href="/">
-            <span className="text-2xl font-bold text-white">NOIZU</span>
-            <span className="text-2xl font-bold text-secondary">-DIRECT</span>
+            <Logo />
           </Link>
         </div>
 

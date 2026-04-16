@@ -11,11 +11,12 @@ export async function PATCH(req: Request) {
   const userId = (session.user as any).id as string
 
   const body = await req.json() as {
-    action: 'change_password' | 'change_slug' | 'delete_account'
+    action: 'change_password' | 'change_slug' | 'delete_account' | 'deactivate_store'
     currentPassword?: string
     newPassword?: string
     slug?: string
     confirmEmail?: string
+    confirmText?: string
   }
 
   if (body.action === 'change_password') {
@@ -62,18 +63,30 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ username: updated.username })
   }
 
-  if (body.action === 'delete_account') {
-    const { confirmEmail } = body
-    const sessionEmail = (session.user as any).email as string
+  if (body.action === 'deactivate_store') {
+    await prisma.creatorProfile.update({
+      where: { userId },
+      data: { isSuspended: true },
+    })
+    return NextResponse.json({ deactivated: true })
+  }
 
-    if (!confirmEmail || confirmEmail !== sessionEmail) {
-      return NextResponse.json({ error: 'Email confirmation does not match' }, { status: 400 })
+  if (body.action === 'delete_account') {
+    const { confirmText } = body
+    if (!confirmText || confirmText !== 'DELETE') {
+      return NextResponse.json({ error: 'You must type DELETE to confirm' }, { status: 400 })
     }
 
-    // TODO: Implement actual account deletion or soft-delete.
-    // Hard delete would be: await prisma.user.delete({ where: { id: userId } })
-    // Cascade relations are defined in the Prisma schema and will handle cleanup.
-    // Returning stub response until deletion flow is confirmed safe for production.
+    // Soft-delete: mark user role as DELETED and suspend creator profile
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: 'DELETED' },
+    })
+    await prisma.creatorProfile.updateMany({
+      where: { userId },
+      data: { isSuspended: true },
+    })
+
     return NextResponse.json({ deleted: true })
   }
 

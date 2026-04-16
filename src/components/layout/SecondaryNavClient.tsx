@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -164,14 +165,25 @@ function NavTrigger({
   const isWCS = item.label === 'WCS Malaysia'
   const isSell = item.label === 'Start Selling'
 
+  const { data: session } = useSession()
+  const user = session?.user as { role?: string } | undefined
+
   const content = parseSafe<unknown>(item.dropdownContent, {})
 
   // Start Selling → pill button
   if (isSell) {
+    let startSellingHref = item.url // default from DB
+    if (session) {
+      const role = (session.user as any)?.role
+      if (role === 'CREATOR') startSellingHref = '/dashboard'
+      else if (role === 'ADMIN') startSellingHref = '/admin'
+      else startSellingHref = '/start-selling'
+    }
+
     return (
       <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
         <Link
-          href={item.url}
+          href={startSellingHref}
           style={{
             display: 'flex', alignItems: 'center',
             fontSize: '13px', fontWeight: 600,

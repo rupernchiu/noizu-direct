@@ -2,8 +2,9 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { BuyButton } from '@/components/ui/BuyButton'
+import { AddToCartButton } from '@/components/ui/AddToCartButton'
 import { WishlistButton } from '@/components/ui/WishlistButton'
+import { ShareButton } from '@/components/ui/ShareButton'
 import { ImageGallery } from '@/components/ui/ImageGallery'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { SEO_CONFIG } from '@/lib/seo-config'
@@ -26,7 +27,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = `${product.description ? product.description.slice(0, 100) + '. ' : ''}By ${product.creator.displayName}. ${price}. ${delivery}`
   const title = `${product.title} by ${product.creator.displayName}`
   const url = `${SEO_CONFIG.siteUrl}/product/${id}`
-  const ogImage = images[0] || SEO_CONFIG.defaultOgImage
+
+  // Images must be absolute URLs for Open Graph scrapers
+  const abs = (src: string) =>
+    src.startsWith('http') ? src : `${SEO_CONFIG.siteUrl}${src.startsWith('/') ? '' : '/'}${src}`
+  const ogImages = images.slice(0, 4).map((img, i) => ({
+    url: abs(img),
+    alt: `${product.title} image ${i + 1}`,
+  }))
+  const ogImage = ogImages[0]?.url ?? abs(SEO_CONFIG.defaultOgImage)
 
   return {
     title,
@@ -37,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description: description.slice(0, 160),
       url,
       type: 'website',
-      images: images.slice(0, 4).map((img, i) => ({ url: img, alt: `${product.title} image ${i + 1}` })),
+      images: ogImages,
     },
     twitter: {
       card: 'summary_large_image',
@@ -100,6 +109,13 @@ export default async function ProductPage({ params }: PageProps) {
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
   const inStock = !isPhysical || (product.stock != null && product.stock > 0)
+
+  const sizeVariants: string[] = (() => {
+    try { return JSON.parse((product as any).sizeVariants ?? '[]') } catch { return [] }
+  })()
+  const colorVariants: { name: string; mockupImage: string }[] = (() => {
+    try { return JSON.parse((product as any).colorVariants ?? '[]') } catch { return [] }
+  })()
 
   const categoryLabel = CATEGORY_LABELS[product.category] || product.category
   const jsonLdInStock = product.isActive && (product.type === 'DIGITAL' || product.type === 'POD' || (product.stock !== null && product.stock > 0))
@@ -253,7 +269,7 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> Accessible from your Downloads page
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Buyer Protection covers this purchase
+                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
                   </li>
                 </ul>
               )}
@@ -269,7 +285,7 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> 14-day dispute window after shipping
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Buyer Protection covers this purchase
+                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
                   </li>
                 </ul>
               )}
@@ -285,22 +301,25 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> Payment held in escrow until delivery
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Buyer Protection covers this purchase
+                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
                   </li>
                 </ul>
               )}
             </div>
 
-            {/* Button row */}
-            <div className="flex gap-3">
-              {inStock ? (
-                <BuyButton productId={product.id} className="flex-1" />
-              ) : (
-                <button disabled className="flex-1 py-3.5 bg-border text-muted-foreground font-semibold rounded-xl cursor-not-allowed text-lg">
-                  Out of Stock
-                </button>
-              )}
-              <WishlistButton productId={product.id} variant="icon" />
+            {/* Button rows */}
+            <div className="flex flex-col gap-2">
+              <AddToCartButton
+                productId={product.id}
+                productType={product.type}
+                stock={product.stock}
+                sizeVariants={sizeVariants}
+                colorVariants={colorVariants}
+              />
+              <div className="flex gap-2">
+                <WishlistButton productId={product.id} variant="pill" className="flex-1" />
+                <ShareButton productTitle={product.title} creatorName={product.creator.displayName} firstImage={images[0] ?? null} className="flex-1" />
+              </div>
             </div>
           </div>
         </div>
@@ -313,13 +332,14 @@ export default async function ProductPage({ params }: PageProps) {
           <span className="text-xs text-muted-foreground block">+ 2.5% fee</span>
         </div>
         <WishlistButton productId={product.id} />
-        {inStock ? (
-          <BuyButton productId={product.id} className="flex-1" />
-        ) : (
-          <button disabled className="flex-1 rounded-xl bg-border text-muted-foreground font-semibold py-3 cursor-not-allowed">
-            Out of Stock
-          </button>
-        )}
+        <AddToCartButton
+          productId={product.id}
+          productType={product.type}
+          stock={product.stock}
+          sizeVariants={sizeVariants}
+          colorVariants={colorVariants}
+          className="flex-1"
+        />
       </div>
     </div>
   )

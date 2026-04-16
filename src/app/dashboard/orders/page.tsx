@@ -3,8 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import { OrdersActions } from './OrdersActions'
-import { SearchBar } from '@/components/ui/SearchBar'
-import { FilterSelect } from '@/components/ui/FilterSelect'
+import { OrdersFilters } from './OrdersFilters'
 import { Pagination } from '@/components/ui/Pagination'
 import { ShoppingBag } from 'lucide-react'
 import { STATUS_LABELS, TYPE_LABELS } from '@/lib/labels'
@@ -14,87 +13,129 @@ const PER_PAGE = 10
 type OrderStatus = 'PENDING' | 'PAID' | 'PROCESSING' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
 
 const statusStyles: Record<OrderStatus, string> = {
-  PENDING: 'bg-yellow-500/20 text-yellow-400',
-  PAID: 'bg-blue-500/20 text-blue-400',
+  PENDING:    'bg-yellow-500/20 text-yellow-400',
+  PAID:       'bg-blue-500/20 text-blue-400',
   PROCESSING: 'bg-orange-500/20 text-orange-400',
-  SHIPPED: 'bg-primary/20 text-primary',
-  COMPLETED: 'bg-secondary/20 text-secondary',
-  CANCELLED: 'bg-red-500/20 text-red-400',
-  REFUNDED: 'bg-muted-foreground/20 text-muted-foreground',
+  SHIPPED:    'bg-primary/20 text-primary',
+  COMPLETED:  'bg-secondary/20 text-secondary',
+  CANCELLED:  'bg-red-500/20 text-red-400',
+  REFUNDED:   'bg-muted-foreground/20 text-muted-foreground',
 }
-
-const STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'PAID', label: 'Paid' },
-  { value: 'PROCESSING', label: 'Processing' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-]
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(date)
 }
 
+function dateRangeSince(range: string): Date | null {
+  const now = new Date()
+  if (range === 'week')   { const d = new Date(now); d.setDate(d.getDate() - 7);   return d }
+  if (range === 'month')  { const d = new Date(now); d.setDate(d.getDate() - 30);  return d }
+  if (range === '3month') { const d = new Date(now); d.setDate(d.getDate() - 90);  return d }
+  return null
+}
+
+function sortOrder(sort: string): { createdAt?: 'asc' | 'desc'; amountUsd?: 'asc' | 'desc'; fulfillmentDeadline?: 'asc' } {
+  if (sort === 'oldest')   return { createdAt: 'asc' }
+  if (sort === 'high')     return { amountUsd: 'desc' }
+  if (sort === 'low')      return { amountUsd: 'asc' }
+  if (sort === 'deadline') return { fulfillmentDeadline: 'asc' }
+  return { createdAt: 'desc' }
+}
+
 export default async function DashboardOrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; status?: string }>
+  searchParams: Promise<{
+    q?:      string
+    page?:   string
+    status?: string
+    type?:   string
+    date?:   string
+    escrow?: string
+    sort?:   string
+  }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
   if ((session.user as any).role !== 'CREATOR') redirect('/')
   const userId = (session.user as any).id
 
-  const params = await searchParams
-  const q = params.q?.trim() ?? ''
-  const page = Math.max(1, parseInt(params.page ?? '1') || 1)
-  const statusFilter = params.status ?? ''
+  const params  = await searchParams
+  const q       = params.q?.trim() ?? ''
+  const page    = Math.max(1, parseInt(params.page ?? '1') || 1)
+  const status  = params.status ?? ''
+  const type    = params.type   ?? ''
+  const date    = params.date   ?? ''
+  const escrow  = params.escrow ?? ''
+  const sort    = params.sort   ?? 'newest'
 
-  const where: any = { creatorId: userId }
+  // ── Base where (shared across count queries + main query) ───────────────────
+  const since = dateRangeSince(date)
+
+  const baseWhere: any = { creatorId: userId }
   if (q) {
-    where.OR = [
+    baseWhere.OR = [
       { id: { contains: q } },
-      { buyer: { name: { contains: q } } },
-      { buyer: { email: { contains: q } } },
+      { product: { title: { contains: q } } },
     ]
   }
-  if (statusFilter) where.status = statusFilter
+  if (type)   baseWhere.product = { ...baseWhere.product, type }
+  if (escrow) baseWhere.escrowStatus = escrow
+  if (since)  baseWhere.createdAt = { gte: since }
+
+  // ── Status counts (for tab badges) — apply base but NOT status filter ───────
+  const statusGroups = await prisma.order.groupBy({
+    by: ['status'],
+    where: baseWhere,
+    _count: { _all: true },
+  })
+  const allCount = statusGroups.reduce((s, g) => s + g._count._all, 0)
+  const counts: Record<string, number> = { ALL: allCount }
+  for (const g of statusGroups) counts[g.status] = g._count._all
+
+  // ── Main query ────────────────────────────────────────────────────────────────
+  const fullWhere = { ...baseWhere }
+  if (status) fullWhere.status = status
 
   const [total, orders] = await Promise.all([
-    prisma.order.count({ where }),
+    prisma.order.count({ where: fullWhere }),
     prisma.order.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
+      where: fullWhere,
+      orderBy: sortOrder(sort),
       include: {
-        buyer: { select: { name: true, email: true } },
+        buyer:   { select: { name: true, email: true } },
         product: { select: { title: true, type: true } },
       },
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
+      skip:  (page - 1) * PER_PAGE,
+      take:  PER_PAGE,
     }),
   ])
+
+  const hasFilters = !!(q || status || type || date || escrow)
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Orders</h1>
-        <p className="text-sm text-muted-foreground mt-1">{total} order{total !== 1 ? 's' : ''}</p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <Suspense fallback={null}>
-          <SearchBar placeholder="Search by order ID or buyer..." className="min-w-48 flex-1" />
-          <FilterSelect paramName="status" options={STATUS_OPTIONS} allLabel="All Statuses" className="w-40" />
-        </Suspense>
-      </div>
+      <Suspense fallback={null}>
+        <OrdersFilters
+          counts={counts}
+          total={total}
+          page={page}
+          perPage={PER_PAGE}
+        />
+      </Suspense>
 
       {orders.length === 0 ? (
         <div className="bg-surface rounded-xl border border-border px-5 py-12 text-center">
           <ShoppingBag className="size-10 text-muted-foreground/40 mx-auto mb-3" />
           <h3 className="text-base font-semibold text-foreground mb-1">No orders found</h3>
           <p className="text-sm text-muted-foreground">
-            {q || statusFilter ? 'No orders match your filters.' : 'Orders will appear here when fans purchase your products.'}
+            {hasFilters
+              ? 'No orders match your filters. Try adjusting your search or filters.'
+              : 'Orders will appear here when fans purchase your products.'}
           </p>
         </div>
       ) : (
@@ -103,7 +144,7 @@ export default async function DashboardOrdersPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-5 py-3 text-left font-medium">Buyer</th>
+                  <th className="px-5 py-3 text-left font-medium">Member</th>
                   <th className="px-5 py-3 text-left font-medium">Product</th>
                   <th className="px-5 py-3 text-left font-medium">Amount</th>
                   <th className="px-5 py-3 text-left font-medium">Status</th>

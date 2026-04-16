@@ -1,59 +1,136 @@
+// SECURITY: Identity documents stored in private-uploads/
+// outside of public directory. Never accessible without
+// authentication. Admin-only access for identity category.
+//
+// PUBLIC files:  /public/uploads/      → served directly by Next.js
+// PRIVATE files: /private-uploads/     → served via /api/files/
+//                                         with auth check
+
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { writeFileSync, mkdirSync } from 'fs'
+import { writeFile, mkdir } from 'fs/promises'
 import { join, extname } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import sharp from 'sharp'
 
 const SVG_MIME = 'image/svg+xml'
 
+const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment'])
+
+// Size limits in bytes per category
+const SIZE_LIMITS: Record<string, number> = {
+  identity:            10 * 1024 * 1024,
+  dispute_evidence:     5 * 1024 * 1024,
+  message_attachment:   5 * 1024 * 1024,
+  product_image:        5 * 1024 * 1024,
+  portfolio:            5 * 1024 * 1024,
+  profile_avatar:       2 * 1024 * 1024,
+  profile_banner:       5 * 1024 * 1024,
+  profile_logo:         2 * 1024 * 1024,
+  blog_cover:           5 * 1024 * 1024,
+  media:                5 * 1024 * 1024,
+  other:                5 * 1024 * 1024,
+}
+
+const ALLOWED_IMAGE_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+])
+const ALLOWED_TYPES = new Set([...ALLOWED_IMAGE_TYPES, 'application/pdf'])
+
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-  const formData = await req.formData()
+  let formData: FormData
+  try {
+    formData = await req.formData()
+  } catch {
+    return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
+  }
+
   const file = formData.get('file') as File | null
-  const subdir = (formData.get('subdir') as string) ?? 'products'
+  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
 
-  if (!file) return NextResponse.json({ error: 'No file' }, { status: 400 })
+  // category drives routing; fall back to subdir for backward compat
+  const category = (formData.get('category') as string | null) || 'other'
+  const subdir   = (formData.get('subdir')   as string | null) || category.replace(/_/g, '-')
 
-  const dir = join(process.cwd(), 'public', 'uploads', subdir)
-  mkdirSync(dir, { recursive: true })
+  // Validate MIME type
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json(
+      { error: 'Invalid file type. Allowed: JPG, PNG, WebP, GIF, SVG, PDF' },
+      { status: 400 },
+    )
+  }
 
-  const isSvg = file.type === SVG_MIME
+  // Validate size
+  const maxSize = SIZE_LIMITS[category] ?? SIZE_LIMITS.other
+  if (file.size > maxSize) {
+    const maxMB = Math.round(maxSize / 1024 / 1024)
+    return NextResponse.json(
+      { error: `File too large. Maximum size for ${category}: ${maxMB}MB` },
+      { status: 400 },
+    )
+  }
+
+  const isPrivate = PRIVATE_CATEGORIES.has(category)
+  const isPdf     = file.type === 'application/pdf'
+  const isSvg     = file.type === SVG_MIME
+  const isImage   = ALLOWED_IMAGE_TYPES.has(file.type)
+
   const rawBuffer = Buffer.from(await file.arrayBuffer())
 
   let finalBuffer: Buffer
   let finalExt: string
   let mimeType: string
-  let width: number | undefined
-  let height: number | undefined
 
-  if (isSvg) {
-    // Keep SVG as-is
+  if (isPdf || isSvg || isPrivate) {
+    // Keep originals: PDFs always, SVGs always, and identity docs for legibility
     finalBuffer = rawBuffer
-    finalExt = '.svg'
-    mimeType = SVG_MIME
+    finalExt    = `.${extname(file.name).slice(1).toLowerCase() || (isPdf ? 'pdf' : 'svg')}`
+    mimeType    = file.type
+  } else if (isImage) {
+    // Convert public images to WebP
+    try {
+      finalBuffer = await sharp(rawBuffer).webp({ quality: 88 }).toBuffer()
+      finalExt    = '.webp'
+      mimeType    = 'image/webp'
+    } catch {
+      // Sharp failed — save original
+      finalBuffer = rawBuffer
+      finalExt    = extname(file.name) || '.jpg'
+      mimeType    = file.type
+    }
   } else {
-    // Convert everything else to WebP
-    const img = sharp(rawBuffer)
-    const meta = await img.metadata()
-    width = meta.width
-    height = meta.height
-    finalBuffer = await img.webp({ quality: 88 }).toBuffer()
-    finalExt = '.webp'
-    mimeType = 'image/webp'
+    finalBuffer = rawBuffer
+    finalExt    = extname(file.name) || '.bin'
+    mimeType    = file.type
   }
 
   const filename = `${uuidv4()}${finalExt}`
-  writeFileSync(join(dir, filename), finalBuffer)
+  const folder   = isPrivate ? subdir : subdir
+
+  let savePath: string
+  let publicUrl: string
+
+  if (isPrivate) {
+    savePath  = join(process.cwd(), 'private-uploads', folder, filename)
+    publicUrl = `/api/files/${folder}/${filename}`
+  } else {
+    savePath  = join(process.cwd(), 'public', 'uploads', folder, filename)
+    publicUrl = `/uploads/${folder}/${filename}`
+  }
+
+  await mkdir(join(process.cwd(), isPrivate ? 'private-uploads' : join('public', 'uploads'), folder), { recursive: true })
+  await writeFile(savePath, finalBuffer)
 
   return NextResponse.json({
-    url: `/uploads/${subdir}/${filename}`,
+    url:       publicUrl,
     filename,
     mimeType,
-    fileSize: finalBuffer.length,
-    width: width ?? null,
-    height: height ?? null,
+    fileSize:  finalBuffer.length,
+    isPrivate,
   })
 }

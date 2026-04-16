@@ -1,0 +1,15 @@
+
+> noizu-direct@0.1.0 dev
+> next dev -p 7000
+
+⨯ Failed to start server
+Error: listen EADDRINUSE: address already in use :::7000
+    at <unknown> (Error: listen EADDRINUSE: address already in use :::7000)
+    at new Promise (<anonymous>) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 7000
+}
+[?25h

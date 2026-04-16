@@ -87,15 +87,43 @@ export default async function OrdersPage({
       orderBy: { createdAt: 'desc' },
       include: {
         product: {
-          select: { id: true, title: true, images: true, type: true, category: true },
+          select: { id: true, title: true, images: true, type: true, category: true, creator: { select: { displayName: true } } },
         },
-        creator: { select: { name: true } },
         dispute: { select: { id: true } },
       },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
   ])
+
+  // Group orders by cartSessionId
+  // Orders sharing the same non-null cartSessionId that appears >1 time are grouped
+  type OrderItem = typeof orders[number] & { cartSessionId?: string | null }
+  const sessionCounts: Record<string, number> = {}
+  for (const o of orders) {
+    const sid = (o as OrderItem).cartSessionId
+    if (sid) sessionCounts[sid] = (sessionCounts[sid] ?? 0) + 1
+  }
+
+  type RenderGroup =
+    | { kind: 'solo'; order: typeof orders[number] }
+    | { kind: 'group'; sessionId: string; groupDate: Date; orders: typeof orders }
+
+  const renderItems: RenderGroup[] = []
+  const seenGroups = new Set<string>()
+
+  for (const o of orders) {
+    const sid = (o as OrderItem).cartSessionId
+    if (sid && sessionCounts[sid] > 1) {
+      if (!seenGroups.has(sid)) {
+        seenGroups.add(sid)
+        const groupOrders = orders.filter(x => (x as OrderItem).cartSessionId === sid)
+        renderItems.push({ kind: 'group', sessionId: sid, groupDate: groupOrders[0].createdAt, orders: groupOrders })
+      }
+    } else {
+      renderItems.push({ kind: 'solo', order: o })
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -130,7 +158,142 @@ export default async function OrdersPage({
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order) => {
+          {renderItems.map((item) => {
+            if (item.kind === 'group') {
+              return (
+                <div key={item.sessionId} className="rounded-xl bg-card border border-border overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border bg-surface">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Checkout on {formatDate(item.groupDate)} · {item.orders.length} orders
+                    </p>
+                  </div>
+                  {item.orders.map((order) => {
+                    const images = (() => {
+                      try { return JSON.parse(order.product.images) as string[] }
+                      catch { return [] }
+                    })()
+                    const thumb = images[0] ?? null
+                    const statusClass = statusStyles[order.status as OrderStatus] ?? 'bg-border text-muted-foreground'
+                    const isDigital = order.product.type === 'DIGITAL'
+                    const isPhysical = order.product.type === 'PHYSICAL'
+                    const canDownload = order.status === 'PAID' && isDigital && order.downloadToken
+
+                    const eligibility = getDisputeEligibility({
+                      product: { type: order.product.type },
+                      status: order.status,
+                      createdAt: order.createdAt,
+                      trackingAddedAt: order.trackingAddedAt,
+                      dispute: order.dispute,
+                    })
+
+                    return (
+                      <div key={order.id} className="bg-surface p-4 flex gap-4 items-start border-b border-border last:border-b-0">
+                        <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
+                          {thumb ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={thumb} alt={order.product.title} className="w-full h-full object-cover" />
+                          ) : (
+                            <Package className="size-6 text-muted-foreground/40" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{order.product.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
+                        </div>
+
+                        <div className="shrink-0 flex flex-col items-end gap-2">
+                          <span className="text-sm font-semibold text-foreground">
+                            {formatAmount(order.displayAmount, order.displayCurrency, order.amountUsd)}
+                          </span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                            {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</span>
+
+                          <Link href={`/account/orders/${order.id}`} className="inline-flex items-center px-2 py-1 rounded text-xs text-muted-foreground hover:text-primary transition-colors">
+                            View →
+                          </Link>
+
+                          {canDownload && (
+                            <Link
+                              href={`/download/${order.downloadToken}`}
+                              className="inline-flex items-center px-3 py-1 rounded-lg bg-primary hover:bg-primary/90 text-white text-xs font-medium transition-colors"
+                            >
+                              Download
+                            </Link>
+                          )}
+
+                          {order.status === 'PAID' && isPhysical && (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                              (order as any).trackingNumber
+                                ? 'bg-border text-foreground cursor-pointer hover:bg-card'
+                                : 'bg-card text-muted-foreground cursor-not-allowed'
+                            }`}>
+                              Track order
+                            </span>
+                          )}
+
+                          {/* Dispute actions — always shown for PHYSICAL and POD, never on terminal statuses */}
+                          {(order.product.type === 'PHYSICAL' || order.product.type === 'POD') &&
+                           !['COMPLETED', 'CANCELLED', 'REFUNDED'].includes(order.status) && (
+                            <>
+                              {eligibility.status === 'has_dispute' && (
+                                <Link
+                                  href={`/account/disputes/${eligibility.disputeId}`}
+                                  className="inline-flex items-center px-3 py-1 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-card transition-colors"
+                                >
+                                  View Dispute
+                                </Link>
+                              )}
+                              {eligibility.status === 'eligible' && (
+                                <Link
+                                  href={`/account/orders/${order.id}/dispute`}
+                                  className="inline-flex items-center px-3 py-1 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs font-medium transition-colors"
+                                >
+                                  Raise Dispute
+                                </Link>
+                              )}
+                              {eligibility.status === 'not_yet' && (
+                                <span className="text-xs text-muted-foreground">
+                                  Dispute in {eligibility.availableInDays}d
+                                </span>
+                              )}
+                              {eligibility.status === 'expired' && (
+                                <span className="text-xs text-muted-foreground line-through opacity-50">
+                                  Dispute closed
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {/* DIGITAL dispute — only shown when within 7-day window */}
+                          {order.product.type === 'DIGITAL' && eligibility.status === 'eligible' && (
+                            <Link
+                              href={`/account/orders/${order.id}/dispute`}
+                              className="inline-flex items-center px-3 py-1 rounded-lg border border-red-500 text-red-500 hover:bg-red-500 hover:text-white text-xs font-medium transition-colors"
+                            >
+                              Raise Dispute
+                            </Link>
+                          )}
+                          {order.product.type === 'DIGITAL' && eligibility.status === 'has_dispute' && (
+                            <Link
+                              href={`/account/disputes/${eligibility.disputeId}`}
+                              className="inline-flex items-center px-3 py-1 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:bg-card transition-colors"
+                            >
+                              View Dispute
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            }
+
+            // Solo (ungrouped) order
+            const order = item.order
             const images = (() => {
               try { return JSON.parse(order.product.images) as string[] }
               catch { return [] }
@@ -162,7 +325,7 @@ export default async function OrdersPage({
 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">{order.product.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">by {order.creator.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
                 </div>
 

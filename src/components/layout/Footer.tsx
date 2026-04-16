@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { Logo } from '@/components/ui/Logo'
 
 const COLUMNS = ['Marketplace', 'Creators', 'Support'] as const
 
@@ -44,8 +45,7 @@ export default async function Footer() {
           {/* Logo + tagline */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center mb-3">
-              <span className="text-xl font-bold text-white">NOIZU</span>
-              <span className="text-xl font-bold text-secondary">-DIRECT</span>
+              <Logo />
             </Link>
             <p className="text-sm text-muted-foreground">Your fave creators. Direct to you.</p>
           </div>

@@ -68,7 +68,7 @@ export default function HeroSection({ content, stats }: HeroSectionProps) {
           {[
             { value: stats ? formatStat(stats.creators) : '500+', label: 'Creators' },
             { value: stats ? formatStat(stats.products) : '10K+', label: 'Products' },
-            { value: stats ? formatStat(stats.buyers) : '50K+', label: 'Buyers' },
+            { value: stats ? formatStat(stats.buyers) : '50K+', label: 'Members' },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl font-bold text-foreground">{stat.value}</div>

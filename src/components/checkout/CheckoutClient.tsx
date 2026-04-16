@@ -149,7 +149,7 @@ export function CheckoutClient({
       <div className="rounded-xl bg-success/5 border border-success/20 p-4 flex items-center gap-3">
         <Shield size={20} style={{ color: 'var(--success)', flexShrink: 0 }} />
         <div>
-          <p className="text-sm font-semibold text-foreground">NOIZU-DIRECT Buyer Protection</p>
+          <p className="text-sm font-semibold text-foreground">NOIZU-DIRECT Member Protection</p>
           <p className="text-xs text-muted-foreground">Your payment is held securely until you receive your order.</p>
         </div>
       </div>

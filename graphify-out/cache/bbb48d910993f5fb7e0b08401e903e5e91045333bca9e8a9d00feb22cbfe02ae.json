@@ -1,0 +1,1 @@
+{"nodes": [{"id": "api_messages_post", "label": "Send Message API", "file_type": "code", "source_file": "src/app/api/messages/route.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

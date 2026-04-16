@@ -374,8 +374,8 @@ export function CreatorPageTabs({
   discoveryVideos,
   discoverySupport,
 }: CreatorPageTabsProps) {
-  const showPortfolio  = portfolioItems.length > 0
-  const showCommission = commissionStatus !== 'CLOSED' || Boolean(commissionTerms) || commissionPricing.length > 0
+  const showPortfolio  = true
+  const showCommission = true
   const showVideos     = videos.length > 0
   const activeGoals    = supportGoals.filter(g => g.status === 'ACTIVE' || g.status === 'COMPLETED')
   const showSupport    = supportTiers.length > 0 || activeGoals.length > 0 || (supportGift?.isActive ?? false)
@@ -586,7 +586,13 @@ export function CreatorPageTabs({
           <section className="pt-10 animate-in fade-in duration-200">
             <h2 className="mb-6 text-xl font-bold text-foreground">Portfolio</h2>
 
-            {/* Masonry — CSS columns */}
+            {portfolioItems.length === 0 ? (
+              <EmptyState
+                title="No portfolio items yet"
+                description="This creator hasn't added any portfolio items yet. Check back soon!"
+              />
+            ) : (
+            /* Masonry — CSS columns */
             <div style={{ columnCount: 2, columnGap: '12px' }}>
               <style>{`
                 @media (min-width: 640px) { .portfolio-masonry { column-count: 3 !important; } }
@@ -622,6 +628,7 @@ export function CreatorPageTabs({
                 </div>
               ))}
             </div>
+            )}
             <PortfolioDiscovery items={discoveryPortfolio} />
           </section>
         )}

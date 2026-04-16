@@ -176,6 +176,7 @@ export default async function StatementsPage({
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">Date Range</label>
             <select
+              suppressHydrationWarning
               name="range"
               defaultValue={rangeKey}
               className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -191,12 +192,13 @@ export default async function StatementsPage({
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">Status</label>
             <select
+              suppressHydrationWarning
               name="status"
               defaultValue={statusFilter}
               className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {statusOptions.map(opt => (
-                <option key={opt.value} value={opt.value} selected={statusFilter === opt.value}>
+                <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
@@ -206,12 +208,13 @@ export default async function StatementsPage({
           <div className="flex flex-col gap-1">
             <label className="text-xs font-medium text-muted-foreground">Product Type</label>
             <select
+              suppressHydrationWarning
               name="type"
               defaultValue={typeFilter}
               className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             >
               {typeOptions.map(opt => (
-                <option key={opt.value} value={opt.value} selected={typeFilter === opt.value}>
+                <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
               ))}
@@ -219,6 +222,7 @@ export default async function StatementsPage({
           </div>
 
           <button
+            suppressHydrationWarning
             type="submit"
             className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium"
           >

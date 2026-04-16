@@ -50,7 +50,7 @@ export default function FeesPage() {
               <tr className="border-b border-border">
                 <td className="px-4 py-3 text-foreground font-medium">Processing fee</td>
                 <td className="px-4 py-3 text-foreground font-bold">2.5%</td>
-                <td className="px-4 py-3 text-muted-foreground">Buyer</td>
+                <td className="px-4 py-3 text-muted-foreground">Member</td>
                 <td className="px-4 py-3 text-muted-foreground">At checkout</td>
               </tr>
               <tr className="border-b border-border">
@@ -69,10 +69,10 @@ export default function FeesPage() {
           </table>
         </div>
 
-        <h2 className="text-xl font-semibold text-foreground mb-3">Buyer Fees</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-3">Member Fees</h2>
         <p className="text-muted-foreground mb-6">
-          Buyers pay a <strong className="text-foreground">2.5% processing fee</strong> added at checkout.
-          This covers payment processing costs. There are no hidden fees or subscription charges for buyers.
+          Members pay a <strong className="text-foreground">2.5% processing fee</strong> added at checkout.
+          This covers payment processing costs. There are no hidden fees or subscription charges for members.
         </p>
 
         <h2 className="text-xl font-semibold text-foreground mb-3">Creator Fees</h2>

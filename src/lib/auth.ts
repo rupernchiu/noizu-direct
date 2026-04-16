@@ -20,6 +20,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!user) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.password);
         if (!valid) return null;
+        // Update lastLoginAt for creator profiles (non-fatal)
+        if (user.role === 'CREATOR') {
+          prisma.creatorProfile.updateMany({
+            where: { userId: user.id },
+            data: { lastLoginAt: new Date() },
+          }).catch(() => {})
+        }
         return { id: user.id, email: user.email, name: user.name, role: user.role };
       },
     }),

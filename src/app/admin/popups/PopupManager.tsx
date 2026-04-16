@@ -203,7 +203,7 @@ export function PopupManager({ initialPopup }: PopupManagerProps) {
             <div className="relative w-full max-w-[480px] overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
               {previewData.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={previewData.imageUrl} alt="" role="presentation" className="h-48 w-full object-cover" />
+                <img src={previewData.imageUrl} alt="" className="h-48 w-full object-cover" />
               )}
               <div className="p-6">
                 <h2 className="text-xl font-bold text-foreground">{previewData.title}</h2>

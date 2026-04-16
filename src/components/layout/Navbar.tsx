@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
-import { Menu, User, LogOut, LayoutDashboard, ShoppingBag, Shield, Download, ShoppingCart } from 'lucide-react'
+import { Menu, User, LogOut, LayoutDashboard, Shield, ShoppingCart } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -19,7 +19,8 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { CurrencySelector } from './CurrencySelector'
-import { useState, useEffect, useRef } from 'react'
+import { useCartStore } from '@/lib/cart-store'
+import { Logo } from '@/components/ui/Logo'
 
 interface SessionUser {
   name?: string | null
@@ -28,170 +29,44 @@ interface SessionUser {
   role?: string
 }
 
-function getRoleLinks(role: string | undefined) {
-  if (role === 'ADMIN') {
-    return {
-      profile: '/account',
-      orders: '/admin/orders',
-      extra: { href: '/admin', label: 'Admin', icon: 'admin' as const },
-      downloads: null,
-    }
-  }
-  if (role === 'CREATOR') {
-    return {
-      profile: '/dashboard/profile',
-      orders: '/dashboard/orders',
-      extra: { href: '/dashboard', label: 'Creator Dashboard', icon: 'dashboard' as const },
-      downloads: null,
-    }
-  }
-  return {
-    profile: '/account',
-    orders: '/account/orders',
-    extra: null,
-    downloads: '/account/downloads',
-  }
-}
-
 // ── Cart Icon ──────────────────────────────────────────────────────────────────
 
 function CartIcon() {
-  const [count, setCount] = useState(0)
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const stored = localStorage.getItem('nd_cart_count')
-    setCount(stored ? parseInt(stored, 10) || 0 : 0)
-  }, [])
-
-  useEffect(() => {
-    function onOut(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    function onEsc(e: KeyboardEvent) { if (e.key === 'Escape') setOpen(false) }
-    if (open) {
-      document.addEventListener('mousedown', onOut)
-      window.addEventListener('keydown', onEsc)
-    }
-    return () => {
-      document.removeEventListener('mousedown', onOut)
-      window.removeEventListener('keydown', onEsc)
-    }
-  }, [open])
+  const { itemCount, openCart } = useCartStore()
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        suppressHydrationWarning
-        onClick={() => setOpen(o => !o)}
-        style={{
+    <button
+      type="button"
+      onClick={openCart}
+      style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: '36px', height: '36px',
+        background: 'transparent', border: 'none',
+        borderRadius: '8px', cursor: 'pointer',
+        position: 'relative', color: 'var(--foreground)',
+        transition: 'background 0.15s',
+      }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+      aria-label={`Shopping cart${itemCount > 0 ? `, ${itemCount} items` : ''}`}
+    >
+      <ShoppingCart size={20} />
+      {itemCount > 0 && (
+        <span style={{
+          position: 'absolute', top: '2px', right: '2px',
+          minWidth: '16px', height: '16px',
+          background: '#ef4444', borderRadius: '8px',
+          border: '1.5px solid var(--background)',
+          fontSize: '10px', fontWeight: 700,
+          color: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: '36px', height: '36px',
-          background: 'transparent', border: 'none',
-          borderRadius: '8px', cursor: 'pointer',
-          position: 'relative', color: 'var(--foreground)',
-          transition: 'background 0.15s',
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = 'var(--border)')}
-        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-      >
-        <ShoppingCart size={20} />
-        {count > 0 && (
-          <span style={{
-            position: 'absolute', top: '4px', right: '4px',
-            width: '8px', height: '8px',
-            background: '#ef4444', borderRadius: '50%',
-            border: '1.5px solid var(--background)',
-          }} />
-        )}
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
-          width: '320px',
-          background: 'var(--card)',
-          border: '1px solid var(--border)',
-          borderRadius: '12px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
-          overflow: 'hidden',
+          padding: '0 3px',
+          lineHeight: 1,
         }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '14px 16px',
-            borderBottom: '1px solid var(--border)',
-          }}>
-            <p style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: 'var(--foreground)' }}>
-              Shopping cart
-            </p>
-            {count > 0 && (
-              <span style={{ fontSize: '13px', color: 'var(--muted-foreground)' }}>
-                {count} item{count !== 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-
-          {/* Empty state */}
-          {count === 0 && (
-            <div style={{
-              padding: '32px 20px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
-            }}>
-              <ShoppingCart size={48} style={{ color: 'var(--muted-foreground)', marginBottom: '12px', opacity: 0.4 }} />
-              <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 500, color: 'var(--foreground)' }}>
-                Your cart is empty
-              </p>
-              <p style={{ margin: '0 0 16px', fontSize: '13px', color: 'var(--muted-foreground)', lineHeight: 1.5 }}>
-                Browse products and add items to your cart
-              </p>
-              <Link
-                href="/marketplace"
-                onClick={() => setOpen(false)}
-                style={{
-                  display: 'block', width: '100%',
-                  background: '#7c3aed', color: '#fff',
-                  padding: '10px 0',
-                  borderRadius: '20px',
-                  fontSize: '14px', fontWeight: 600,
-                  textAlign: 'center', textDecoration: 'none',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#6d28d9')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#7c3aed')}
-              >
-                Browse Marketplace
-              </Link>
-            </div>
-          )}
-
-          {/* Filled state — future: render cart items here */}
-          {count > 0 && (
-            <div>
-              {/* Cart items would be rendered here */}
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-                <Link
-                  href="/checkout"
-                  onClick={() => setOpen(false)}
-                  style={{
-                    display: 'block', width: '100%',
-                    background: '#7c3aed', color: '#fff',
-                    padding: '12px 0',
-                    borderRadius: '8px',
-                    fontSize: '14px', fontWeight: 600,
-                    textAlign: 'center', textDecoration: 'none',
-                  }}
-                >
-                  Go to checkout
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
+          {itemCount > 99 ? '99+' : itemCount}
+        </span>
       )}
-    </div>
+    </button>
   )
 }
 
@@ -200,7 +75,8 @@ function CartIcon() {
 export default function Navbar() {
   const { data: session } = useSession()
   const user = session?.user as SessionUser | undefined
-  const links = getRoleLinks(user?.role)
+  const isCreator = ['CREATOR', 'ADMIN'].includes(user?.role ?? '')
+  const isAdmin = user?.role === 'ADMIN'
 
   async function handleSignOut() {
     try {
@@ -225,24 +101,20 @@ export default function Navbar() {
         <span className="text-sm font-medium text-foreground">{user?.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 bg-surface border-border">
-        <DropdownMenuItem render={<Link href={links.profile} />} className="flex items-center gap-2 cursor-pointer">
+        <DropdownMenuItem render={<Link href="/account" />} className="flex items-center gap-2 cursor-pointer">
           <User className="size-4" />
-          My Profile
+          My Account
         </DropdownMenuItem>
-        <DropdownMenuItem render={<Link href={links.orders} />} className="flex items-center gap-2 cursor-pointer">
-          <ShoppingBag className="size-4" />
-          Orders
-        </DropdownMenuItem>
-        {links.downloads && (
-          <DropdownMenuItem render={<Link href={links.downloads} />} className="flex items-center gap-2 cursor-pointer">
-            <Download className="size-4" />
-            Downloads
+        {isCreator && (
+          <DropdownMenuItem render={<Link href="/dashboard" />} className="flex items-center gap-2 cursor-pointer">
+            <LayoutDashboard className="size-4" />
+            Creator Dashboard
           </DropdownMenuItem>
         )}
-        {links.extra && (
-          <DropdownMenuItem render={<Link href={links.extra.href} />} className="flex items-center gap-2 cursor-pointer">
-            {links.extra.icon === 'admin' ? <Shield className="size-4" /> : <LayoutDashboard className="size-4" />}
-            {links.extra.label}
+        {isAdmin && (
+          <DropdownMenuItem render={<Link href="/admin" />} className="flex items-center gap-2 cursor-pointer">
+            <Shield className="size-4" />
+            Admin Panel
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -280,8 +152,7 @@ export default function Navbar() {
           {/* Left — Logo (absolute so it doesn't participate in centering calc) */}
           <div className="absolute left-0 flex items-center">
             <Link href="/" className="flex items-center shrink-0">
-              <span className="text-lg font-bold text-foreground">NOIZU</span>
-              <span className="text-lg font-bold text-secondary">-DIRECT</span>
+              <Logo />
             </Link>
           </div>
 
@@ -325,8 +196,7 @@ export default function Navbar() {
                 <div className="flex flex-col gap-6 pt-8 px-4">
                   {/* Mobile logo */}
                   <Link href="/" className="flex items-center">
-                    <span className="text-lg font-bold text-foreground">NOIZU</span>
-                    <span className="text-lg font-bold text-secondary">-DIRECT</span>
+                    <Logo />
                   </Link>
                   {/* Mobile nav links */}
                   <div className="flex flex-col gap-4">
@@ -350,35 +220,28 @@ export default function Navbar() {
                     {session ? (
                       <>
                         <Link
-                          href={links.profile}
+                          href="/account"
                           className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                         >
                           <User className="size-4" />
-                          My Profile
+                          My Account
                         </Link>
-                        <Link
-                          href={links.orders}
-                          className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
-                        >
-                          <ShoppingBag className="size-4" />
-                          Orders
-                        </Link>
-                        {links.downloads && (
+                        {isCreator && (
                           <Link
-                            href={links.downloads}
+                            href="/dashboard"
                             className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                           >
-                            <Download className="size-4" />
-                            Downloads
+                            <LayoutDashboard className="size-4" />
+                            Creator Dashboard
                           </Link>
                         )}
-                        {links.extra && (
+                        {isAdmin && (
                           <Link
-                            href={links.extra.href}
+                            href="/admin"
                             className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                           >
-                            {links.extra.icon === 'admin' ? <Shield className="size-4" /> : <LayoutDashboard className="size-4" />}
-                            {links.extra.label}
+                            <Shield className="size-4" />
+                            Admin Panel
                           </Link>
                         )}
                         <button

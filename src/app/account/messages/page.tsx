@@ -243,6 +243,7 @@ export default function MessagesPage() {
                 const isSelected = selectedConvoId === convo.id
                 return (
                   <button
+                    suppressHydrationWarning
                     key={convo.id}
                     onClick={() => selectConvo(convo.id)}
                     className={`w-full px-4 py-3 flex items-start gap-3 text-left hover:bg-card transition-colors ${
@@ -306,6 +307,7 @@ export default function MessagesPage() {
               {/* Thread header */}
               <div className="px-4 py-3 border-b border-border flex items-center gap-3">
                 <button
+                  suppressHydrationWarning
                   className="md:hidden text-muted-foreground hover:text-foreground mr-1"
                   onClick={() => setMobileShowThread(false)}
                 >
@@ -371,6 +373,7 @@ export default function MessagesPage() {
               {/* Input */}
               <div className="px-4 py-3 border-t border-border flex gap-2">
                 <textarea
+                  suppressHydrationWarning
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   onKeyDown={(e) => {
@@ -384,6 +387,7 @@ export default function MessagesPage() {
                   className="flex-1 resize-none rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <button
+                  suppressHydrationWarning
                   onClick={sendMessage}
                   disabled={sending || !content.trim() || !otherUserId}
                   className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-primary hover:bg-primary/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

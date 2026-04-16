@@ -8,7 +8,10 @@ import { SecondaryNav } from '@/components/layout/SecondaryNav';
 import { SearchBar } from '@/components/layout/SearchBar';
 import Footer from '@/components/layout/Footer';
 import { Toaster } from '@/components/ui/sonner'
-import { FloatingScrollButtons } from '@/components/ui/FloatingScrollButtons';
+import { FloatingScrollButtons } from '@/components/ui/FloatingScrollButtons'
+import { CartProvider } from '@/components/layout/CartProvider';
+import { RejectionBannerWrapper } from '@/components/ui/RejectionBannerWrapper'
+import { ApprovalBannerWrapper } from '@/components/ui/ApprovalBannerWrapper'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_CANONICAL_DOMAIN || 'https://noizu.direct'),
@@ -42,15 +45,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark h-full" suppressHydrationWarning>
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-background text-foreground font-sans antialiased"
       >
-        <ThemeProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          storageKey="noizu-theme"
+        >
           <SessionProvider>
             <AnnouncementBar />
+            <RejectionBannerWrapper />
+            <ApprovalBannerWrapper />
             <Navbar />
+            <CartProvider />
             <SecondaryNav />
             <SearchBar />
             <main className="flex-1">{children}</main>

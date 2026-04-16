@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Logo } from '@/components/ui/Logo'
 
 const schema = z.object({
   email: z.string().email('Invalid email'),
@@ -16,14 +18,16 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 const DEMO_ACCOUNTS = [
-  { label: 'Admin',   icon: '👑', email: 'admin@noizu.direct',  password: 'admin123'    },
-  { label: 'Creator', icon: '🎨', email: 'sakura@noizu.direct', password: 'creator123'  },
-  { label: 'Buyer',   icon: '🛍️', email: 'buyer1@test.com',     password: 'buyer123'    },
+  { label: 'Admin',       icon: '👑', email: 'admin@noizu.direct',  password: 'admin123',    hint: 'Full platform access' },
+  { label: 'Creator',     icon: '🎨', email: 'sakura@noizu.direct', password: 'password123', hint: 'Creator dashboard'    },
+  { label: 'Member',      icon: '🛍️', email: 'buyer1@test.com',     password: 'buyer123',    hint: 'Shop + orders'        },
 ] as const
 
 const SHOW_DEMO = process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === 'true'
 
 export default function LoginPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [activeDemo, setActiveDemo] = useState<string | null>(null)
   const {
     register,
@@ -40,11 +44,29 @@ export default function LoginPage() {
 
   async function onSubmit(data: FormData) {
     try {
-      await signIn('credentials', {
+      const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
-        redirectTo: '/',
+        redirect: false,
       })
+      if (!result || result.error) {
+        toast.error('Invalid email or password')
+        return
+      }
+      // Fetch session to read role, then redirect
+      const res = await fetch('/api/auth/session')
+      const session = await res.json() as { user?: { role?: string } }
+      const role = session?.user?.role
+      const callbackUrl = searchParams?.get('callbackUrl')
+      if (callbackUrl) {
+        router.push(callbackUrl)
+      } else if (role === 'ADMIN') {
+        router.push('/admin')
+      } else if (role === 'CREATOR') {
+        router.push('/dashboard')
+      } else {
+        router.push('/account')
+      }
     } catch {
       toast.error('Invalid email or password')
     }
@@ -53,10 +75,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md bg-card rounded-2xl border border-border p-8 space-y-6">
-        <div className="text-center">
+        <div className="flex justify-center">
           <Link href="/">
-            <span className="text-2xl font-bold text-white">NOIZU</span>
-            <span className="text-2xl font-bold text-secondary">-DIRECT</span>
+            <Logo />
           </Link>
         </div>
 
@@ -65,7 +86,7 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} method="post" className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Email
@@ -98,6 +119,11 @@ export default function LoginPage() {
             {errors.password && (
               <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
             )}
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button
@@ -169,7 +195,10 @@ export default function LoginPage() {
                     }}
                   >
                     <span>{acc.icon}</span>
-                    {acc.label}
+                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '1px' }}>
+                      <span>{acc.label}</span>
+                      <span style={{ fontSize: '10px', opacity: 0.65, fontWeight: 400 }}>{acc.hint}</span>
+                    </span>
                   </button>
                 )
               })}

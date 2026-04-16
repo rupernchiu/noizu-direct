@@ -5,7 +5,6 @@ import { Suspense } from 'react'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { Pagination } from '@/components/ui/Pagination'
-import { STATUS_LABELS } from '@/lib/labels'
 
 const PER_PAGE = 20
 
@@ -98,18 +97,18 @@ export default async function AdminOrdersPage({
                 <tr key={order.id} className="border-b border-border last:border-0 hover:bg-surface">
                   <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{order.id.slice(0, 8)}…</td>
                   <td className="px-4 py-3">
-                    <div className="text-foreground">{order.buyer.name}</div>
-                    <div className="text-muted-foreground text-xs">{order.buyer.email}</div>
+                    <div className="text-foreground">{order.buyer?.name ?? '—'}</div>
+                    <div className="text-muted-foreground text-xs">{order.buyer?.email ?? '—'}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="text-foreground max-w-xs truncate">{order.product.title}</div>
-                    <div className="text-muted-foreground text-xs">{order.product.type}</div>
+                    <div className="text-foreground max-w-xs truncate">{order.product?.title ?? '—'}</div>
+                    <div className="text-muted-foreground text-xs">{order.product?.type ?? '—'}</div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{order.creator.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{order.creator?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? 'bg-border text-muted-foreground'}`}>
-                      {STATUS_LABELS[order.status] ?? order.status}
+                      {order.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>

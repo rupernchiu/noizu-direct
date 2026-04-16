@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 interface Props {
   productId: string
   initialInWishlist?: boolean
-  variant?: 'icon' | 'button'
+  variant?: 'icon' | 'button' | 'pill'
   className?: string
 }
 
@@ -36,6 +36,25 @@ export function WishlistButton({ productId, initialInWishlist = false, variant =
     } finally {
       setLoading(false)
     }
+  }
+
+  if (variant === 'pill') {
+    return (
+      <button
+        onClick={toggle}
+        disabled={loading}
+        aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+        className={cn(
+          'py-3 text-sm font-semibold rounded-xl border transition-all disabled:opacity-60 disabled:cursor-not-allowed',
+          inWishlist
+            ? 'border-primary/50 bg-primary/10 text-primary'
+            : 'border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground',
+          className
+        )}
+      >
+        {inWishlist ? '✓ Wishlisted' : '+ Wishlist'}
+      </button>
+    )
   }
 
   if (variant === 'button') {

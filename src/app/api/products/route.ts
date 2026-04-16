@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
   // Build where clause
   const where: Prisma.ProductWhereInput = {
     isActive: true,
+    creator: { storeStatus: 'ACTIVE' },
   }
 
   if (category && category !== 'ALL') {

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json() as {
-    action: 'verify' | 'suspend' | 'unsuspend'
+    action: 'verify' | 'suspend' | 'unsuspend' | 'archive'
     ids: string[]
   }
 
@@ -16,9 +16,10 @@ export async function POST(req: Request) {
   }
 
   const actionMap: Record<string, Record<string, unknown>> = {
-    verify: { isVerified: true },
+    verify:  { isVerified: true },
     suspend: { isSuspended: true },
     unsuspend: { isSuspended: false },
+    archive: { storeStatus: 'HIATUS', storeStatusReason: 'Archived by admin', storeStatusUpdatedAt: new Date() },
   }
 
   const data = actionMap[body.action]

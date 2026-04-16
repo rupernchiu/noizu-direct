@@ -170,7 +170,7 @@ export default function CreatorMessagesPage() {
                   {searchQuery ? 'No results found' : 'No messages yet'}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {searchQuery ? 'Try a different name.' : 'Buyers will message you here about products, commissions, and orders.'}
+                  {searchQuery ? 'Try a different name.' : 'Members will message you here about products, commissions, and orders.'}
                 </p>
               </div>
             ) : (

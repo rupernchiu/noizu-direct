@@ -2,11 +2,14 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
-import { User, ShoppingBag, Download, MessageCircle, FileText, Heart, Users, Scale } from 'lucide-react'
+import { User, ShoppingBag, Download, MessageCircle, Bell, FileText, Heart, Users, Scale } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
   if (!session) redirect('/login')
+  const role = (session.user as any).role as string | undefined
+  const isCreator = role === 'CREATOR' || role === 'ADMIN'
 
   return (
     <div className="min-h-screen bg-background">
@@ -19,10 +22,19 @@ export default async function AccountLayout({ children }: { children: React.Reac
           {/* Sidebar */}
           <aside className="md:w-56 shrink-0">
             <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+              {isCreator && (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-2 py-1 mb-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-border/40 shrink-0"
+                >
+                  ← Creator Dashboard
+                </Link>
+              )}
               <NavLink href="/account"><User className="size-4" />Profile</NavLink>
               <NavLink href="/account/orders"><ShoppingBag className="size-4" />Orders</NavLink>
               <NavLink href="/account/downloads"><Download className="size-4" />Downloads</NavLink>
               <NavLink href="/account/messages"><MessageCircle className="size-4" />Messages</NavLink>
+              <NavLink href="/account/notifications"><Bell className="size-4" />Notifications</NavLink>
               <NavLink href="/account/statements"><FileText className="size-4" />Statements</NavLink>
               <NavLink href="/account/wishlist"><Heart className="size-4" />Wishlist</NavLink>
               <NavLink href="/account/following"><Users className="size-4" />Following</NavLink>
