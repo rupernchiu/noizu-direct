@@ -157,8 +157,8 @@ export default async function AuditLogPage({
                     </p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs font-medium text-foreground">{e.actorName}</p>
-                    <p className="text-[11px] text-muted-foreground font-mono">id={e.actorId.slice(0, 8)}</p>
+                    <p className="text-xs font-medium text-foreground">{e.actorName ?? '—'}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono">id={(e.actorId ?? '—').slice(0, 8)}</p>
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-primary/10 text-primary whitespace-nowrap">
@@ -166,8 +166,8 @@ export default async function AuditLogPage({
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs text-foreground">{e.entityType}</p>
-                    <p className="text-[11px] text-muted-foreground">#{e.entityId.slice(0, 8)}</p>
+                    <p className="text-xs text-foreground">{e.entityType ?? '—'}</p>
+                    <p className="text-[11px] text-muted-foreground">#{(e.entityId ?? '—').slice(0, 8)}</p>
                     {e.entityLabel && (
                       <p className="text-[11px] text-muted-foreground truncate max-w-[120px]" title={e.entityLabel}>{e.entityLabel}</p>
                     )}

@@ -289,6 +289,31 @@ export default async function CreatorPage({ params }: PageProps) {
     )
   }
 
+  // IDLE / FLAGGED gate — block storefront entirely
+  if (creator.storeStatus === 'FLAGGED' || creator.storeStatus === 'IDLE') {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4 text-center">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-10 max-w-md">
+          <div className="mb-4 flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive mx-auto">
+            <svg className="size-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h1 className="mb-2 text-xl font-bold text-foreground">Store Unavailable</h1>
+          <p className="text-sm text-muted-foreground">This store is temporarily unavailable.</p>
+          <Link
+            href="/creators"
+            className="mt-6 inline-block rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+          >
+            Browse other creators
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const session = await auth()
   const isLoggedIn = Boolean(session?.user)
 
@@ -355,6 +380,13 @@ export default async function CreatorPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background">
       <JsonLd data={[personSchema, breadcrumbSchema]} />
+
+      {/* ── Hiatus banner ──────────────────────────────────────────────────── */}
+      {creator.storeStatus === 'HIATUS' && (
+        <div className="w-full bg-amber-500/10 border-b border-amber-500/30 px-4 py-3 text-center text-sm text-amber-400">
+          This store is currently on hiatus. The creator may return soon.
+        </div>
+      )}
 
       {/* ── Hero Banner — persistent, full bleed ───────────────────────────── */}
       {/* 200px mobile → 400px desktop */}
