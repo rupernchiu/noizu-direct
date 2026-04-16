@@ -54,7 +54,10 @@
       "Bash(mkdir -p \"/c/Users/ruper/noizu-direct/src/app/api/invoices/[orderId]\")",
       "Bash(mkdir -p \"/c/Users/ruper/noizu-direct/src/app/api/orders/[id]\")",
       "Bash(ls src/app/not-found.tsx src/app/api/orders/[id])",
-      "Bash(npx kill-port *)"
+      "Bash(npx kill-port *)",
+      "Bash(xargs grep *)",
+      "Bash(xargs head *)",
+      "Bash(xargs cat *)"
     ]
   },
   "enabledPlugins": {

@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
-import { ApprovePayoutButton } from './PayoutActions'
+import { PayoutActions } from './PayoutActions'
 import { SearchBar } from '@/components/ui/SearchBar'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { Pagination } from '@/components/ui/Pagination'
@@ -11,6 +11,10 @@ const PER_PAGE = 20
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-yellow-500/20 text-yellow-400',
+  APPROVED: 'bg-blue-500/20 text-blue-400',
+  PROCESSING: 'bg-orange-500/20 text-orange-400',
+  PAID: 'bg-green-500/20 text-green-400',
+  REJECTED: 'bg-red-500/20 text-red-400',
   COMPLETED: 'bg-green-500/20 text-green-400',
   FAILED: 'bg-red-500/20 text-red-400',
   CANCELLED: 'bg-border text-muted-foreground',
@@ -18,6 +22,10 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_OPTIONS = [
   { value: 'PENDING', label: 'Pending' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'PROCESSING', label: 'Processing' },
+  { value: 'PAID', label: 'Paid' },
+  { value: 'REJECTED', label: 'Rejected' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'FAILED', label: 'Failed' },
   { value: 'CANCELLED', label: 'Cancelled' },
@@ -50,8 +58,35 @@ export default async function AdminPayoutsPage({
       orderBy: { requestedAt: 'desc' },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
+      select: {
+        id: true,
+        amountUsd: true,
+        currency: true,
+        status: true,
+        payoutMethod: true,
+        accountDetails: true,
+        rejectionReason: true,
+        requestedAt: true,
+        completedAt: true,
+        creator: { select: { name: true } },
+      },
     }),
   ])
+
+  function truncate(str: string | null, max = 30) {
+    if (!str) return '—'
+    return str.length > max ? str.slice(0, max) + '…' : str
+  }
+
+  function formatAccountDetails(details: string | null) {
+    if (!details) return '—'
+    try {
+      const parsed = JSON.parse(details) as { bankName?: string; accountNumber?: string; accountName?: string }
+      return truncate(`${parsed.bankName ?? ''} ···${(parsed.accountNumber ?? '').slice(-4)}`, 32)
+    } catch {
+      return truncate(details)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -72,8 +107,9 @@ export default async function AdminPayoutsPage({
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Creator</th>
                 <th className="text-right px-4 py-3 text-muted-foreground font-medium">Amount</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Method</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Account</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Requested</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Completed</th>
                 <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
@@ -81,24 +117,36 @@ export default async function AdminPayoutsPage({
               {payouts.map((payout) => (
                 <tr key={payout.id} className="border-b border-border last:border-0 hover:bg-surface">
                   <td className="px-4 py-3 text-foreground">{payout.creator.name}</td>
-                  <td className="px-4 py-3 text-foreground text-right">${(payout.amountUsd / 100).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-foreground text-right">
+                    RM {(payout.amountUsd / 100).toFixed(2)}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[payout.status] ?? 'bg-border text-muted-foreground'}`}>
                       {payout.status}
                     </span>
+                    {payout.status === 'REJECTED' && payout.rejectionReason && (
+                      <p className="text-xs text-muted-foreground mt-0.5" title={payout.rejectionReason}>
+                        {truncate(payout.rejectionReason, 24)}
+                      </p>
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(payout.requestedAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs capitalize">
+                    {payout.payoutMethod?.replace('_', ' ') ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                    {formatAccountDetails(payout.accountDetails)}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {payout.completedAt ? new Date(payout.completedAt).toLocaleDateString() : '—'}
+                    {new Date(payout.requestedAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    {payout.status === 'PENDING' && <ApprovePayoutButton payoutId={payout.id} />}
+                    <PayoutActions payoutId={payout.id} status={payout.status} />
                   </td>
                 </tr>
               ))}
               {payouts.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                     {q || status ? 'No payouts match your filters.' : 'No payouts yet.'}
                   </td>
                 </tr>

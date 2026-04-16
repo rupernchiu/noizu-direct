@@ -94,6 +94,8 @@ model CreatorProfile {
   lastLoginAt          DateTime?
   fulfillmentWarnings  Int      @default(0)
   healthEmailSentAt    String?  // JSON: { nudge30, reengagement, fulfillmentWarn, preSuspension }
+  onboardingCompleted  Boolean  @default(false)
+  onboardingDismissed  Boolean  @default(false)
   createdAt            DateTime @default(now())
 
   user                User               @relation(fields: [userId], references: [id])
@@ -374,10 +376,17 @@ model Payout {
   id                String    @id @default(cuid())
   creatorId         String
   amountUsd         Int
+  currency          String    @default("USD")
   status            String    @default("PENDING")
   airwallexPayoutId String?
   requestedAt       DateTime  @default(now())
   completedAt       DateTime?
+  processedAt       DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  adminNote         String?
+  payoutMethod      String?
+  accountDetails    String?
 
   creator User @relation(fields: [creatorId], references: [id])
 }
@@ -669,6 +678,19 @@ model CreatorFollow {
   @@unique([buyerId, creatorId])
 }
 
+
+// ── Email Log ─────────────────────────────────────────────────────────────────
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  type      String
+  status    String   @default("sent")
+  resendId  String?
+  error     String?
+  createdAt DateTime @default(now())
+}
 
 // ── Password Reset ────────────────────────────────────────────────────────────
 

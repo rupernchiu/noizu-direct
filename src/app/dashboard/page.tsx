@@ -87,6 +87,7 @@ export default async function DashboardPage() {
     { id: 'bio', label: 'Write your bio', completed: !!(profile.bio && profile.bio.length > 20), href: '/dashboard/profile' },
     { id: 'social', label: 'Add social links', completed: !!(profile.socialLinks && profile.socialLinks !== '{}' && profile.socialLinks !== 'null'), href: '/dashboard/profile' },
     { id: 'product', label: 'List your first product', completed: activeListings > 0, href: '/dashboard/listings/new' },
+    { id: 'profile', label: 'Complete store profile', completed: !!(profile.displayName && profile.username), href: '/dashboard/profile' },
   ]
   const allOnboardingComplete = onboardingSteps.every(s => s.completed)
 
@@ -122,7 +123,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Onboarding checklist */}
-      <OnboardingChecklistWrapper steps={onboardingSteps} allComplete={allOnboardingComplete} />
+      <OnboardingChecklistWrapper steps={onboardingSteps} allComplete={allOnboardingComplete} dismissed={profile.onboardingDismissed} />
 
       {/* Recent orders */}
       <div className="bg-surface rounded-xl border border-border overflow-hidden">

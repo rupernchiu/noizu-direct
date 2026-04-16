@@ -19,8 +19,6 @@ export function OnboardingChecklist({ steps, onDismiss }: OnboardingChecklistPro
   const total = steps.length
   const pct = Math.round((completed / total) * 100)
 
-  if (completed === total) return null
-
   return (
     <div className="bg-card border border-primary/30 rounded-xl p-5 mb-6 relative">
       <button
