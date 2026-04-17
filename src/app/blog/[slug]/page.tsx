@@ -78,7 +78,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     headline: post.title,
     description: post.excerpt || '',
     image: post.coverImage ? { '@type': 'ImageObject', url: post.coverImage, width: 800, height: 400 } : undefined,
-    author: { '@type': 'Person', name: post.author?.name || 'NOIZU-DIRECT' },
+    author: { '@type': 'Person', name: 'NOIZU-DIRECT' },
     publisher: { '@type': 'Organization', name: 'NOIZU-DIRECT', logo: { '@type': 'ImageObject', url: 'https://noizu.direct/logo.png' } },
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
