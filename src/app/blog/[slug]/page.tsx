@@ -57,11 +57,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const cacheKey = CACHE_KEYS.blogPost(slug)
-  const cachedPost = await getCached<Awaited<ReturnType<typeof prisma.post.findUnique>>>(cacheKey)
-  const post = cachedPost ?? await prisma.post.findUnique({
-    where: { slug },
-    include: { author: { select: { name: true } } },
-  })
+  const fetchPost = () => prisma.post.findUnique({ where: { slug }, include: { author: { select: { name: true } } } })
+  type PostWithAuthor = Awaited<ReturnType<typeof fetchPost>>
+  const cachedPost = await getCached<NonNullable<PostWithAuthor>>(cacheKey)
+  const post: PostWithAuthor = cachedPost ?? await fetchPost()
 
   if (!post || post.status !== 'PUBLISHED') notFound()
   if (!cachedPost) await setCached(cacheKey, post, CACHE_TTL.blogPost)
