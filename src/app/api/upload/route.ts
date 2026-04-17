@@ -1,17 +1,15 @@
-// SECURITY: Identity documents stored in private-uploads/
-// outside of public directory. Never accessible without
-// authentication. Admin-only access for identity category.
+// SECURITY: Identity documents stored in R2 private/ prefix.
+// Never accessible without authentication. Admin-only access for identity category.
 //
-// PUBLIC files:  /public/uploads/      → served directly by Next.js
-// PRIVATE files: /private-uploads/     → served via /api/files/
-//                                         with auth check
+// PUBLIC files:  R2 uploads/ prefix → served via R2 public URL
+// PRIVATE files: R2 private/ prefix → served via /api/files/ with auth check
 
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import { join, extname } from 'path'
+import { extname } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import sharp from 'sharp'
+import { uploadToR2 } from '@/lib/r2'
 
 const SVG_MIME = 'image/svg+xml'
 
@@ -110,21 +108,27 @@ export async function POST(req: Request) {
   }
 
   const filename = `${uuidv4()}${finalExt}`
-  const folder   = isPrivate ? subdir : subdir
+  const folder   = subdir
 
-  let savePath: string
+  let r2Key: string
   let publicUrl: string
 
   if (isPrivate) {
-    savePath  = join(process.cwd(), 'private-uploads', folder, filename)
+    r2Key     = `private/${folder}/${filename}`
     publicUrl = `/api/files/${folder}/${filename}`
   } else {
-    savePath  = join(process.cwd(), 'public', 'uploads', folder, filename)
-    publicUrl = `/uploads/${folder}/${filename}`
+    r2Key     = `uploads/${folder}/${filename}`
+    publicUrl = await uploadToR2(finalBuffer, r2Key, mimeType)
+    return NextResponse.json({
+      url:       publicUrl,
+      filename,
+      mimeType,
+      fileSize:  finalBuffer.length,
+      isPrivate,
+    })
   }
 
-  await mkdir(join(process.cwd(), isPrivate ? 'private-uploads' : join('public', 'uploads'), folder), { recursive: true })
-  await writeFile(savePath, finalBuffer)
+  await uploadToR2(finalBuffer, r2Key, mimeType)
 
   return NextResponse.json({
     url:       publicUrl,

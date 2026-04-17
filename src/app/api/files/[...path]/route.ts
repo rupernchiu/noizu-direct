@@ -1,6 +1,6 @@
 // Private file serving — requires authentication.
-// Files in private-uploads/ are NEVER served directly by Next.js.
-// This route checks authorization before streaming file contents.
+// Files in R2 private/ prefix are NEVER served directly.
+// This route checks authorization before redirecting to a presigned R2 URL.
 //
 // Authorization rules:
 //   identity         → admin only (ID documents)
@@ -8,18 +8,7 @@
 //   message-attachment → any authenticated user (extend later per message ownership)
 
 import { auth } from '@/lib/auth'
-import { readFile } from 'fs/promises'
-import { join, extname, basename, relative, isAbsolute } from 'path'
-
-const CONTENT_TYPES: Record<string, string> = {
-  jpg:  'image/jpeg',
-  jpeg: 'image/jpeg',
-  png:  'image/png',
-  webp: 'image/webp',
-  gif:  'image/gif',
-  svg:  'image/svg+xml',
-  pdf:  'application/pdf',
-}
+import { getR2SignedUrl } from '@/lib/r2'
 
 export async function GET(
   _request: Request,
@@ -48,37 +37,16 @@ export async function GET(
   }
 
   // ── Path traversal guard ───────────────────────────────────────────────────
-  // Ensure the resolved path stays inside private-uploads/
-  // Uses path.relative() so it works on both Windows (backslash) and Unix.
-  const base     = join(process.cwd(), 'private-uploads')
-  const absolute = join(base, filePath)
-  const rel      = relative(base, absolute)
-  if (rel.startsWith('..') || isAbsolute(rel)) {
+  // Ensure no path traversal components in the segments
+  if (segments.some(s => s === '..' || s === '.')) {
     return new Response('Bad Request', { status: 400 })
   }
 
-  // ── Serve file ─────────────────────────────────────────────────────────────
-  let fileBuffer: Buffer
+  // ── Serve via R2 presigned URL ─────────────────────────────────────────────
   try {
-    fileBuffer = await readFile(absolute)
+    const signedUrl = await getR2SignedUrl(`private/${filePath}`, 300)
+    return Response.redirect(signedUrl, 307)
   } catch {
     return new Response('Not Found', { status: 404 })
   }
-
-  const ext         = extname(filePath).slice(1).toLowerCase()
-  const contentType = CONTENT_TYPES[ext] ?? 'application/octet-stream'
-  const isPdf       = ext === 'pdf'
-
-  const headers: Record<string, string> = {
-    'Content-Type':           contentType,
-    'Cache-Control':          'no-store, no-cache, must-revalidate',
-    'X-Content-Type-Options': 'nosniff',
-    'Content-Length':         String(fileBuffer.length),
-  }
-
-  if (isPdf) {
-    headers['Content-Disposition'] = `attachment; filename="${basename(filePath)}"`
-  }
-
-  return new Response(new Uint8Array(fileBuffer), { headers })
 }

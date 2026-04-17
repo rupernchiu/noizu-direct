@@ -1,20 +1,18 @@
-// schema updated: post model + page showInFooter/footerColumn/footerOrder added
-import { PrismaClient } from '@/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaClient } from '@/generated/prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
-declare global {
-  // eslint-disable-next-line no-var
-  var prisma: PrismaClient | undefined;
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined
 }
 
 function createPrismaClient() {
-  const dbUrl = process.env.DATABASE_URL ?? 'file:./dev.db';
-  const adapter = new PrismaBetterSqlite3({ url: dbUrl });
-  return new PrismaClient({ adapter } as any);
+  const dbUrl = process.env.DATABASE_URL!
+  const pool = new Pool({ connectionString: dbUrl })
+  const adapter = new PrismaPg(pool)
+  return new PrismaClient({ adapter } as any)
 }
 
-export const prisma: PrismaClient = global.prisma ?? createPrismaClient();
+export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 
-if (process.env.NODE_ENV !== 'production') {
-  global.prisma = prisma as any;
-}
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
