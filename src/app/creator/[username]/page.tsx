@@ -155,9 +155,7 @@ export default async function CreatorPage({ params }: PageProps) {
   const { username } = await params
 
   const cacheKey = CACHE_KEYS.creator(username)
-  const cachedCreator = await getCached<NonNullable<Awaited<ReturnType<typeof prisma.creatorProfile.findUnique>>>>(cacheKey)
-
-  const creator = cachedCreator ?? await prisma.creatorProfile.findUnique({
+  const fetchCreator = () => prisma.creatorProfile.findUnique({
     where: { username },
     include: {
       user: { select: { id: true, name: true, createdAt: true } },
@@ -179,6 +177,9 @@ export default async function CreatorPage({ params }: PageProps) {
       supportGift: true,
     },
   })
+  type CreatorWithRelations = Awaited<ReturnType<typeof fetchCreator>>
+  const cachedCreator = await getCached<NonNullable<CreatorWithRelations>>(cacheKey)
+  const creator: CreatorWithRelations = cachedCreator ?? await fetchCreator()
 
   if (!creator) notFound()
   if (!cachedCreator) await setCached(cacheKey, creator, CACHE_TTL.creator)
