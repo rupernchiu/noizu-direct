@@ -96,7 +96,8 @@
       "Bash(taskkill /F /IM chrome.exe)",
       "Bash(wmic process *)",
       "Bash(powershell -Command \"Start-Process 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\ruper\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data','--no-first-run','about:blank'\")",
-      "Bash(Start-Sleep 3)"
+      "Bash(Start-Sleep 3)",
+      "Bash(git push *)"
     ]
   },
   "enabledPlugins": {
