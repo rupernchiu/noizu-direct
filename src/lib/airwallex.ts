@@ -1,38 +1,50 @@
-const BASE_URL = 'https://api-demo.airwallex.com/api/v1'
+const BASE_URL = process.env.AIRWALLEX_BASE_URL ?? 'https://api-demo.airwallex.com'
 
-async function getToken(): Promise<string> {
-  const res = await fetch(`${BASE_URL}/authentication/login`, {
+let _cachedToken: { value: string; expiresAt: number } | null = null
+
+export async function getAirwallexToken(): Promise<string> {
+  const now = Date.now()
+  if (_cachedToken && _cachedToken.expiresAt > now + 60_000) return _cachedToken.value
+
+  const res = await fetch(`${BASE_URL}/api/v1/authentication/login`, {
     method: 'POST',
     headers: {
       'x-client-id': process.env.AIRWALLEX_CLIENT_ID ?? '',
-      'x-api-key': process.env.AIRWALLEX_API_KEY ?? '',
+      'x-api-key': process.env.AIRWALLEX_API_SECRET ?? '',
       'Content-Type': 'application/json',
     },
   })
   if (!res.ok) throw new Error(`Airwallex auth failed: ${res.status}`)
-  const data = await res.json()
-  return data.token as string
+  const data = await res.json() as { token: string }
+  _cachedToken = { value: data.token, expiresAt: now + 30 * 60 * 1000 }
+  return _cachedToken.value
 }
 
-export async function createPaymentIntent(params: {
-  orderId: string
-  amountCents: number
+export async function createPaymentIntent({
+  amount,
+  currency,
+  orderId,
+  buyerEmail: _buyerEmail,
+}: {
+  amount: number   // in cents
   currency: string
-  merchantOrderId: string
-}) {
-  const token = await getToken()
-  const res = await fetch(`${BASE_URL}/pa/payment_intents/create`, {
+  orderId: string
+  buyerEmail?: string
+}): Promise<any> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/pa/payment_intents/create`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      request_id: params.orderId,
-      amount: params.amountCents / 100,
-      currency: params.currency,
-      merchant_order_id: params.merchantOrderId,
-      return_url: `${process.env.NEXT_PUBLIC_APP_URL}/order/success?orderId=${params.orderId}`,
+      request_id: orderId,
+      amount: amount / 100,
+      currency,
+      merchant_order_id: orderId,
+      descriptor: 'NOIZU-DIRECT',
+      metadata: { orderId },
     }),
   })
   if (!res.ok) {
@@ -42,11 +54,14 @@ export async function createPaymentIntent(params: {
   return res.json()
 }
 
-export async function getPaymentIntent(intentId: string) {
-  const token = await getToken()
-  const res = await fetch(`${BASE_URL}/pa/payment_intents/${intentId}`, {
+export async function confirmPaymentIntent(intentId: string): Promise<any> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/pa/payment_intents/${intentId}`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!res.ok) throw new Error(`Get intent failed: ${res.status}`)
   return res.json()
 }
+
+// Backward-compat alias
+export const getPaymentIntent = confirmPaymentIntent

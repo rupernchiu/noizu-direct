@@ -61,7 +61,7 @@ function formatDate(date: Date) {
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string; status?: string }>
+  searchParams: Promise<{ q?: string; page?: string; status?: string; success?: string }>
 }) {
   const session = await auth()
   if (!session) redirect('/login')
@@ -71,6 +71,7 @@ export default async function OrdersPage({
   const q = params.q?.trim() ?? ''
   const page = Math.max(1, parseInt(params.page ?? '1') || 1)
   const status = params.status ?? ''
+  const showSuccess = params.success === '1'
 
   const where: any = { buyerId: userId }
   if (q) {
@@ -129,6 +130,12 @@ export default async function OrdersPage({
 
   return (
     <div className="space-y-6">
+      {showSuccess && (
+        <div className="rounded-xl bg-green-500/10 border border-green-500/20 p-4 text-sm text-green-400 font-medium">
+          Payment successful! Your order is being processed.
+        </div>
+      )}
+
       <div>
         <h1 className="text-2xl font-bold text-foreground">Orders</h1>
         <p className="text-sm text-muted-foreground mt-1">Your purchase history</p>

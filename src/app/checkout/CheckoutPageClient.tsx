@@ -139,6 +139,8 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
   const [shipping, setShipping] = useState<ShippingAddress>({
     fullName: '', line1: '', line2: '', city: '', state: '', postal: '', country: '', phone: '',
   })
+  const [awPayment, setAwPayment] = useState<{ intentId: string; clientSecret: string } | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Derived totals — recalculated from live state
@@ -234,8 +236,49 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     return true
   }
 
+  function loadAirwallexScript(): Promise<void> {
+    if ((window as any).Airwallex) return Promise.resolve()
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://checkout.airwallex.com/assets/bundle.x.min.js'
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error('Failed to load Airwallex SDK'))
+      document.head.appendChild(script)
+    })
+  }
+
+  useEffect(() => {
+    if (!awPayment) return
+    let dropIn: any = null
+
+    async function mountDropin() {
+      await loadAirwallexScript()
+      const aw = (window as any).Airwallex
+      aw.init({
+        env: process.env.NEXT_PUBLIC_AIRWALLEX_ENV ?? 'demo',
+        origin: window.location.origin,
+      })
+      dropIn = aw.createElement('dropIn', {
+        intent_id: awPayment!.intentId,
+        client_secret: awPayment!.clientSecret,
+        currency: 'USD',
+      })
+      dropIn.mount('#airwallex-dropin')
+      dropIn.on('success', () => router.push('/orders?success=1'))
+      dropIn.on('error', (e: any) => {
+        setPaymentError(e?.detail?.error?.message ?? 'Payment failed. Please try again.')
+      })
+    }
+
+    mountDropin().catch(err => setPaymentError((err as Error).message))
+
+    return () => {
+      if (dropIn) { try { dropIn.unmount() } catch {} }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awPayment])
+
   async function handleConfirmPay() {
-    // Flush any pending deletes immediately before checkout
     for (const [id, timer] of pendingDeletes.current) {
       clearTimeout(timer)
       pendingDeletes.current.delete(id)
@@ -245,30 +288,21 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     if (liveHasPhysical && !validateShipping()) return
     setLoading(true)
     try {
-      const res = await fetch('/api/checkout/create-session', {
+      const cartSessionId = `cart_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+      const res = await fetch('/api/airwallex/payment-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shippingAddress: liveHasPhysical ? shipping : undefined }),
+        body: JSON.stringify({
+          orderId: cartSessionId,
+          shippingAddress: liveHasPhysical ? shipping : undefined,
+        }),
       })
-      const data = await res.json() as {
-        hppUrl?: string | null
-        orders?: ConfirmedOrder[]
-        error?: string
-      }
-      if (!res.ok) throw new Error(data.error ?? 'Failed to create session')
-
-      if (data.hppUrl) { window.location.href = data.hppUrl; return }
-
-      const confirmRes = await fetch('/api/checkout/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ shippingAddress: liveHasPhysical ? shipping : undefined }),
-      })
-      const confirmData = await confirmRes.json() as { orders?: ConfirmedOrder[]; error?: string }
-      if (!confirmRes.ok) throw new Error(confirmData.error ?? 'Checkout failed')
-      setConfirmedOrders(confirmData.orders ?? [])
+      const data = await res.json() as { intentId?: string; clientSecret?: string; error?: string }
+      if (!res.ok) throw new Error(data.error ?? 'Failed to create payment intent')
+      setAwPayment({ intentId: data.intentId!, clientSecret: data.clientSecret! })
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Something went wrong')
+    } finally {
       setLoading(false)
     }
   }
@@ -595,32 +629,49 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                 <p className="text-xs text-muted-foreground">Payment held securely per our escrow policy.</p>
               </div>
 
-              {/* Proceed button */}
-              <div className="space-y-2 pt-1">
-                <button
-                  onClick={handleConfirmPay}
-                  disabled={loading || liveGroups.length === 0}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-                >
-                  {loading ? (
-                    <>
-                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
-                      Processing...
-                    </>
-                  ) : (
-                    `Proceed to Payment (${liveTotalItems} item${liveTotalItems !== 1 ? 's' : ''})`
+              {/* Payment area */}
+              {awPayment ? (
+                <div className="space-y-3 pt-1">
+                  {paymentError && (
+                    <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
+                      {paymentError}
+                    </div>
                   )}
-                </button>
-                <button
-                  onClick={() => router.push('/marketplace')}
-                  className="w-full py-2.5 border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 rounded-xl transition-all"
-                >
-                  Continue Shopping
-                </button>
-              </div>
+                  <div id="airwallex-dropin" className="min-h-[320px]" />
+                  <button
+                    onClick={() => router.push('/marketplace')}
+                    className="w-full py-2.5 border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 rounded-xl transition-all"
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 pt-1">
+                  <button
+                    onClick={handleConfirmPay}
+                    disabled={loading || liveGroups.length === 0}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      `Proceed to Payment (${liveTotalItems} item${liveTotalItems !== 1 ? 's' : ''})`
+                    )}
+                  </button>
+                  <button
+                    onClick={() => router.push('/marketplace')}
+                    className="w-full py-2.5 border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 rounded-xl transition-all"
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

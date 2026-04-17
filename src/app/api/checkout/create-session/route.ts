@@ -119,7 +119,7 @@ export async function POST(req: Request) {
   const orderBreakdown = Array.from(creatorMap.values())
 
   // Call Airwallex to create payment intent
-  if (!process.env.AIRWALLEX_CLIENT_ID || !process.env.AIRWALLEX_API_KEY) {
+  if (!process.env.AIRWALLEX_CLIENT_ID || !process.env.AIRWALLEX_API_SECRET) {
     return NextResponse.json({
       cartSessionId,
       grandTotal,
@@ -135,9 +135,8 @@ export async function POST(req: Request) {
   try {
     const intent = await createPaymentIntent({
       orderId: cartSessionId,
-      amountCents: grandTotal,
+      amount: grandTotal,
       currency: 'USD',
-      merchantOrderId: cartSessionId,
     })
 
     return NextResponse.json({
