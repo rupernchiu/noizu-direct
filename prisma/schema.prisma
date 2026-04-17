@@ -96,6 +96,11 @@ model CreatorProfile {
   healthEmailSentAt    String?  // JSON: { nudge30, reengagement, fulfillmentWarn, preSuspension }
   onboardingCompleted  Boolean  @default(false)
   onboardingDismissed  Boolean  @default(false)
+  airwallexBeneficiaryId String?
+  payoutMethod           String  @default("bank_transfer")
+  payoutDetails          String? // AES-256 encrypted JSON
+  payoutCountry          String?
+  payoutCurrency         String?
   createdAt            DateTime @default(now())
 
   user                User               @relation(fields: [userId], references: [id])
@@ -385,8 +390,10 @@ model Payout {
   rejectedAt        DateTime?
   rejectionReason   String?
   adminNote         String?
-  payoutMethod      String?
+  payoutMethod      String  @default("bank_transfer")
   accountDetails    String?
+  airwallexTransferId String?
+  failureReason       String?
 
   creator User @relation(fields: [creatorId], references: [id])
 }

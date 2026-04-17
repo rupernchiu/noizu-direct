@@ -4,200 +4,328 @@ import { useRouter } from 'next/navigation'
 
 const FEE_RATE = 0.04
 
+const COUNTRY_OPTIONS = [
+  { value: 'MY', label: 'Malaysia', currency: 'MYR' },
+  { value: 'SG', label: 'Singapore', currency: 'SGD' },
+  { value: 'PH', label: 'Philippines', currency: 'PHP' },
+  { value: 'ID', label: 'Indonesia', currency: 'IDR' },
+  { value: 'US', label: 'United States', currency: 'USD' },
+  { value: 'EU', label: 'European Union', currency: 'EUR' },
+]
+
+const MY_BANKS = ['Maybank', 'CIMB', 'Public Bank', 'RHB', 'Hong Leong', 'AmBank', 'UOB', 'OCBC', 'HSBC']
+const SG_BANKS = ['DBS', 'OCBC', 'UOB', 'Standard Chartered', 'Citibank', 'HSBC']
+const PH_BANKS = ['BDO', 'BPI', 'Metrobank', 'PNB', 'UnionBank', 'Security Bank', 'GCash']
+const ID_BANKS = ['BCA', 'BRI', 'BNI', 'Mandiri', 'CIMB Niaga', 'Danamon']
+
+function getBanks(country: string): string[] | null {
+  if (country === 'MY') return MY_BANKS
+  if (country === 'SG') return SG_BANKS
+  if (country === 'PH') return PH_BANKS
+  if (country === 'ID') return ID_BANKS
+  return null
+}
+
+const inputClass = 'w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+
 export default function PayoutRequestPage() {
   const router = useRouter()
+
+  // Settings state
+  const [settingsLoading, setSettingsLoading] = useState(true)
+  const [savedMethod, setSavedMethod] = useState<{
+    payoutMethod: string; payoutCountry: string | null; payoutCurrency: string | null;
+    hasBeneficiary: boolean; maskedAccount: string | null
+  } | null>(null)
+  const [editMethod, setEditMethod] = useState<'bank_transfer' | 'paypal'>('bank_transfer')
+  const [editCountry, setEditCountry] = useState('MY')
+  const [editAccountName, setEditAccountName] = useState('')
+  const [editBankName, setEditBankName] = useState('')
+  const [editAccountNumber, setEditAccountNumber] = useState('')
+  const [editRoutingCode, setEditRoutingCode] = useState('')
+  const [editIban, setEditIban] = useState('')
+  const [editSwift, setEditSwift] = useState('')
+  const [editPaypalEmail, setEditPaypalEmail] = useState('')
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+  const [settingsSuccess, setSettingsSuccess] = useState(false)
+
+  // Request state
   const [available, setAvailable] = useState<number | null>(null)
   const [amount, setAmount] = useState('')
-  const [payoutMethod, setPayoutMethod] = useState<'bank_transfer'>('bank_transfer')
-  const [bankName, setBankName] = useState('')
-  const [accountNumber, setAccountNumber] = useState('')
-  const [accountName, setAccountName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [requestLoading, setRequestLoading] = useState(false)
+  const [requestError, setRequestError] = useState<string | null>(null)
 
   useEffect(() => {
+    fetch('/api/dashboard/payout/settings')
+      .then(r => r.json())
+      .then((d: any) => { setSavedMethod(d); setSettingsLoading(false) })
+      .catch(() => setSettingsLoading(false))
+
     fetch('/api/dashboard/payout')
-      .then((r) => r.json())
+      .then(r => r.json())
       .then((d: { available?: number }) => setAvailable(d.available ?? 0))
       .catch(() => setAvailable(0))
   }, [])
+
+  const editCurrency = COUNTRY_OPTIONS.find(c => c.value === editCountry)?.currency ?? 'MYR'
+  const editBanks = getBanks(editCountry)
+
+  async function saveSettings(e: React.FormEvent) {
+    e.preventDefault()
+    setSettingsError(null)
+    setSettingsSuccess(false)
+    setSettingsSaving(true)
+    try {
+      const body: Record<string, string> = { payoutMethod: editMethod }
+      if (editMethod === 'bank_transfer') {
+        body.payoutCountry = editCountry
+        body.payoutCurrency = editCurrency
+        body.accountName = editAccountName
+        body.bankName = editBankName
+        body.accountNumber = editAccountNumber
+        if (editCountry === 'US') body.routingCode = editRoutingCode
+        if (editCountry === 'EU') { body.swiftCode = editSwift; body.accountNumber = editIban }
+      } else {
+        body.paypalEmail = editPaypalEmail
+      }
+      const res = await fetch('/api/dashboard/payout/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+      if (!res.ok) { setSettingsError(data.error ?? 'Failed to save'); return }
+      setSettingsSuccess(true)
+      // Refresh saved method display
+      const updated = await fetch('/api/dashboard/payout/settings').then(r => r.json())
+      setSavedMethod(updated)
+    } catch {
+      setSettingsError('Something went wrong')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
 
   const numAmount = parseFloat(amount) || 0
   const fee = numAmount * FEE_RATE
   const net = numAmount - fee
 
-  async function submit(e: React.FormEvent) {
+  async function submitRequest(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
-    if (numAmount <= 0) { setError('Enter a valid amount'); return }
-    if (numAmount < 50) { setError('Minimum payout is RM 50'); return }
-    if (available !== null && numAmount > available) { setError('Exceeds available balance'); return }
-    if (!bankName.trim()) { setError('Bank name is required'); return }
-    if (!accountNumber.trim()) { setError('Account number is required'); return }
-    if (!accountName.trim()) { setError('Account holder name is required'); return }
-    setLoading(true)
+    setRequestError(null)
+    if (numAmount < 50) { setRequestError('Minimum payout is RM 50'); return }
+    if (available !== null && numAmount * 100 > available) { setRequestError('Exceeds available balance'); return }
+    setRequestLoading(true)
     try {
       const res = await fetch('/api/dashboard/payout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: numAmount,
-          payoutMethod: 'bank_transfer',
-          accountDetails: JSON.stringify({ bankName, accountNumber, accountName }),
-        }),
+        body: JSON.stringify({ amount: Math.round(numAmount * 100) }),
       })
       if (!res.ok) {
         const body = await res.json() as { error?: string }
-        setError(body.error ?? 'Failed to submit payout request')
+        setRequestError(body.error ?? 'Failed to submit payout request')
         return
       }
       router.push('/dashboard/earnings')
     } catch {
-      setError('Something went wrong')
+      setRequestError('Something went wrong')
     } finally {
-      setLoading(false)
+      setRequestLoading(false)
     }
   }
 
   return (
-    <div className="max-w-md space-y-6">
+    <div className="max-w-md space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Request Payout</h1>
-        <p className="text-sm text-muted-foreground mt-1">Withdraw your available balance</p>
+        <h1 className="text-2xl font-bold text-foreground">Payout</h1>
+        <p className="text-sm text-muted-foreground mt-1">Manage your payout method and withdraw earnings</p>
       </div>
 
-      <div className="rounded-xl bg-secondary/10 border border-secondary/30 px-4 py-3">
-        <p className="text-xs text-muted-foreground">Available Balance</p>
-        <p className="text-2xl font-bold text-secondary">
-          {available === null ? '...' : `RM ${available.toFixed(2)}`}
-        </p>
-      </div>
-
-      {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={submit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1.5">Amount (MYR)</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">RM</span>
-            <input
-              type="number"
-              step="0.01"
-              min="50"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="w-full rounded-lg bg-card border border-border pl-10 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">Minimum payout: RM 50</p>
+      {/* ── Payout Method Section ── */}
+      <div className="rounded-xl bg-card border border-border p-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Payout Method</h2>
+          {!settingsLoading && savedMethod?.maskedAccount && (
+            <span className="text-xs text-muted-foreground bg-surface px-2 py-1 rounded-lg">
+              Saved: {savedMethod.maskedAccount}
+            </span>
+          )}
         </div>
 
-        {numAmount > 0 && (
-          <div className="rounded-lg bg-card border border-border p-4 space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Amount</span>
-              <span className="text-foreground">RM {numAmount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Withdrawal fee (4%)</span>
-              <span className="text-red-400">-RM {fee.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between border-t border-border pt-2 font-medium">
-              <span className="text-foreground">You receive</span>
-              <span className="text-secondary">RM {net.toFixed(2)}</span>
-            </div>
+        <form onSubmit={saveSettings} className="space-y-4">
+          {/* Method toggle */}
+          <div className="flex gap-2">
+            {(['bank_transfer', 'paypal'] as const).map(m => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setEditMethod(m)}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  editMethod === m
+                    ? 'bg-primary text-white'
+                    : 'bg-surface border border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {m === 'bank_transfer' ? 'Bank Transfer' : 'PayPal'}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Payout Method</label>
-          <div className="space-y-2">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="payoutMethod"
-                value="bank_transfer"
-                checked={payoutMethod === 'bank_transfer'}
-                onChange={() => setPayoutMethod('bank_transfer')}
-                className="text-primary"
-              />
-              <span className="text-sm text-foreground">Bank Transfer</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-not-allowed opacity-50">
-              <input
-                type="radio"
-                name="payoutMethod"
-                value="airwallex"
-                disabled
-                className="text-primary"
-              />
-              <span className="text-sm text-foreground">Airwallex</span>
-              <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-border text-muted-foreground">
-                Coming soon
-              </span>
-            </label>
-          </div>
-        </div>
+          {editMethod === 'bank_transfer' && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Country</label>
+                <select
+                  value={editCountry}
+                  onChange={e => { setEditCountry(e.target.value); setEditBankName('') }}
+                  className={inputClass}
+                >
+                  {COUNTRY_OPTIONS.map(c => (
+                    <option key={c.value} value={c.value}>{c.label} ({c.currency})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Account Holder Name</label>
+                <input type="text" value={editAccountName} onChange={e => setEditAccountName(e.target.value)}
+                  placeholder="Full name as on bank account" className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Bank Name</label>
+                {editBanks ? (
+                  <select value={editBankName} onChange={e => setEditBankName(e.target.value)} className={inputClass}>
+                    <option value="">Select bank...</option>
+                    {editBanks.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" value={editBankName} onChange={e => setEditBankName(e.target.value)}
+                    placeholder="Bank name" className={inputClass} />
+                )}
+              </div>
+              {editCountry === 'EU' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">IBAN</label>
+                    <input type="text" value={editIban} onChange={e => setEditIban(e.target.value)}
+                      placeholder="e.g. DE89370400440532013000" className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1.5">SWIFT / BIC</label>
+                    <input type="text" value={editSwift} onChange={e => setEditSwift(e.target.value)}
+                      placeholder="e.g. DEUTDEDB" className={inputClass} />
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Account Number</label>
+                  <input type="text" value={editAccountNumber} onChange={e => setEditAccountNumber(e.target.value)}
+                    placeholder="e.g. 1234567890" className={inputClass} />
+                </div>
+              )}
+              {editCountry === 'US' && (
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1.5">Routing Number (ACH)</label>
+                  <input type="text" value={editRoutingCode} onChange={e => setEditRoutingCode(e.target.value)}
+                    placeholder="e.g. 021000021" className={inputClass} />
+                </div>
+              )}
+            </div>
+          )}
 
-        {payoutMethod === 'bank_transfer' && (
-          <div className="space-y-4">
+          {editMethod === 'paypal' && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Bank Name</label>
-              <input
-                type="text"
-                required
-                value={bankName}
-                onChange={(e) => setBankName(e.target.value)}
-                placeholder="e.g. Maybank"
-                className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">PayPal Email</label>
+              <input type="email" value={editPaypalEmail} onChange={e => setEditPaypalEmail(e.target.value)}
+                placeholder="your@paypal.com" className={inputClass} />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Account Number</label>
-              <input
-                type="text"
-                required
-                value={accountNumber}
-                onChange={(e) => setAccountNumber(e.target.value)}
-                placeholder="e.g. 1234567890"
-                className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Account Holder Name</label>
-              <input
-                type="text"
-                required
-                value={accountName}
-                onChange={(e) => setAccountName(e.target.value)}
-                placeholder="Full name as on bank account"
-                className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex gap-3">
+          {settingsError && (
+            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{settingsError}</p>
+          )}
+          {settingsSuccess && (
+            <p className="text-xs text-green-400 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2">Payout details saved successfully.</p>
+          )}
+
           <button
             type="submit"
-            disabled={loading || numAmount <= 0}
-            className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={settingsSaving}
+            className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Submitting...' : 'Submit Request'}
+            {settingsSaving ? 'Saving...' : 'Save Payout Details'}
           </button>
-          <a
-            href="/dashboard/earnings"
-            className="px-6 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
-          >
-            Cancel
-          </a>
+        </form>
+      </div>
+
+      {/* ── Request Payout Section ── */}
+      <div className="space-y-5">
+        <h2 className="text-lg font-semibold text-foreground">Request Payout</h2>
+
+        <div className="rounded-xl bg-secondary/10 border border-secondary/30 px-4 py-3">
+          <p className="text-xs text-muted-foreground">Available Balance</p>
+          <p className="text-2xl font-bold text-secondary">
+            {available === null ? '...' : `RM ${(available / 100).toFixed(2)}`}
+          </p>
         </div>
-      </form>
+
+        {requestError && (
+          <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+            {requestError}
+          </div>
+        )}
+
+        <form onSubmit={submitRequest} className="space-y-5">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Amount (MYR)</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">RM</span>
+              <input
+                type="number" step="0.01" min="50"
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0.00"
+                className="w-full rounded-lg bg-card border border-border pl-10 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Minimum payout: RM 50</p>
+          </div>
+
+          {numAmount > 0 && (
+            <div className="rounded-lg bg-card border border-border p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount</span>
+                <span className="text-foreground">RM {numAmount.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Withdrawal fee (4%)</span>
+                <span className="text-red-400">-RM {fee.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between border-t border-border pt-2 font-medium">
+                <span className="text-foreground">You receive</span>
+                <span className="text-secondary">RM {net.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={requestLoading || numAmount <= 0}
+              className="px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {requestLoading ? 'Submitting...' : 'Submit Request'}
+            </button>
+            <a
+              href="/dashboard/earnings"
+              className="px-6 py-2.5 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground text-sm font-medium transition-colors"
+            >
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

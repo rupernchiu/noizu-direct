@@ -34,21 +34,14 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
 
-  const { amount, payoutMethod, accountDetails } = await req.json() as {
-    amount: number
-    payoutMethod?: string
-    accountDetails?: string
+  const { amount } = await req.json() as { amount: number }
+
+  // 1. Min amount check (RM50 = 5000 cents)
+  if (!amount || amount < 5000) {
+    return NextResponse.json({ error: 'Minimum payout is RM50' }, { status: 400 })
   }
 
-  if (!amount || amount <= 0) {
-    return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
-  }
-
-  if (amount < 50) {
-    return NextResponse.json({ error: 'Minimum payout amount is RM 50' }, { status: 400 })
-  }
-
-  // Check for existing pending payout
+  // 2. No pending payout
   const existingPending = await prisma.payout.findFirst({
     where: { creatorId: userId, status: 'PENDING' },
   })
@@ -56,7 +49,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'You already have a pending payout request' }, { status: 400 })
   }
 
-  // Verify sufficient balance
+  // 3. No open disputes
+  const openDisputes = await prisma.dispute.count({
+    where: { status: 'OPEN', order: { creatorId: userId } },
+  })
+  if (openDisputes > 0) {
+    return NextResponse.json({ error: 'You have open disputes that must be resolved first' }, { status: 400 })
+  }
+
+  // 4. Account status
+  const creatorProfile = await prisma.creatorProfile.findUnique({
+    where: { userId },
+  })
+  if (!creatorProfile) return NextResponse.json({ error: 'Creator profile not found' }, { status: 404 })
+
+  if (creatorProfile.storeStatus !== 'ACTIVE') {
+    return NextResponse.json({ error: 'Your account must be active to request a payout' }, { status: 400 })
+  }
+
+  // 5. New creator hold (account <30 days AND 0 lifetime PAID payouts)
+  const accountAgeMs = Date.now() - creatorProfile.createdAt.getTime()
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
+  if (accountAgeMs < thirtyDaysMs) {
+    const paidPayoutsCount = await prisma.payout.count({
+      where: { creatorId: userId, status: 'PAID' },
+    })
+    if (paidPayoutsCount === 0) {
+      return NextResponse.json({
+        error: 'New creator accounts have a 7-day hold. Your account must be at least 30 days old for your first payout.',
+      }, { status: 400 })
+    }
+  }
+
+  // 6. Must have payout details saved
+  const hasPayoutDetails =
+    creatorProfile.airwallexBeneficiaryId != null ||
+    (creatorProfile.payoutMethod === 'paypal' && creatorProfile.payoutDetails != null)
+  if (!hasPayoutDetails) {
+    return NextResponse.json({ error: 'Please set up your payout details first' }, { status: 400 })
+  }
+
+  // 7. Balance check
   const [completedTxAgg, payoutsAgg] = await Promise.all([
     prisma.transaction.aggregate({
       where: { creatorId: userId, status: 'COMPLETED' },
@@ -80,13 +113,12 @@ export async function POST(req: Request) {
       creatorId: userId,
       amountUsd: amount,
       status: 'PENDING',
-      currency: 'MYR',
-      payoutMethod: payoutMethod ?? 'bank_transfer',
-      accountDetails: accountDetails ?? null,
+      currency: (creatorProfile as any).payoutCurrency ?? 'MYR',
+      payoutMethod: creatorProfile.payoutMethod,
     },
   })
 
-  // Send confirmation email to creator
+  // Send confirmation email
   const creator = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, name: true },
@@ -94,7 +126,7 @@ export async function POST(req: Request) {
   if (creator?.email) {
     const email = creator.email
     const subject = 'Payout request received'
-    const html = `<p>Hi ${creator.name ?? 'there'},</p><p>Your payout request of RM ${amount.toFixed(2)} has been received and is being reviewed.</p><p>We will notify you once it has been processed.</p><p>— NOIZU DIRECT</p>`
+    const html = `<p>Hi ${creator.name ?? 'there'},</p><p>Your payout request of RM ${(amount / 100).toFixed(2)} has been received and is being reviewed.</p><p>We will notify you once it has been processed.</p><p>— NOIZU DIRECT</p>`
     const type = 'payout_requested'
     try {
       const { data } = await resend.emails.send({ from: 'NOIZU-DIRECT <noreply@noizu.direct>', to: [email], subject, html })

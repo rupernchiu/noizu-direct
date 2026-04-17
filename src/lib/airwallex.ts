@@ -65,3 +65,88 @@ export async function confirmPaymentIntent(intentId: string): Promise<any> {
 
 // Backward-compat alias
 export const getPaymentIntent = confirmPaymentIntent
+
+export async function createBeneficiary({
+  creatorId,
+  accountName,
+  bankName,
+  accountNumber,
+  routingCode,
+  swiftCode,
+  country,
+  currency,
+}: {
+  creatorId: string
+  accountName: string
+  bankName: string
+  accountNumber: string
+  routingCode?: string
+  swiftCode?: string
+  country: string
+  currency: string
+}): Promise<{ beneficiary_id: string; status: string }> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/beneficiaries/create`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      request_id: creatorId,
+      entity_type: 'PERSONAL',
+      address: { country_code: country },
+      bank_details: {
+        account_currency: currency,
+        account_name: accountName,
+        bank_name: bankName,
+        account_number: accountNumber,
+        ...(routingCode ? { routing_number: routingCode } : {}),
+        ...(swiftCode ? { swift_code: swiftCode } : {}),
+      },
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Create beneficiary failed: ${err}`)
+  }
+  return res.json()
+}
+
+export async function executeTransfer({
+  beneficiaryId,
+  amount,
+  currency,
+  payoutId,
+}: {
+  beneficiaryId: string
+  amount: number  // in cents
+  currency: string
+  payoutId: string
+  creatorName?: string
+}): Promise<{ transfer_id?: string; id?: string; status: string }> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/transfers/create`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      request_id: payoutId,
+      beneficiary_id: beneficiaryId,
+      amount: amount / 100,
+      currency,
+      payment_method: 'LOCAL',
+      memo: 'NOIZU-DIRECT Creator Payout',
+    }),
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Execute transfer failed: ${err}`)
+  }
+  return res.json()
+}
+
+export async function getTransferStatus(transferId: string): Promise<{ status: string; failure_reason?: string }> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/transfers/${transferId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`Get transfer status failed: ${res.status}`)
+  return res.json()
+}

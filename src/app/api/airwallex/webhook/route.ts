@@ -122,6 +122,71 @@ async function handlePaymentFailed(intentId: string) {
   })
 }
 
+async function handleTransferSucceeded(transferId: string) {
+  const payout = await prisma.payout.findFirst({
+    where: { airwallexTransferId: transferId },
+    include: { creator: { select: { email: true, name: true } } },
+  })
+  if (!payout || payout.status === 'PAID') return
+
+  await prisma.payout.update({
+    where: { id: payout.id },
+    data: { status: 'PAID', completedAt: new Date(), processedAt: new Date() },
+  })
+
+  await sendAndLog(
+    payout.creator.email,
+    'Your payout has been sent — NOIZU-DIRECT',
+    emailShell(`
+      <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout sent!</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, your payout of <strong style="color:#e5e5f0;">RM ${(payout.amountUsd / 100).toFixed(2)}</strong> has been sent to your account. Please allow 1–3 business days for the funds to arrive.</p>
+      <p style="margin:0;font-size:13px;color:#6b6b7a;">Reference: #${payout.id.slice(-8).toUpperCase()}</p>
+    `),
+    'payout_sent',
+  )
+}
+
+async function handleTransferFailed(transferId: string, failureReason?: string) {
+  const payout = await prisma.payout.findFirst({
+    where: { airwallexTransferId: transferId },
+    include: { creator: { select: { email: true, name: true } } },
+  })
+  if (!payout || payout.status === 'REJECTED') return
+
+  await prisma.payout.update({
+    where: { id: payout.id },
+    data: {
+      status: 'REJECTED',
+      rejectedAt: new Date(),
+      failureReason: failureReason ?? 'Transfer failed',
+    },
+  })
+
+  await prisma.auditEvent.create({
+    data: {
+      actorId: 'system',
+      actorName: 'Airwallex Webhook',
+      action: 'payouts.failed',
+      entityType: 'Payout',
+      entityId: payout.id,
+      reason: failureReason ?? 'Transfer failed',
+      entityLabel: `RM ${(payout.amountUsd / 100).toFixed(2)}`,
+    },
+  }).catch(() => {})
+
+  await sendAndLog(
+    payout.creator.email,
+    'Your payout failed — NOIZU-DIRECT',
+    emailShell(`
+      <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout failed</p>
+      <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, unfortunately your payout of <strong style="color:#e5e5f0;">RM ${(payout.amountUsd / 100).toFixed(2)}</strong> could not be processed.</p>
+      <p style="margin:0 0 16px;font-size:14px;color:#8b8b9a;">Reason: ${failureReason ?? 'Unknown error'}</p>
+      <p style="margin:0;font-size:13px;color:#6b6b7a;">Please update your payout details and try again, or contact support.</p>
+    `),
+    'payout_failed',
+  )
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const signature = req.headers.get('x-signature') ?? ''
@@ -146,6 +211,11 @@ export async function POST(req: NextRequest) {
     void handlePaymentSucceeded(intentId)
   } else if (event.name === 'payment_intent.failed' && intentId) {
     void handlePaymentFailed(intentId)
+  } else if (event.name === 'transfer.succeeded' && intentId) {
+    void handleTransferSucceeded(intentId)
+  } else if (event.name === 'transfer.failed' && intentId) {
+    const failureReason = (event.data?.object as any)?.failure_reason as string | undefined
+    void handleTransferFailed(intentId, failureReason)
   }
 
   return NextResponse.json({ ok: true })

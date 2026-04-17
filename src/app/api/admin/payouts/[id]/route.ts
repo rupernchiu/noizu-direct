@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/guards'
 import { Resend } from 'resend'
+import { executeTransfer } from '@/lib/airwallex'
+import { executePayPalPayout } from '@/lib/paypal'
+
+const KEY = Buffer.from(
+  (process.env.PAYOUT_ENCRYPTION_KEY ?? 'placeholder_32_char_encryption_key').padEnd(32, '0').slice(0, 32)
+)
+function decrypt(text: string): string {
+  try {
+    const [ivHex, encHex] = text.split(':')
+    const iv = Buffer.from(ivHex, 'hex')
+    const enc = Buffer.from(encHex, 'hex')
+    const decipher = crypto.createDecipheriv('aes-256-cbc', KEY, iv)
+    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8')
+  } catch { return '' }
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
@@ -49,13 +65,51 @@ export async function PATCH(
     emailHtml = `<p>Good news! Your payout request has been approved and is being processed.</p><p>Amount: ${amountDisplay}</p><p>— NOIZU DIRECT</p>`
     emailType = 'payout_approved'
   } else if (action === 'paid') {
+    // Fetch creator profile for payout method details
+    const creatorProfile = await prisma.creatorProfile.findUnique({
+      where: { userId: existing.creatorId },
+      select: { payoutMethod: true, airwallexBeneficiaryId: true, payoutDetails: true, payoutCurrency: true },
+    })
+
+    let transferId: string | null = null
+
+    try {
+      if (creatorProfile?.payoutMethod === 'paypal' && creatorProfile.payoutDetails) {
+        const details = JSON.parse(decrypt(creatorProfile.payoutDetails)) as { paypalEmail?: string }
+        if (details.paypalEmail) {
+          const result = await executePayPalPayout({
+            payoutId: existing.id,
+            paypalEmail: details.paypalEmail,
+            amount: existing.amountUsd,
+            currency: creatorProfile.payoutCurrency ?? 'USD',
+          })
+          transferId = result.batch_id
+        }
+      } else if (creatorProfile?.airwallexBeneficiaryId) {
+        const result = await executeTransfer({
+          beneficiaryId: creatorProfile.airwallexBeneficiaryId,
+          amount: existing.amountUsd,
+          currency: creatorProfile.payoutCurrency ?? 'MYR',
+          payoutId: existing.id,
+        })
+        transferId = result.transfer_id ?? result.id ?? null
+      }
+    } catch (e) {
+      console.error('Transfer execution error:', e)
+      // Continue — mark as PROCESSING even if transfer API call fails
+    }
+
     payout = await prisma.payout.update({
       where: { id },
-      data: { status: 'PAID', processedAt: new Date(), completedAt: new Date() },
+      data: {
+        status: 'PROCESSING',
+        processedAt: new Date(),
+        ...(transferId ? { airwallexTransferId: transferId } : {}),
+      },
     })
-    emailSubject = 'Your payout has been sent'
-    emailHtml = `<p>Your payout of ${amountDisplay} has been sent to your account.</p><p>Please allow 1–3 business days for the funds to arrive.</p><p>— NOIZU DIRECT</p>`
-    emailType = 'payout_paid'
+    emailSubject = 'Your payout is being processed'
+    emailHtml = `<p>Your payout of ${amountDisplay} is being processed and will arrive within 1–3 business days.</p><p>— NOIZU DIRECT</p>`
+    emailType = 'payout_processing'
   } else {
     // reject
     payout = await prisma.payout.update({
@@ -79,7 +133,7 @@ export async function PATCH(
       action: `payouts.${action}`,
       entityType: 'Payout',
       entityId: id,
-      reason: rejectionReason ?? null,
+      reason: action === 'paid' ? 'Admin executed payout transfer' : (rejectionReason ?? null),
       entityLabel: amountDisplay,
     },
   })
