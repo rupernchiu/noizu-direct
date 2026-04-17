@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function PayoutActions({ payoutId, status }: { payoutId: string; status: string }) {
+export function PayoutActions({ payoutId, status, hasPayoutDetails }: { payoutId: string; status: string; hasPayoutDetails: boolean }) {
   const router = useRouter()
   const [loadingAction, setLoadingAction] = useState<string | null>(null)
   const [showReject, setShowReject] = useState(false)
@@ -30,7 +30,7 @@ export function PayoutActions({ payoutId, status }: { payoutId: string; status: 
   }
 
   async function handlePaid() {
-    if (!confirm('Mark this payout as paid?')) return
+    if (!confirm('Execute payout via Airwallex/PayPal? This will initiate the real transfer.')) return
     setLoadingAction('paid')
     try {
       await patch({ action: 'paid' })
@@ -68,11 +68,12 @@ export function PayoutActions({ payoutId, status }: { payoutId: string; status: 
 
         {status === 'APPROVED' && (
           <button
-            onClick={handlePaid}
-            disabled={loadingAction !== null}
+            onClick={hasPayoutDetails ? handlePaid : undefined}
+            disabled={loadingAction !== null || !hasPayoutDetails}
+            title={!hasPayoutDetails ? 'Creator has not set up payout details' : undefined}
             className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
           >
-            {loadingAction === 'paid' ? 'Marking...' : 'Mark as Paid'}
+            {loadingAction === 'paid' ? 'Executing...' : 'Execute'}
           </button>
         )}
 

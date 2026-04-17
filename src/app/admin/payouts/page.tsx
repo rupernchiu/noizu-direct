@@ -59,6 +59,12 @@ export default async function AdminPayoutsPage({
           select: {
             name: true,
             email: true,
+            creatorProfile: {
+              select: {
+                airwallexBeneficiaryId: true,
+                payoutDetails: true,
+              },
+            },
           },
         },
       },
@@ -119,23 +125,39 @@ export default async function AdminPayoutsPage({
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[payout.status] ?? 'bg-border text-muted-foreground'}`}>
                       {payout.status}
                     </span>
-                    {payout.status === 'REJECTED' && payout.rejectionReason && (
-                      <p className="text-xs text-muted-foreground mt-0.5" title={payout.rejectionReason}>
-                        {truncate(payout.rejectionReason, 24)}
+                    {payout.status === 'PROCESSING' && (
+                      <p className="text-xs text-muted-foreground mt-0.5">Awaiting transfer</p>
+                    )}
+                    {payout.status === 'REJECTED' && (payout.failureReason ?? payout.rejectionReason) && (
+                      <p className="text-xs text-muted-foreground mt-0.5" title={payout.failureReason ?? payout.rejectionReason ?? undefined}>
+                        {truncate(payout.failureReason ?? payout.rejectionReason, 24)}
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs capitalize">
-                    {payout.payoutMethod?.replace('_', ' ') ?? '—'}
+                  <td className="px-4 py-3">
+                    {payout.payoutMethod === 'paypal' ? (
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">PayPal</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">Bank Transfer</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
                     {formatAccountDetails(payout.accountDetails)}
+                    {payout.airwallexTransferId && (
+                      <p className="text-xs text-muted-foreground mt-0.5 font-mono">
+                        Ref: ···{payout.airwallexTransferId.slice(-8)}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
                     {new Date(payout.requestedAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <PayoutActions payoutId={payout.id} status={payout.status} />
+                    <PayoutActions
+                      payoutId={payout.id}
+                      status={payout.status}
+                      hasPayoutDetails={!!payout.creator.creatorProfile?.airwallexBeneficiaryId || !!payout.creator.creatorProfile?.payoutDetails}
+                    />
                   </td>
                 </tr>
               ))}
