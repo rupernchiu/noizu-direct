@@ -57,7 +57,20 @@
       "Bash(npx kill-port *)",
       "Bash(xargs grep *)",
       "Bash(xargs head *)",
-      "Bash(xargs cat *)"
+      "Bash(xargs cat *)",
+      "Bash(gh --version)",
+      "Bash(vercel --version)",
+      "Bash(npx wrangler *)",
+      "Bash(npx supabase *)",
+      "Bash(gh auth *)",
+      "Bash(vercel whoami *)",
+      "Bash(taskkill /F /IM chrome.exe /T)",
+      "Bash(powershell.exe -Command \"Start-Process 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\ruper\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data','--profile-directory=Default','--no-first-run','--no-default-browser-check'\")",
+      "Bash(echo \"Task 1 \\(GitHub\\) PID: $!\")",
+      "Bash(xargs -I{} sh -c 'echo \"--- {} ---\" && cat \"{}\"')",
+      "Bash(> \"$TASK_DIR/task4.log\")",
+      "Bash(echo \"T4 PID=$!\")",
+      "Bash(> \"$TASK_DIR/task3.log\")"
     ]
   },
   "enabledPlugins": {
