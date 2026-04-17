@@ -1,14 +1,31 @@
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const dbUrl = process.env.DATABASE_URL ?? 'file:./dev.db';
-const adapter = new PrismaBetterSqlite3({ url: dbUrl });
+const dbUrl = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL!;
+const pool = new Pool({ connectionString: dbUrl });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter } as any);
 
 async function main() {
   console.log('🌱 Starting seed...');
+
+  // Cleanup: delete products for seed creators (upserts handle profiles/users idempotently)
+  const seedUsernames = ['sakura_arts', 'akira_doujin', 'cosplay_luna', 'propsmith_my'];
+  const seedProfiles = await prisma.creatorProfile.findMany({ where: { username: { in: seedUsernames } } });
+  if (seedProfiles.length > 0) {
+    const profileIds = seedProfiles.map(p => p.id);
+    const seedProducts = await prisma.product.findMany({ where: { creatorId: { in: profileIds } }, select: { id: true } });
+    if (seedProducts.length > 0) {
+      const productIds = seedProducts.map(p => p.id);
+      await prisma.cartItem.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.wishlistItem.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.product.deleteMany({ where: { id: { in: productIds } } });
+    }
+  }
+  console.log('🧹 Cleaned up existing seed products');
 
   // Platform settings
   await prisma.platformSettings.upsert({
@@ -52,8 +69,9 @@ async function main() {
     },
   });
   const sakuraProfile = await prisma.creatorProfile.upsert({
-    where: { userId: c1.id },
+    where: { username: 'sakura_arts' },
     update: {
+      userId: c1.id,
       displayName: 'Sakura Arts',
       bio: 'Digital illustrator from Kuala Lumpur specialising in original characters and fan art. Comic Fiesta veteran since 2018. Currently open for commissions — DM for collab requests! Ships worldwide from Malaysia.',
       categoryTags: JSON.stringify(['DIGITAL_ART', 'COSPLAY_PRINT', 'STICKERS']),
@@ -159,8 +177,9 @@ async function main() {
     },
   });
   const akiraProfile = await prisma.creatorProfile.upsert({
-    where: { userId: c2.id },
+    where: { username: 'akira_doujin' },
     update: {
+      userId: c2.id,
       displayName: 'Akira Doujin Works',
       bio: 'Indie doujin circle based in Petaling Jaya, Malaysia. Original BL and josei manga in physical and digital. Sold at Comic Fiesta, Animangaki, and World Cosplay Summit Malaysia since 2016. Everything is hand-lettered, no AI.',
       categoryTags: JSON.stringify(['DOUJIN', 'DIGITAL_ART']),
@@ -225,8 +244,9 @@ async function main() {
     },
   });
   const lunaProfile = await prisma.creatorProfile.upsert({
-    where: { userId: c3.id },
+    where: { username: 'cosplay_luna' },
     update: {
+      userId: c3.id,
       displayName: 'Luna Cosplay',
       bio: 'Professional cosplayer based in Singapore. WCS Malaysia 2022 finalist. Known for elaborate armour builds and accurate character recreations. Prints, digital wallpacks, and sticker packs from my photoshoots. Prints ship from Singapore.',
       categoryTags: JSON.stringify(['COSPLAY_PRINT', 'STICKERS', 'DIGITAL_ART']),
@@ -302,8 +322,9 @@ async function main() {
     },
   });
   const propsmithProfile = await prisma.creatorProfile.upsert({
-    where: { userId: c4.id },
+    where: { username: 'propsmith_my' },
     update: {
+      userId: c4.id,
       displayName: 'PropSmith MY',
       bio: 'Prop maker from Johor Bahru. 3D printing + Worbla + resin casting. Swords, shields, armour pieces — anything in a game I can build it. Available for event appearances and cosplay collaboration. Shipped 200+ props across SEA.',
       categoryTags: JSON.stringify(['PHYSICAL_MERCH']),

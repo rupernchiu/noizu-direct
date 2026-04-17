@@ -1,10 +1,12 @@
 import 'dotenv/config';
 import { PrismaClient } from '../src/generated/prisma/client';
-import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const dbUrl = process.env.DATABASE_URL ?? 'file:./dev.db';
-const adapter = new PrismaBetterSqlite3({ url: dbUrl });
+const dbUrl = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL!;
+const pool = new Pool({ connectionString: dbUrl });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter } as any);
 
 function daysAgo(n: number, hoursOffset = 0): Date {
