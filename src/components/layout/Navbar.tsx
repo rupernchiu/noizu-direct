@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { signOut, useSession } from 'next-auth/react'
-import { Menu, User, LogOut, LayoutDashboard, Shield, ShoppingCart } from 'lucide-react'
+import { Menu, LogOut, LayoutDashboard, Bell, ShoppingCart } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -101,20 +101,26 @@ export default function Navbar() {
         <span className="text-sm font-medium text-foreground">{user?.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 bg-surface border-border">
-        <DropdownMenuItem render={<Link href="/account" />} className="flex items-center gap-2 cursor-pointer">
-          <User className="size-4" />
-          My Account
+        {/* Role badge */}
+        <div className="px-2 py-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
+            {isAdmin ? 'Admin' : isCreator ? 'Creator' : 'Member'}
+          </span>
+        </div>
+        <DropdownMenuSeparator />
+        {/* My Dashboard */}
+        <DropdownMenuItem
+          render={<Link href={isAdmin ? '/admin' : isCreator ? '/dashboard' : '/account'} />}
+          className="flex items-center gap-2 cursor-pointer"
+        >
+          <LayoutDashboard className="size-4" />
+          My Dashboard
         </DropdownMenuItem>
-        {isCreator && (
-          <DropdownMenuItem render={<Link href="/dashboard" />} className="flex items-center gap-2 cursor-pointer">
-            <LayoutDashboard className="size-4" />
-            Creator Dashboard
-          </DropdownMenuItem>
-        )}
-        {isAdmin && (
-          <DropdownMenuItem render={<Link href="/admin" />} className="flex items-center gap-2 cursor-pointer">
-            <Shield className="size-4" />
-            Admin Panel
+        {/* Notifications — skip for admin */}
+        {!isAdmin && (
+          <DropdownMenuItem render={<Link href="/account/notifications" />} className="flex items-center gap-2 cursor-pointer">
+            <Bell className="size-4" />
+            Notifications
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
@@ -219,29 +225,23 @@ export default function Navbar() {
                   <div className="flex flex-col gap-2">
                     {session ? (
                       <>
+                        <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide py-1">
+                          {isAdmin ? 'Admin' : isCreator ? 'Creator' : 'Member'}
+                        </span>
                         <Link
-                          href="/account"
+                          href={isAdmin ? '/admin' : isCreator ? '/dashboard' : '/account'}
                           className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                         >
-                          <User className="size-4" />
-                          My Account
+                          <LayoutDashboard className="size-4" />
+                          My Dashboard
                         </Link>
-                        {isCreator && (
+                        {!isAdmin && (
                           <Link
-                            href="/dashboard"
+                            href="/account/notifications"
                             className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                           >
-                            <LayoutDashboard className="size-4" />
-                            Creator Dashboard
-                          </Link>
-                        )}
-                        {isAdmin && (
-                          <Link
-                            href="/admin"
-                            className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
-                          >
-                            <Shield className="size-4" />
-                            Admin Panel
+                            <Bell className="size-4" />
+                            Notifications
                           </Link>
                         )}
                         <button

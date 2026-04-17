@@ -54,22 +54,17 @@ export default async function AdminPayoutsPage({
     prisma.payout.count({ where }),
     prisma.payout.findMany({
       where,
-      include: { creator: { select: { name: true } } },
+      include: {
+        creator: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
       orderBy: { requestedAt: 'desc' },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
-      select: {
-        id: true,
-        amountUsd: true,
-        currency: true,
-        status: true,
-        payoutMethod: true,
-        accountDetails: true,
-        rejectionReason: true,
-        requestedAt: true,
-        completedAt: true,
-        creator: { select: { name: true } },
-      },
     }),
   ])
 
@@ -116,7 +111,7 @@ export default async function AdminPayoutsPage({
             <tbody>
               {payouts.map((payout) => (
                 <tr key={payout.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-foreground">{payout.creator.name}</td>
+                  <td className="px-4 py-3 text-foreground">{payout.creator.name ?? payout.creator.email}</td>
                   <td className="px-4 py-3 text-foreground text-right">
                     RM {(payout.amountUsd / 100).toFixed(2)}
                   </td>
