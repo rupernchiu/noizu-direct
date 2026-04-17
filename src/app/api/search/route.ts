@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 
 const PAGE_SIZES = { products: 12, creators: 10, posts: 10 }
 
@@ -12,6 +13,10 @@ export async function GET(req: NextRequest) {
   if (q.length < 2) {
     return NextResponse.json({ products: [], creators: [], posts: [], counts: { products: 0, creators: 0, posts: 0 } })
   }
+
+  const cacheKey = CACHE_KEYS.search(`${encodeURIComponent(q)}:${type}:${page}`)
+  const cached = await getCached(cacheKey)
+  if (cached) return NextResponse.json(cached)
 
   try {
     const ql = q.toLowerCase()
@@ -133,12 +138,14 @@ export async function GET(req: NextRequest) {
       }))
     }
 
-    return NextResponse.json({
+    const result = {
       products,
       creators,
       posts,
       counts: { products: productCount, creators: creatorCount, posts: postCount },
-    })
+    }
+    await setCached(cacheKey, result, CACHE_TTL.search)
+    return NextResponse.json(result)
   } catch (err) {
     console.error('[search] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 import { CreatorPageTabs } from './CreatorPageTabs'
 import type { DiscoveryProduct, DiscoveryCreator, DiscoveryVideo, DiscoveryPortfolioItem } from './CreatorDiscovery'
 import { CreatorPopup } from '@/components/ui/CreatorPopup'
@@ -153,7 +154,10 @@ const SOCIAL_LABELS: Record<string, string> = {
 export default async function CreatorPage({ params }: PageProps) {
   const { username } = await params
 
-  const creator = await prisma.creatorProfile.findUnique({
+  const cacheKey = CACHE_KEYS.creator(username)
+  const cachedCreator = await getCached<NonNullable<Awaited<ReturnType<typeof prisma.creatorProfile.findUnique>>>>(cacheKey)
+
+  const creator = cachedCreator ?? await prisma.creatorProfile.findUnique({
     where: { username },
     include: {
       user: { select: { id: true, name: true, createdAt: true } },
@@ -177,6 +181,7 @@ export default async function CreatorPage({ params }: PageProps) {
   })
 
   if (!creator) notFound()
+  if (!cachedCreator) await setCached(cacheKey, creator, CACHE_TTL.creator)
 
   // ── Discovery queries ──────────────────────────────────────────────────────
   const topCategory = (() => {

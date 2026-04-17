@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 import Link from 'next/link'
 import sanitizeHtml from 'sanitize-html'
 import { JsonLd } from '@/components/seo/JsonLd'
@@ -55,12 +56,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const post = await prisma.post.findUnique({
+  const cacheKey = CACHE_KEYS.blogPost(slug)
+  const cachedPost = await getCached<Awaited<ReturnType<typeof prisma.post.findUnique>>>(cacheKey)
+  const post = cachedPost ?? await prisma.post.findUnique({
     where: { slug },
     include: { author: { select: { name: true } } },
   })
 
   if (!post || post.status !== 'PUBLISHED') notFound()
+  if (!cachedPost) await setCached(cacheKey, post, CACHE_TTL.blogPost)
 
   // Increment view count (fire and forget)
   prisma.post.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } }).catch(() => {})
