@@ -1,3 +1,4 @@
+// Schedule: runs every 6 hours
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { calculateTrending } from '@/lib/trendingCalculator'

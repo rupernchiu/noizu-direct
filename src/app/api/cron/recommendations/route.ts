@@ -1,3 +1,4 @@
+// Schedule: runs once daily at 3am
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { computeRecommendations } from '@/lib/recommendationCalculator'

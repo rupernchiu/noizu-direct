@@ -11,7 +11,34 @@ export async function calculateTrending() {
   })
 
   let updated = 0
+  const BATCH_SIZE = 100
+  const totalBatches = Math.ceil(products.length / BATCH_SIZE)
 
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const batch = products.slice(batchIndex * BATCH_SIZE, (batchIndex + 1) * BATCH_SIZE)
+    try {
+      await processTrendingBatch(batch, now, windowStart)
+      updated += batch.length
+    } catch (err) {
+      console.error(`Trending batch ${batchIndex + 1}/${totalBatches} failed:`, err)
+    }
+    console.log(`Trending batch ${batchIndex + 1}/${totalBatches} complete`)
+    if (batchIndex < totalBatches - 1) await new Promise(r => setTimeout(r, 100))
+  }
+
+  return {
+    processed: products.length,
+    updated,
+    version: TRENDING_CONFIG.version,
+    calculatedAt: now.toISOString(),
+  }
+}
+
+async function processTrendingBatch(
+  products: { id: string; manualBoost: number; creator: { userId: string } }[],
+  now: Date,
+  windowStart: Date,
+) {
   for (const product of products) {
     const creatorUserId = product.creator.userId
     const [orders_7d, wishlist_7d, cart_7d, views_7d, reviews_7d] = await Promise.all([
@@ -92,13 +119,5 @@ export async function calculateTrending() {
       }),
     ])
 
-    updated++
-  }
-
-  return {
-    processed: products.length,
-    updated,
-    version: TRENDING_CONFIG.version,
-    calculatedAt: now.toISOString(),
   }
 }

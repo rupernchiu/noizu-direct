@@ -44,7 +44,7 @@ export async function computeRecommendations(): Promise<RecommendationResult> {
 
   // Build recommendation rows (both directions) for pairs with >= 2 shared buyers
   type Row = { sourceProductId: string; recommendedProductId: string; score: number; sharedBuyers: number; computedAt: Date }
-  const rows: Row[] = []
+  const allRows: Row[] = []
   const now = new Date()
 
   for (const [key, shared] of pairShared) {
@@ -53,20 +53,32 @@ export async function computeRecommendations(): Promise<RecommendationResult> {
     const totalA = productBuyerCount.get(a) ?? 1
     const totalB = productBuyerCount.get(b) ?? 1
     const score = shared / (Math.sqrt(totalA) * Math.sqrt(totalB))
-    rows.push({ sourceProductId: a, recommendedProductId: b, score, sharedBuyers: shared, computedAt: now })
-    rows.push({ sourceProductId: b, recommendedProductId: a, score, sharedBuyers: shared, computedAt: now })
+    allRows.push({ sourceProductId: a, recommendedProductId: b, score, sharedBuyers: shared, computedAt: now })
+    allRows.push({ sourceProductId: b, recommendedProductId: a, score, sharedBuyers: shared, computedAt: now })
   }
 
   // Replace all existing recommendations atomically
   await prisma.$transaction(async (tx) => {
     await tx.productRecommendation.deleteMany()
-    if (rows.length > 0) {
-      await tx.productRecommendation.createMany({ data: rows, skipDuplicates: true })
-    }
   })
 
+  // Insert in batches of 100
+  const BATCH_SIZE = 100
+  const totalBatches = Math.ceil(allRows.length / BATCH_SIZE)
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const batch = allRows.slice(batchIndex * BATCH_SIZE, (batchIndex + 1) * BATCH_SIZE)
+    try {
+      await prisma.productRecommendation.createMany({ data: batch, skipDuplicates: true })
+    } catch (err) {
+      console.error(`Recommendations batch ${batchIndex + 1}/${totalBatches} failed:`, err)
+    }
+    console.log(`Recommendations batch ${batchIndex + 1}/${totalBatches} complete`)
+    if (batchIndex < totalBatches - 1) await new Promise(r => setTimeout(r, 100))
+  }
+
   return {
-    pairs: Math.floor(rows.length / 2),
+    pairs: Math.floor(allRows.length / 2),
     productsProcessed: productBuyerCount.size,
     computedAt: now.toISOString(),
   }

@@ -1,3 +1,4 @@
+// Schedule: runs once daily at 4am
 import { NextRequest, NextResponse } from 'next/server'
 import { runCreatorHealthCheck } from '@/lib/creatorHealthCheck'
 
