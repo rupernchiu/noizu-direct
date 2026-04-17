@@ -80,7 +80,19 @@
       "Bash(nslookup \"db.xkohjwgsnklxoqgtppxs.supabase.co.\" 8.8.8.8)",
       "Bash(timeout 5 bash -c 'echo \"\" | nc aws-0-ap-southeast-1.pooler.supabase.com 6543')",
       "Bash(export DATABASE_URL=$\\(grep '^DATABASE_URL_DIRECT=' .env)",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(npx vercel *)",
+      "Bash(cat wrangler.toml)",
+      "Bash(cat wrangler.jsonc)",
+      "Bash(2>&1)",
+      "Bash(node_modules/.bin/ts-node-esm --skipProject -e ' *)",
+      "Bash(node_modules/.bin/tsx --tsconfig tsconfig.json /tmp/dbcheck.ts)",
+      "Bash(node_modules/.bin/tsx dbcheck-temp.ts)",
+      "Bash(npx --yes vercel env add TEST_VAR production preview development --cwd C:/Users/ruper/noizu-direct)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('TOKEN:'+d.get\\('token',''\\)\\)\")",
+      "Read(//c/Users/ruper/.local/share/vercel/**)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('TOKEN='+d.get\\('token','NOT_FOUND'\\)\\)\")",
+      "Bash(DATABASE_URL=\"postgresql://postgres.xkohjwgsnklxoqgtppxs:NoizuDirect2026@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres\" npx prisma migrate resolve --applied 0001_baseline)"
     ]
   },
   "enabledPlugins": {
