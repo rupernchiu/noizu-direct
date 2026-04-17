@@ -15,6 +15,11 @@ export async function POST(req: Request) {
     }
   }
 
-  const result = await computeRecommendations()
-  return NextResponse.json(result)
+  try {
+    const result = await computeRecommendations()
+    return NextResponse.json(result)
+  } catch (err) {
+    console.error('[cron/recommendations] Error:', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }

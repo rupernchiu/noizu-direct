@@ -11,6 +11,7 @@ export default defineConfig({
   },
   datasource: {
     url: process.env["DATABASE_URL"],
-    directUrl: process.env["DATABASE_URL_DIRECT"],
-  },
+    // directUrl is supported at runtime but not yet in the type definition
+    ...({ directUrl: process.env["DATABASE_URL_DIRECT"] } as object),
+  } as { url?: string },
 });
