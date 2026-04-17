@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireCreator } from '@/lib/guards'
 import { Prisma } from '@/generated/prisma/client'
+import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
@@ -113,6 +114,11 @@ export async function POST(req: Request) {
     images?: string[]
     stock?: number
   }
+
+  await Promise.all([
+    invalidatePattern('marketplace:*'),
+    invalidateCache(CACHE_KEYS.trending, CACHE_KEYS.creator(profile.username)),
+  ])
 
   const product = await prisma.product.create({
     data: {

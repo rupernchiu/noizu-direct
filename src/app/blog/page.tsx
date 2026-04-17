@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 
 export const metadata: Metadata = {
   title: 'Creator Blog & Guides | NOIZU-DIRECT',
@@ -14,12 +15,26 @@ export const metadata: Metadata = {
   },
 }
 
+type PostSummary = {
+  id: string; slug: string; title: string; excerpt: string | null
+  coverImage: string | null; publishedAt: Date | null; tags: string
+  author: { name: string | null }
+}
+
 export default async function BlogPage() {
-  const posts = await prisma.post.findMany({
-    where: { status: 'PUBLISHED', publishedAt: { lte: new Date() } },
-    orderBy: { publishedAt: 'desc' },
-    select: { id: true, slug: true, title: true, excerpt: true, coverImage: true, publishedAt: true, tags: true, author: { select: { name: true } } },
-  })
+  const cached = await getCached<PostSummary[]>(CACHE_KEYS.blogPosts)
+  let posts: PostSummary[]
+
+  if (cached) {
+    posts = cached
+  } else {
+    posts = await prisma.post.findMany({
+      where: { status: 'PUBLISHED', publishedAt: { lte: new Date() } },
+      orderBy: { publishedAt: 'desc' },
+      select: { id: true, slug: true, title: true, excerpt: true, coverImage: true, publishedAt: true, tags: true, author: { select: { name: true } } },
+    }) as PostSummary[]
+    await setCached(CACHE_KEYS.blogPosts, posts, CACHE_TTL.blogPosts)
+  }
 
   const [featured, ...rest] = posts
 

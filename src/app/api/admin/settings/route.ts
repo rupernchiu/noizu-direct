@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/guards'
+import { invalidateCache, CACHE_KEYS } from '@/lib/redis'
 
 export async function PATCH(req: NextRequest) {
   const session = await requireAdmin()
@@ -15,6 +16,7 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.topCreatorThreshold === 'number') allowed.topCreatorThreshold = Math.round(body.topCreatorThreshold)
 
   await prisma.platformSettings.updateMany({ data: allowed })
+  await invalidateCache(CACHE_KEYS.platformSettings)
 
   const settings = await prisma.platformSettings.findFirst()
   return NextResponse.json(settings)

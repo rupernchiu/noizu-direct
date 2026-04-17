@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { calculateTrending } from '@/lib/trendingCalculator'
+import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET
@@ -18,6 +19,10 @@ export async function GET(req: Request) {
   }
   try {
     const result = await calculateTrending()
+    await Promise.all([
+      invalidateCache(CACHE_KEYS.trending),
+      invalidatePattern('marketplace:*'),
+    ])
     return NextResponse.json(result)
   } catch (err) {
     console.error('[cron/trending] Error:', err)

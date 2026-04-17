@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireCreator, verifyProductOwnership } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
+import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 
 export async function PATCH(
   req: Request,
@@ -33,6 +34,10 @@ export async function PATCH(
     },
   })
 
+  await Promise.all([
+    invalidatePattern('marketplace:*'),
+    invalidateCache(CACHE_KEYS.trending),
+  ])
   return NextResponse.json(updated)
 }
 
@@ -55,5 +60,9 @@ export async function DELETE(
     data: { isActive: false },
   })
 
+  await Promise.all([
+    invalidatePattern('marketplace:*'),
+    invalidateCache(CACHE_KEYS.trending),
+  ])
   return NextResponse.json({ success: true })
 }

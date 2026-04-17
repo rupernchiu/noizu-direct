@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
+import { invalidateCache, CACHE_KEYS } from '@/lib/redis'
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,30}$/
 
@@ -77,5 +78,6 @@ export async function PATCH(req: Request) {
     },
   })
 
+  await invalidateCache(CACHE_KEYS.creator(updated.username))
   return NextResponse.json(updated)
 }

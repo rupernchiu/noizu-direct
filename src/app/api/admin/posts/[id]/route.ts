@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/guards'
+import { invalidateCache, CACHE_KEYS } from '@/lib/redis'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin()
@@ -31,6 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('seoDescription' in body) data.seoDescription  = body.seoDescription
 
   const post = await prisma.post.update({ where: { id }, data })
+  await invalidateCache(CACHE_KEYS.blogPosts, CACHE_KEYS.blogPost(post.slug))
   return NextResponse.json(post)
 }
 
@@ -38,6 +40,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const session = await requireAdmin()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { id } = await params
+  const post = await prisma.post.findUnique({ where: { id }, select: { slug: true } })
   await prisma.post.delete({ where: { id } })
+  if (post) await invalidateCache(CACHE_KEYS.blogPosts, CACHE_KEYS.blogPost(post.slug))
   return NextResponse.json({ ok: true })
 }
