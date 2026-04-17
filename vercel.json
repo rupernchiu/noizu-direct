@@ -1,0 +1,20 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/trending",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/recommendations",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/creator-health",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/payout-reconciler",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

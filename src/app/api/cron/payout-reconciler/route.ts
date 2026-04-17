@@ -18,13 +18,16 @@ function emailShell(body: string): string {
 </table></td></tr></table></body></html>`
 }
 
-export async function POST(req: NextRequest) {
-  const cronSecret = process.env.CRON_SECRET
-  const headerSecret = req.headers.get('x-cron-secret')
-  if (!cronSecret || headerSecret !== cronSecret) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
+function isAuthorized(req: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET
+  if (!secret) return false
+  return (
+    req.headers.get('authorization') === `Bearer ${secret}` ||
+    req.headers.get('x-cron-secret') === secret
+  )
+}
 
+async function runReconciler() {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000)
 
   const stalledPayouts = await prisma.payout.findMany({
@@ -52,7 +55,6 @@ export async function POST(req: NextRequest) {
         })
         updated++
 
-        // Email creator
         const html = emailShell(`
           <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout sent!</p>
           <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, your payout of <strong style="color:#e5e5f0;">RM ${(payout.amountUsd / 100).toFixed(2)}</strong> has been sent.</p>
@@ -75,7 +77,6 @@ export async function POST(req: NextRequest) {
         })
         updated++
 
-        // Email creator
         const html = emailShell(`
           <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout failed</p>
           <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, your payout could not be processed. Reason: ${failure_reason ?? 'Unknown'}. Please contact support.</p>
@@ -92,5 +93,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ checked, updated })
+  return { checked, updated }
+}
+
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  try {
+    return NextResponse.json(await runReconciler())
+  } catch (e) {
+    console.error('[cron/payout-reconciler]', e)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  if (!isAuthorized(req)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  try {
+    return NextResponse.json(await runReconciler())
+  } catch (e) {
+    console.error('[cron/payout-reconciler]', e)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
 }
