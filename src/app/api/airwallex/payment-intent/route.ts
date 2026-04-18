@@ -22,8 +22,13 @@ export async function POST(req: Request) {
   const userId = (session.user as any).id as string
   const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
 
-  const body = await req.json() as { orderId: string; shippingAddress?: ShippingAddress }
-  const { orderId: cartSessionId, shippingAddress } = body
+  const body = await req.json() as {
+    orderId: string
+    shippingAddress?: ShippingAddress
+    discountCodeId?: string
+    discountAmount?: number
+  }
+  const { orderId: cartSessionId, shippingAddress, discountCodeId, discountAmount: requestedDiscount } = body
 
   if (!cartSessionId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
 
@@ -57,8 +62,8 @@ export async function POST(req: Request) {
   // Validate availability
   for (const item of cartItems) {
     const p = item.product
-    if (!p.isActive || p.creator.isSuspended ||
-        (p.stock !== null && p.stock !== undefined && p.stock < item.quantity)) {
+    const stockOk = (p as any).isPreOrder || p.stock === null || p.stock === undefined || p.stock >= item.quantity
+    if (!p.isActive || p.creator.isSuspended || !stockOk) {
       return NextResponse.json({ error: `"${p.title}" is no longer available` }, { status: 400 })
     }
   }
@@ -69,10 +74,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 })
   }
 
+  // Validate and apply discount if provided
+  let verifiedDiscountAmount = 0
+  let verifiedDiscountCodeId: string | null = null
+  if (discountCodeId && requestedDiscount && requestedDiscount > 0) {
+    const dc = await prisma.discountCode.findUnique({ where: { id: discountCodeId } })
+    if (dc && dc.isActive && (!dc.expiresAt || dc.expiresAt > new Date()) &&
+        (dc.maxUses === null || dc.usedCount < dc.maxUses)) {
+      verifiedDiscountAmount = requestedDiscount
+      verifiedDiscountCodeId = discountCodeId
+    }
+  }
+
   // Totals
   const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
-  const processingFee = Math.round(subtotal * 0.025)
-  const grandTotal = subtotal + processingFee
+  const discountedSubtotal = Math.max(0, subtotal - verifiedDiscountAmount)
+  const processingFee = Math.round(discountedSubtotal * 0.025)
+  const grandTotal = discountedSubtotal + processingFee
 
   // Clean up any stale PENDING orders for this buyer before creating new ones
   await prisma.order.deleteMany({ where: { buyerId: userId, status: 'PENDING' } })
@@ -94,15 +112,18 @@ export async function POST(req: Request) {
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
     const isDigitalGroup = !isPhysicalGroup
 
+    const groupDiscountShare = verifiedDiscountAmount > 0
+      ? Math.round((groupSubtotal / subtotal) * verifiedDiscountAmount)
+      : 0
     const order = await prisma.order.create({
       data: {
         buyerId: userId,
         creatorId: items[0].product.creator.userId,
         productId: items[0].productId,
         cartSessionId,
-        amountUsd: orderAmount,
+        amountUsd: orderAmount - groupDiscountShare,
         displayCurrency: 'USD',
-        displayAmount: orderAmount,
+        displayAmount: orderAmount - groupDiscountShare,
         status: 'PENDING',
         escrowStatus: isDigitalGroup ? 'RELEASED' : 'HELD',
         escrowHeldAt: new Date(),
@@ -116,9 +137,19 @@ export async function POST(req: Request) {
         downloadExpiry: isDigitalGroup
           ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           : null,
+        discountCodeId: verifiedDiscountCodeId,
+        discountAmount: groupDiscountShare,
       },
     })
     createdOrderIds.push(order.id)
+  }
+
+  // Increment discount code usage
+  if (verifiedDiscountCodeId) {
+    await prisma.discountCode.update({
+      where: { id: verifiedDiscountCodeId },
+      data: { usedCount: { increment: 1 } },
+    })
   }
 
   // Create payment intent for the full cart total

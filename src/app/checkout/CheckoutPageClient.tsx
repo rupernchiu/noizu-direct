@@ -141,12 +141,18 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
   })
   const [awPayment, setAwPayment] = useState<{ intentId: string; clientSecret: string } | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [discountCode, setDiscountCode] = useState('')
+  const [discountApplying, setDiscountApplying] = useState(false)
+  const [appliedDiscount, setAppliedDiscount] = useState<{ discountCodeId: string; discountAmount: number; message: string } | null>(null)
+  const [discountError, setDiscountError] = useState<string | null>(null)
   const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Derived totals — recalculated from live state
-  const liveSubtotal     = liveGroups.reduce((s, g) => s + g.subtotal, 0)
-  const liveProcessingFee = Math.round(liveSubtotal * 0.025)
-  const liveTotal        = liveSubtotal + liveProcessingFee
+  const liveSubtotal      = liveGroups.reduce((s, g) => s + g.subtotal, 0)
+  const liveDiscount      = appliedDiscount?.discountAmount ?? 0
+  const liveDiscounted    = Math.max(0, liveSubtotal - liveDiscount)
+  const liveProcessingFee = Math.round(liveDiscounted * 0.025)
+  const liveTotal         = liveDiscounted + liveProcessingFee
   const liveTotalItems   = liveGroups.reduce((n, g) => n + g.items.length, 0)
   const liveHasPhysical  = liveGroups.some(g =>
     g.items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
@@ -222,6 +228,28 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     }).catch(() => {})
   }
 
+  async function applyDiscount() {
+    if (!discountCode.trim()) return
+    const firstProduct = liveGroups[0]?.items[0]?.product
+    if (!firstProduct) return
+    setDiscountApplying(true)
+    setDiscountError(null)
+    try {
+      const res = await fetch('/api/checkout/apply-discount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: discountCode, productId: firstProduct.id, amountUsd: liveSubtotal }),
+      })
+      const data = await res.json() as { discountCodeId?: string; discountAmount?: number; message?: string; error?: string }
+      if (!res.ok) { setDiscountError(data.error ?? 'Invalid code'); return }
+      setAppliedDiscount({ discountCodeId: data.discountCodeId!, discountAmount: data.discountAmount!, message: data.message! })
+    } catch {
+      setDiscountError('Failed to apply code')
+    } finally {
+      setDiscountApplying(false)
+    }
+  }
+
   function updateShipping(field: keyof ShippingAddress, value: string) {
     setShipping(prev => ({ ...prev, [field]: value }))
   }
@@ -295,6 +323,8 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
         body: JSON.stringify({
           orderId: cartSessionId,
           shippingAddress: liveHasPhysical ? shipping : undefined,
+          discountCodeId: appliedDiscount?.discountCodeId,
+          discountAmount: appliedDiscount?.discountAmount,
         }),
       })
       const data = await res.json() as { intentId?: string; clientSecret?: string; error?: string }
@@ -606,11 +636,53 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                 </div>
               ))}
 
+              {/* Discount code input */}
+              <div className="border-t border-border pt-3">
+                {appliedDiscount ? (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-success text-xs">{appliedDiscount.message}</span>
+                    <button
+                      onClick={() => { setAppliedDiscount(null); setDiscountCode('') }}
+                      className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Discount code"
+                        value={discountCode}
+                        onChange={e => { setDiscountCode(e.target.value); setDiscountError(null) }}
+                        onKeyDown={e => e.key === 'Enter' && applyDiscount()}
+                        className="flex-1 rounded-lg bg-background border border-border px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                      />
+                      <button
+                        onClick={applyDiscount}
+                        disabled={discountApplying || !discountCode.trim()}
+                        className="px-3 py-2 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-xs font-medium hover:bg-secondary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {discountApplying ? '...' : 'Apply'}
+                      </button>
+                    </div>
+                    {discountError && <p className="text-xs text-destructive">{discountError}</p>}
+                  </div>
+                )}
+              </div>
+
               <div className="border-t border-border pt-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="text-foreground">{formatPrice(liveSubtotal)}</span>
                 </div>
+                {liveDiscount > 0 && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-success">Discount</span>
+                    <span className="text-success">-{formatPrice(liveDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Processing fee (2.5%)</span>
                   <span className="text-foreground">{formatPrice(liveProcessingFee)}</span>

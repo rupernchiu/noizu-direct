@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -103,6 +103,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </p>
               <NavLink href="/dashboard/reviews/products"><Star className="size-4" />Product Reviews</NavLink>
               <NavLink href="/dashboard/reviews/messages"><MessageCircle className="size-4" />Storefront Messages</NavLink>
+              <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
               <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
               <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
               {/* Separator */}

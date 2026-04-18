@@ -31,6 +31,11 @@ export async function PATCH(
       ...(body.stock !== undefined && { stock: body.stock as number }),
       ...(body.isActive !== undefined && { isActive: body.isActive as boolean }),
       ...(body.isPinned !== undefined && { isPinned: body.isPinned as boolean }),
+      ...(body.isPreOrder !== undefined && { isPreOrder: body.isPreOrder as boolean }),
+      ...(body.preOrderMessage !== undefined && { preOrderMessage: body.preOrderMessage as string | null }),
+      ...(body.preOrderReleaseAt !== undefined && {
+        preOrderReleaseAt: body.preOrderReleaseAt ? new Date(body.preOrderReleaseAt as string) : null,
+      }),
     },
   })
 

@@ -159,7 +159,8 @@ export default async function ProductPage({ params }: PageProps) {
 
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
-  const inStock = !isPhysical || (product.stock != null && product.stock > 0)
+  const isPreOrder = (product as any).isPreOrder as boolean
+  const inStock = isPreOrder || !isPhysical || (product.stock != null && product.stock > 0)
 
   const sizeVariants: string[] = (() => {
     try { return JSON.parse((product as any).sizeVariants ?? '[]') } catch { return [] }
@@ -255,10 +256,32 @@ export default async function ProductPage({ params }: PageProps) {
               </span>
             </div>
 
+            {/* Pre-order badge */}
+            {isPreOrder && (
+              <span className="inline-flex items-center rounded-full bg-purple-500/10 border border-purple-500/30 px-3 py-1 text-xs font-semibold text-purple-400">
+                Pre-Order
+              </span>
+            )}
+
             {/* Title */}
             <h1 className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
               {product.title}
             </h1>
+
+            {/* Pre-order callout */}
+            {isPreOrder && (
+              <div className="rounded-xl bg-purple-500/5 border border-purple-500/20 p-4 space-y-1">
+                {(product as any).preOrderMessage && (
+                  <p className="text-sm text-purple-300">{(product as any).preOrderMessage}</p>
+                )}
+                {(product as any).preOrderReleaseAt && (
+                  <p className="text-xs text-muted-foreground">
+                    Expected:{' '}
+                    {new Date((product as any).preOrderReleaseAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Rating display */}
             {reviewTotal > 0 && (

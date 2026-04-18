@@ -115,6 +115,7 @@ model CreatorProfile {
   podProviders        CreatorPodProvider[]
   followers           CreatorFollow[]
   guestbookEntries    CreatorGuestbook[]
+  discountCodes       DiscountCode[]
 }
 
 // ── POD Provider ──────────────────────────────────────────────────────────────
@@ -174,6 +175,9 @@ model Product {
   isTrendingSuppressed Boolean  @default(false)
   reviewCount          Int      @default(0)
   averageRating        Float    @default(0)
+  isPreOrder           Boolean  @default(false)
+  preOrderMessage      String?
+  preOrderReleaseAt    DateTime?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -187,6 +191,7 @@ model Product {
   sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
   targetRecommendations ProductRecommendation[] @relation("TargetProduct")
   reviews             ProductReview[]
+  discountCodes       DiscountCode[]
 }
 
 // ── Product View Tracking ──────────────────────────────────────────────────────
@@ -310,6 +315,8 @@ model Order {
   fulfillmentDeadline      DateTime?
   fulfillmentWarningsSent  Int       @default(0)
   buyerConfirmedAt         DateTime?
+  discountCodeId           String?
+  discountAmount           Int       @default(0)
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -322,6 +329,7 @@ model Order {
   dispute           Dispute?
   escrowTransactions EscrowTransaction[]
   review            ProductReview?
+  discountCode      DiscountCode?      @relation(fields: [discountCodeId], references: [id])
 }
 
 // ── Dispute ───────────────────────────────────────────────────────────────────
@@ -673,6 +681,27 @@ model CartItem {
 
   buyer   User    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// ── Discount Codes ────────────────────────────────────────────────────────────
+
+model DiscountCode {
+  id                 String    @id @default(cuid())
+  code               String    @unique
+  type               String    // PERCENTAGE | FIXED_AMOUNT
+  value              Int       // percentage (0-100) or cents
+  minimumOrderAmount Int?      // cents, optional
+  maxUses            Int?      // null = unlimited
+  usedCount          Int       @default(0)
+  expiresAt          DateTime?
+  isActive           Boolean   @default(true)
+  creatorId          String
+  productId          String?
+  createdAt          DateTime  @default(now())
+
+  creator  CreatorProfile @relation(fields: [creatorId], references: [id])
+  product  Product?       @relation(fields: [productId], references: [id])
+  orders   Order[]
 }
 
 // ── Wishlist ──────────────────────────────────────────────────────────────────

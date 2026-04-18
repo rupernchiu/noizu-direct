@@ -34,6 +34,9 @@ interface Product {
   type: string
   images: string
   stock: number | null
+  isPreOrder: boolean
+  preOrderMessage: string | null
+  preOrderReleaseAt: string | null
 }
 
 export function EditListingForm({ product }: { product: Product }) {
@@ -42,6 +45,11 @@ export function EditListingForm({ product }: { product: Product }) {
     try { return JSON.parse(product.images) as string[] } catch { return [] }
   })
   const [error, setError] = useState<string | null>(null)
+  const [isPreOrder, setIsPreOrder] = useState(product.isPreOrder)
+  const [preOrderMessage, setPreOrderMessage] = useState(product.preOrderMessage ?? '')
+  const [preOrderReleaseAt, setPreOrderReleaseAt] = useState(
+    product.preOrderReleaseAt ? new Date(product.preOrderReleaseAt).toISOString().slice(0, 16) : ''
+  )
 
   const {
     register,
@@ -70,7 +78,13 @@ export function EditListingForm({ product }: { product: Product }) {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, images }),
+        body: JSON.stringify({
+          ...data,
+          images,
+          isPreOrder,
+          preOrderMessage: isPreOrder ? preOrderMessage : null,
+          preOrderReleaseAt: isPreOrder && preOrderReleaseAt ? new Date(preOrderReleaseAt).toISOString() : null,
+        }),
       })
       if (!res.ok) {
         const body = await res.json() as { error?: string }
@@ -185,6 +199,42 @@ export function EditListingForm({ product }: { product: Product }) {
             {errors.stock && <p className="mt-1 text-xs text-red-400">{errors.stock.message}</p>}
           </div>
         )}
+
+        {/* Pre-order */}
+        <div className="rounded-lg bg-card border border-border p-4 space-y-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPreOrder}
+              onChange={e => setIsPreOrder(e.target.checked)}
+              className="w-4 h-4 rounded border-border accent-primary"
+            />
+            <span className="text-sm font-medium text-foreground">Enable pre-order</span>
+          </label>
+          {isPreOrder && (
+            <div className="space-y-3 pt-1">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Pre-order message</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Ships in March 2026"
+                  value={preOrderMessage}
+                  onChange={e => setPreOrderMessage(e.target.value)}
+                  className="w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Expected release date <span className="text-muted-foreground/60">(optional)</span></label>
+                <input
+                  type="datetime-local"
+                  value={preOrderReleaseAt}
+                  onChange={e => setPreOrderReleaseAt(e.target.value)}
+                  className="w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Images */}
         <div>

@@ -25,13 +25,23 @@ export default async function EditListingPage({
 
   if (!product || product.creator.userId !== userId) redirect('/dashboard/listings')
 
+  const serialized = {
+    ...product,
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
+    trendingUpdatedAt: product.trendingUpdatedAt?.toISOString() ?? null,
+    preOrderReleaseAt: (product as any).preOrderReleaseAt
+      ? new Date((product as any).preOrderReleaseAt).toISOString()
+      : null,
+  }
+
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-foreground">Edit Listing</h1>
         <p className="text-sm text-muted-foreground mt-1">Update your product details</p>
       </div>
-      <EditListingForm product={product} />
+      <EditListingForm product={serialized as any} />
     </div>
   )
 }
