@@ -1350,7 +1350,11 @@ export function CreatorPageTabs({
         )}
 
         {/* Leave a fan message form — below the list */}
-        {userRole === 'ADMIN' || sessionUserId === creatorUserId ? null : !userRole ? (
+        {sessionUserId === creatorUserId ? null : (userRole === 'ADMIN' || userRole === 'CREATOR') ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground">Only members can leave fan messages</p>
+          </div>
+        ) : !userRole ? (
           <div className="rounded-xl border border-border bg-card p-5 text-center">
             <p className="text-sm text-muted-foreground mb-3">Sign in to leave a fan message</p>
             <Link
@@ -1408,6 +1412,53 @@ export function CreatorPageTabs({
         )}
       </div>
 
+
+      {/* ── Leave a Private Message ───────────────────────────────────────── */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-6 mb-16">
+        <h2 className="text-lg font-bold text-foreground mb-4">Leave a Message</h2>
+        {sessionUserId === creatorUserId ? null : (userRole === 'ADMIN' || userRole === 'CREATOR') ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground">Only members can send messages to creators</p>
+          </div>
+        ) : !userRole ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground mb-3">Sign in to send a message</p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+        ) : msgSent ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm font-medium text-success">Message sent! The creator will reply in your Messages inbox.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSendMessage} className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <textarea
+              rows={4}
+              value={msgText}
+              onChange={e => setMsgText(e.target.value.slice(0, 1000))}
+              maxLength={1000}
+              required
+              className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+              placeholder={`Send a private message to ${displayName}…`}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{msgText.length}/1000</span>
+              {msgError && <p className="text-sm text-destructive">{msgError}</p>}
+              <button
+                type="submit"
+                disabled={msgSending || !msgText.trim()}
+                className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {msgSending ? 'Sending…' : 'Send Message'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
 
       {/* ── Portfolio Lightbox ─────────────────────────────────────────────── */}
       {lightboxIdx !== null && (
