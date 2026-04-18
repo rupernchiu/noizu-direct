@@ -1,7 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 
 export async function POST(req: Request) {
+  // Require authentication — unauthenticated callers must not be able to probe discount codes
+  const session = await auth()
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const body = await req.json() as { code: string; productId: string; amountUsd: number }
   const { code, productId, amountUsd } = body
 

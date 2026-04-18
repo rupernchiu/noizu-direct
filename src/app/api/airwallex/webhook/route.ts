@@ -192,11 +192,17 @@ export async function POST(req: NextRequest) {
   const signature = req.headers.get('x-signature') ?? ''
   const secret = process.env.AIRWALLEX_WEBHOOK_SECRET ?? ''
 
-  if (secret && secret !== 'placeholder') {
-    const expected = crypto.createHmac('sha256', secret).update(body).digest('hex')
-    if (expected !== signature) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-    }
+  // Always enforce HMAC verification. A missing or placeholder secret is a
+  // deployment misconfiguration — reject rather than silently bypass.
+  if (!secret || secret === 'placeholder') {
+    console.error('[airwallex/webhook] AIRWALLEX_WEBHOOK_SECRET is not configured')
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
+  }
+  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex')
+  const sigBuf   = Buffer.from(signature)
+  const expBuf   = Buffer.from(expected)
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   const event = JSON.parse(body) as {

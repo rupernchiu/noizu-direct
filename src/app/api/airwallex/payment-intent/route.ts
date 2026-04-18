@@ -74,14 +74,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 })
   }
 
-  // Validate and apply discount if provided
+  // Validate and apply discount if provided.
+  // Re-validate discount server-side — never trust the client-supplied amount.
+  // Use an atomic conditional-increment to prevent race-condition double-use.
   let verifiedDiscountAmount = 0
   let verifiedDiscountCodeId: string | null = null
   if (discountCodeId && requestedDiscount && requestedDiscount > 0) {
     const dc = await prisma.discountCode.findUnique({ where: { id: discountCodeId } })
-    if (dc && dc.isActive && (!dc.expiresAt || dc.expiresAt > new Date()) &&
-        (dc.maxUses === null || dc.usedCount < dc.maxUses)) {
-      verifiedDiscountAmount = requestedDiscount
+    if (
+      dc && dc.isActive &&
+      (!dc.expiresAt || dc.expiresAt > new Date()) &&
+      (dc.maxUses === null || dc.usedCount < dc.maxUses)
+    ) {
+      // Atomically increment only if the usage limit is still satisfied.
+      // updateMany returns a count of rows actually updated; if 0, the code
+      // was used up by a concurrent request between our check and now.
+      const updated = await prisma.discountCode.updateMany({
+        where: {
+          id: discountCodeId,
+          isActive: true,
+          OR: [
+            { maxUses: null },
+            { maxUses: { gt: dc.usedCount } },
+          ],
+        },
+        data: { usedCount: { increment: 1 } },
+      })
+
+      if (updated.count === 0) {
+        return NextResponse.json({ error: 'Discount code is no longer available' }, { status: 400 })
+      }
+
+      // Server-side recalculate discount amount rather than trusting the client value
+      const subtotalForDiscount = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
+      verifiedDiscountAmount = dc.type === 'PERCENTAGE'
+        ? Math.round(subtotalForDiscount * (dc.value / 100))
+        : Math.min(dc.value, subtotalForDiscount)
       verifiedDiscountCodeId = discountCodeId
     }
   }
@@ -144,13 +172,7 @@ export async function POST(req: Request) {
     createdOrderIds.push(order.id)
   }
 
-  // Increment discount code usage
-  if (verifiedDiscountCodeId) {
-    await prisma.discountCode.update({
-      where: { id: verifiedDiscountCodeId },
-      data: { usedCount: { increment: 1 } },
-    })
-  }
+  // Discount code usedCount was already incremented atomically above during validation.
 
   // Create payment intent for the full cart total
   const intent = await createPaymentIntent({

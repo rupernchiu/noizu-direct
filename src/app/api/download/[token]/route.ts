@@ -21,7 +21,13 @@ export async function GET(
   if (!filePath) return new Response('No file attached to this product', { status: 404 })
 
   const normalised = filePath.startsWith('/') ? filePath.slice(1) : filePath
-  const abs = join(process.cwd(), 'public', normalised)
+  const publicRoot = join(process.cwd(), 'public')
+  const abs = join(publicRoot, normalised)
+
+  // Path traversal guard: resolved path must remain inside public/
+  if (!abs.startsWith(publicRoot + '/') && abs !== publicRoot) {
+    return new Response('Forbidden', { status: 403 })
+  }
 
   try {
     const buf = readFileSync(abs)
