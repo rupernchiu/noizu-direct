@@ -936,3 +936,21 @@ model AuditEvent {
 
   actor StaffUser? @relation(fields: [actorId], references: [id])
 }
+
+// ── Creator Spotlight ─────────────────────────────────────────────────────────
+
+model CreatorSpotlight {
+  id             String   @id @default(cuid())
+  displayName    String
+  creatorType    String
+  location       String
+  quote          String
+  earningsStat   String
+  earningsPeriod String
+  avatarInitials String
+  avatarColor    String
+  profileUrl     String?
+  isActive       Boolean  @default(true)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+}

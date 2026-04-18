@@ -36,6 +36,11 @@ import NewDropsSection from '@/components/sections/NewDropsSection'
 import HowItWorksSection from '@/components/sections/HowItWorksSection'
 import TrendingSection from '@/components/sections/TrendingSection'
 import { AdminPopup } from '@/components/ui/AdminPopup'
+import CreatorPainPointsSection from '@/components/sections/CreatorPainPointsSection'
+import CreatorSpotlightSection from '@/components/sections/CreatorSpotlightSection'
+import CommissionSpotlightSection from '@/components/sections/CommissionSpotlightSection'
+import CommunityProofSection from '@/components/sections/CommunityProofSection'
+import FinalCreatorCTASection from '@/components/sections/FinalCreatorCTASection'
 
 export default async function HomePage() {
   const [sections, popupAd, creatorCount, productCount, buyerCount] = await Promise.all([
@@ -111,6 +116,10 @@ export default async function HomePage() {
               <React.Fragment key={section.id}>
                 <HeroSection content={content} stats={{ creators: creatorCount, products: productCount, buyers: buyerCount }} />
                 <TrustBar />
+                <CreatorPainPointsSection />
+                <HowItWorksSection />
+                <CreatorSpotlightSection />
+                <CommissionSpotlightSection />
               </React.Fragment>
             )
           case 'FEATURED_CREATORS':
@@ -124,7 +133,8 @@ export default async function HomePage() {
         }
       })}
       <TrendingSection />
-      <HowItWorksSection />
+      <CommunityProofSection />
+      <FinalCreatorCTASection />
     </div>
   )
 }
