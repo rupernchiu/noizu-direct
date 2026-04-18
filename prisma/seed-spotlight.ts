@@ -5,7 +5,7 @@ import { Pool } from 'pg'
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL })
 const adapter = new PrismaPg(pool)
-const prisma = new PrismaClient({ adapter } as object)
+const prisma = new PrismaClient({ adapter } as any)
 
 async function main() {
   await prisma.creatorSpotlight.deleteMany()
