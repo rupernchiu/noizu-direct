@@ -184,8 +184,8 @@ export default function Navbar() {
           {/* Right — icons (margin-left: auto pushes to right edge) */}
           <div className="hidden md:flex items-center gap-1 ml-auto">
             <CurrencySelector />
-            <CartIcon />
             <ThemeToggle />
+            <CartIcon />
             {authSection}
           </div>
 

@@ -64,6 +64,7 @@ export default async function AdminCmsPage() {
                 sectionId={section.id}
                 isActive={section.isActive}
                 content={section.content}
+                sectionType={section.type}
               />
             </div>
           </div>
