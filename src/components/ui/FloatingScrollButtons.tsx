@@ -40,8 +40,8 @@ export function FloatingScrollButtons() {
 
   return (
     <div
-      className="fixed z-50 flex flex-col gap-2"
-      style={{ right: 24, bottom: 80 }}
+      className="fixed z-50 flex flex-row gap-2"
+      style={{ bottom: 24, left: '50%', transform: 'translateX(-50%)' }}
       aria-label="Page scroll controls"
     >
       <button

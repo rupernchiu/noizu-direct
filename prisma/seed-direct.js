@@ -68,7 +68,7 @@ for (const c of creatorDefs) {
       .run(uid, c.email, creatorPwd, c.name, now, now);
     user = { id: uid };
   }
-  let profile = db.prepare('SELECT id FROM CreatorProfile WHERE username = ?').get(c.username);
+  let profile = db.prepare('SELECT id, userId FROM CreatorProfile WHERE username = ?').get(c.username);
   if (!profile) {
     const pid = cuid();
     db.prepare(`INSERT INTO CreatorProfile
@@ -80,6 +80,9 @@ for (const c of creatorDefs) {
            c.commissionStatus, c.commissionDescription, c.commissionPricing, c.badges,
            c.isVerified, c.isTopCreator, c.totalSales, now);
     profile = { id: pid };
+  } else if (profile.userId !== user.id) {
+    db.prepare('UPDATE CreatorProfile SET userId = ? WHERE username = ?').run(user.id, c.username);
+    console.log('  Relinked', c.username, 'from', profile.userId, '->', user.id);
   }
   profiles[c.username] = profile.id;
   console.log('Creator:', c.username, '->', profile.id);

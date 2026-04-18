@@ -8,7 +8,7 @@ export function Logo({ className }: Props) {
   return (
     <span className={cn('inline-flex items-center', className)}>
       <img
-        src="/uploads/library/e17af218-5eb7-4281-9e75-eb7427fac949.webp"
+        src="https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-light.webp"
         alt="NOIZU-DIRECT"
         width={130}
         height={33}
@@ -16,7 +16,7 @@ export function Logo({ className }: Props) {
         className="dark:hidden"
       />
       <img
-        src="/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp"
+        src="https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-dark.webp"
         alt="NOIZU-DIRECT"
         width={130}
         height={33}

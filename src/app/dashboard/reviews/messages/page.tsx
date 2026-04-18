@@ -10,22 +10,24 @@ export default async function StorefrontMessagesPage() {
 
   const userId = (session.user as any).id as string
 
-  const messages = await prisma.message.findMany({
-    where: { receiverId: userId, orderId: null },
-    orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
-    include: {
-      sender: { select: { name: true } },
-    },
+  const profile = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true, displayName: true } })
+  if (!profile) redirect('/')
+
+  const entries = await prisma.creatorGuestbook.findMany({
+    where: { creatorProfileId: profile.id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, content: true, rating: true, status: true, createdAt: true, author: { select: { name: true } } },
   })
 
   return (
     <StorefrontMessagesManager
-      initialMessages={messages.map(m => ({
-        id: m.id,
-        senderName: m.sender.name,
-        content: m.content,
-        createdAt: m.createdAt.toISOString(),
-        displayOrder: m.displayOrder,
+      initialMessages={entries.map(e => ({
+        id: e.id,
+        authorName: e.author.name,
+        content: e.content,
+        rating: e.rating ?? undefined,
+        createdAt: e.createdAt.toISOString(),
+        status: e.status,
       }))}
     />
   )

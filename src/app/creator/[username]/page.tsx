@@ -175,6 +175,9 @@ export default async function CreatorPage({ params }: PageProps) {
         orderBy: { createdAt: 'desc' },
       },
       supportGift: true,
+      podProviders: {
+        orderBy: { isDefault: 'desc' },
+      },
     },
   })
   type CreatorWithRelations = Awaited<ReturnType<typeof fetchCreator>>
@@ -359,6 +362,17 @@ export default async function CreatorPage({ params }: PageProps) {
 
   const session = await auth()
   const isLoggedIn = Boolean(session?.user)
+  const sessionUserId: string | null = (session?.user as any)?.id ?? null
+
+  // Guestbook entries (approved + visible)
+  const guestbookEntries = creator.id
+    ? await prisma.creatorGuestbook.findMany({
+        where: { creatorProfileId: creator.id, status: 'APPROVED', isVisible: true },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        select: { id: true, content: true, rating: true, createdAt: true, author: { select: { name: true, avatar: true } } },
+      })
+    : []
 
   // Follower count + current-user follow state
   const [followerCount, initialFollowing] = await Promise.all([
@@ -611,7 +625,7 @@ export default async function CreatorPage({ params }: PageProps) {
       )}
 
       {/* ── Tabbed content (client component) ─────────────────────────────── */}
-      <div className="mt-5">
+      <div>
         <CreatorPageTabs
           products={productsWithCreator}
           portfolioItems={publicPortfolio}
@@ -649,9 +663,25 @@ export default async function CreatorPage({ params }: PageProps) {
             monthlyGiftCount: creator.supportGift.monthlyGiftCount,
             monthlyGifterCount: creator.supportGift.monthlyGifterCount,
           } : null}
+          podProviders={(creator.podProviders ?? []).map(p => ({
+            id: p.id, name: p.name, customName: p.customName ?? null,
+            storeUrl: p.storeUrl ?? null, notes: p.notes ?? null,
+            isDefault: p.isDefault, defaultProductionDays: p.defaultProductionDays,
+            shippingMY: p.shippingMY, shippingSG: p.shippingSG,
+            shippingPH: p.shippingPH, shippingIntl: p.shippingIntl,
+          }))}
+          guestbookEntries={guestbookEntries.map(e => ({
+            id: e.id,
+            content: e.content,
+            rating: e.rating ?? null,
+            createdAt: e.createdAt.toISOString(),
+            authorName: e.author.name,
+            authorAvatar: e.author.avatar ?? null,
+          }))}
           creatorAvatar={creator.avatar ?? null}
           userRole={(session?.user as any)?.role ?? null}
           creatorUserId={creator.user?.id ?? ''}
+          sessionUserId={sessionUserId}
           discoveryProducts={discoveryProducts}
           discoveryCreators={discoveryCreators}
           discoveryCommission={discoveryCommission}

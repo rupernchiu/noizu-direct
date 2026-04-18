@@ -34,6 +34,7 @@ export default async function ProductReviewsPage() {
         body: r.body ?? null,
         createdAt: r.createdAt.toISOString(),
         displayOrder: r.displayOrder,
+        status: (r as any).status ?? 'PENDING',
       }))}
     />
   )

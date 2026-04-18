@@ -6,11 +6,10 @@ import Link from 'next/link'
 interface ProductReviewFormProps {
   productId: string
   userRole: string | null
-  eligibleOrderId: string | null
   alreadyReviewed: boolean
 }
 
-export function ProductReviewForm({ userRole, eligibleOrderId, alreadyReviewed }: ProductReviewFormProps) {
+export function ProductReviewForm({ productId, userRole, alreadyReviewed }: ProductReviewFormProps) {
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [title, setTitle] = useState('')
@@ -33,12 +32,8 @@ export function ProductReviewForm({ userRole, eligibleOrderId, alreadyReviewed }
     )
   }
 
-  if (userRole === 'CREATOR' || userRole === 'ADMIN') {
-    return (
-      <div className="mt-6 rounded-xl border border-border bg-card p-5 text-center">
-        <p className="text-sm text-muted-foreground">Only members can leave reviews</p>
-      </div>
-    )
+  if (userRole === 'ADMIN') {
+    return null
   }
 
   if (alreadyReviewed) {
@@ -49,18 +44,10 @@ export function ProductReviewForm({ userRole, eligibleOrderId, alreadyReviewed }
     )
   }
 
-  if (!eligibleOrderId) {
-    return (
-      <div className="mt-6 rounded-xl border border-border bg-card p-5 text-center">
-        <p className="text-sm text-muted-foreground">Purchase and complete an order to leave a review</p>
-      </div>
-    )
-  }
-
   if (submitted) {
     return (
       <div className="mt-6 rounded-xl border border-border bg-card p-5 text-center">
-        <p className="text-sm font-medium text-success">Review submitted! Thank you for your feedback.</p>
+        <p className="text-sm font-medium text-success">Thank you! Your review has been submitted and is pending creator approval.</p>
       </div>
     )
   }
@@ -74,7 +61,7 @@ export function ProductReviewForm({ userRole, eligibleOrderId, alreadyReviewed }
       const res = await fetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: eligibleOrderId, rating, title: title || undefined, body: body || undefined }),
+        body: JSON.stringify({ productId, rating, title: title || undefined, body: body || undefined }),
       })
       if (!res.ok) {
         const data = await res.json()

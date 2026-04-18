@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { ChevronUp, ChevronDown, Trash2, ExternalLink } from 'lucide-react'
+import { ChevronUp, ChevronDown, Trash2, ExternalLink, Check, X } from 'lucide-react'
 
 interface ReviewRow {
   id: string
@@ -14,6 +14,7 @@ interface ReviewRow {
   body: string | null
   createdAt: string
   displayOrder: number
+  status: string
 }
 
 const PER_PAGE = 20
@@ -28,17 +29,27 @@ function formatDateTime(iso: string) {
 
 const inputCls = 'rounded-lg border border-border bg-surface px-3 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none'
 
+const STATUS_BADGE: Record<string, string> = {
+  PENDING:  'bg-warning/10 text-warning border border-warning/30',
+  APPROVED: 'bg-success/10 text-success border border-success/30',
+  REJECTED: 'bg-destructive/10 text-destructive border border-destructive/30',
+}
+
 export function ProductReviewsManager({ initialReviews }: { initialReviews: ReviewRow[] }) {
   const [reviews, setReviews] = useState(initialReviews)
   const [search, setSearch] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL')
   const [page, setPage] = useState(1)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
 
+  const pendingCount = reviews.filter(r => r.status === 'PENDING').length
+
   const filtered = useMemo(() => {
     let list = [...reviews]
+    if (statusFilter !== 'ALL') list = list.filter(r => r.status === statusFilter)
     if (search) {
       const q = search.toLowerCase()
       list = list.filter(r =>
@@ -50,7 +61,7 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
     if (dateFrom) list = list.filter(r => r.createdAt >= dateFrom)
     if (dateTo) list = list.filter(r => r.createdAt <= dateTo + 'T23:59:59')
     return list
-  }, [reviews, search, dateFrom, dateTo])
+  }, [reviews, search, dateFrom, dateTo, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE))
   const pageRows = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE)
@@ -59,6 +70,20 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
     setLoading(id)
     const res = await fetch(`/api/dashboard/reviews/products/${id}`, { method: 'DELETE' })
     if (res.ok) { setReviews(prev => prev.filter(r => r.id !== id)); setConfirmDelete(null) }
+    setLoading(null)
+  }
+
+  async function handleAction(id: string, action: 'approve' | 'reject') {
+    setLoading(id)
+    const res = await fetch(`/api/dashboard/reviews/products/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action }),
+    })
+    if (res.ok) {
+      const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED'
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
+    }
     setLoading(null)
   }
 
@@ -84,7 +109,30 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-foreground mb-4">Product Reviews</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-foreground">Product Reviews</h1>
+        {pendingCount > 0 && (
+          <span className="rounded-full bg-warning/10 border border-warning/30 px-3 py-1 text-xs font-semibold text-warning">
+            {pendingCount} pending approval
+          </span>
+        )}
+      </div>
+
+      {/* Status filter tabs */}
+      <div className="flex gap-1 border-b border-border mb-4">
+        {(['ALL', 'PENDING', 'APPROVED', 'REJECTED'] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => { setStatusFilter(s); setPage(1) }}
+            className={[
+              'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
+              statusFilter === s ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+            ].join(' ')}
+          >
+            {s === 'ALL' ? `All (${reviews.length})` : `${s.charAt(0) + s.slice(1).toLowerCase()} (${reviews.filter(r => r.status === s).length})`}
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
         <input className={inputCls} placeholder="Search product, creator, member…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} style={{ minWidth: 220 }} />
@@ -101,11 +149,11 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
               <thead>
                 <tr className="border-b border-border bg-surface text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3">Creator</th>
                   <th className="px-4 py-3">Member</th>
                   <th className="px-4 py-3">Rating</th>
                   <th className="hidden md:table-cell px-4 py-3">Review</th>
                   <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -113,15 +161,15 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
                 {pageRows.map(review => {
                   const { date, time } = formatDateTime(review.createdAt)
                   const globalIdx = reviews.findIndex(r => r.id === review.id)
+                  const isPending = review.status === 'PENDING'
                   return (
-                    <tr key={review.id} className="hover:bg-surface/50 transition-colors">
+                    <tr key={review.id} className={['hover:bg-surface/50 transition-colors', isPending ? 'bg-warning/5' : ''].join(' ')}>
                       <td className="px-4 py-3 max-w-[140px]">
                         <a href={`/product/${review.productId}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1 truncate">
                           <span className="truncate">{review.productTitle}</span>
                           <ExternalLink className="size-3 shrink-0" />
                         </a>
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">{review.creatorName}</td>
                       <td className="px-4 py-3 text-muted-foreground">{review.buyerName}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="text-yellow-400">{'★'.repeat(review.rating)}</span><span className="text-border">{'★'.repeat(5 - review.rating)}</span>
@@ -134,7 +182,34 @@ export function ProductReviewsManager({ initialReviews }: { initialReviews: Revi
                         {date}<br />{time}
                       </td>
                       <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_BADGE[review.status] ?? ''}`}>
+                          {review.status.charAt(0) + review.status.slice(1).toLowerCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
+                          {isPending && (
+                            <>
+                              <button
+                                onClick={() => handleAction(review.id, 'approve')}
+                                disabled={loading === review.id}
+                                className="p-1 rounded hover:bg-success/10 text-success/60 hover:text-success disabled:opacity-30 transition-colors"
+                                aria-label="Approve"
+                                title="Approve"
+                              >
+                                <Check className="size-4" />
+                              </button>
+                              <button
+                                onClick={() => handleAction(review.id, 'reject')}
+                                disabled={loading === review.id}
+                                className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive disabled:opacity-30 transition-colors"
+                                aria-label="Reject"
+                                title="Reject"
+                              >
+                                <X className="size-4" />
+                              </button>
+                            </>
+                          )}
                           <button onClick={() => handleReorder(review.id, 'up')} disabled={globalIdx === 0 || loading === review.id} className="p-1 rounded hover:bg-border/40 disabled:opacity-30 transition-colors" aria-label="Move up"><ChevronUp className="size-4" /></button>
                           <button onClick={() => handleReorder(review.id, 'down')} disabled={globalIdx === reviews.length - 1 || loading === review.id} className="p-1 rounded hover:bg-border/40 disabled:opacity-30 transition-colors" aria-label="Move down"><ChevronDown className="size-4" /></button>
                           <button onClick={() => setConfirmDelete(review.id)} disabled={loading === review.id} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive disabled:opacity-30 transition-colors" aria-label="Delete"><Trash2 className="size-4" /></button>

@@ -52,17 +52,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           storageKey="noizu-theme"
         >
           <SessionProvider>
-            <AnnouncementBar />
-            <RejectionBannerWrapper />
-            <ApprovalBannerWrapper />
-            <Navbar />
-            <CartProvider />
-            <SecondaryNav />
+            <header className="sticky top-0 z-50 bg-background">
+              <AnnouncementBar />
+              <RejectionBannerWrapper />
+              <ApprovalBannerWrapper />
+              <Navbar />
+              <CartProvider />
+              <SecondaryNav />
+            </header>
             <SearchBar />
             <main className="flex-1">{children}</main>
             <Footer />

@@ -114,7 +114,7 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
 
   async function deleteMessage(id: string) {
     setLoading(id)
-    const res = await fetch(`/api/admin/reviews/messages/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/admin/reviews/guestbook/${id}`, { method: 'DELETE' })
     if (res.ok) setMessages(prev => prev.filter(m => m.id !== id))
     setConfirmDelete(null); setLoading(null)
   }

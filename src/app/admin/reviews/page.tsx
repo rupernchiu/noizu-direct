@@ -7,7 +7,7 @@ export default async function AdminReviewsPage() {
   const session = await auth()
   if ((session?.user as any)?.role !== 'ADMIN') redirect('/')
 
-  const [reviews, messages] = await Promise.all([
+  const [reviews, guestbook] = await Promise.all([
     prisma.productReview.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
@@ -17,14 +17,11 @@ export default async function AdminReviewsPage() {
         buyer: { select: { name: true } },
       },
     }),
-    prisma.message.findMany({
-      where: { orderId: null },
+    prisma.creatorGuestbook.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        sender: { select: { name: true } },
-        receiver: {
-          select: { name: true, creatorProfile: { select: { username: true, displayName: true } } },
-        },
+        author: { select: { name: true } },
+        creatorProfile: { select: { username: true, displayName: true } },
       },
     }),
   ])
@@ -43,13 +40,13 @@ export default async function AdminReviewsPage() {
         isVisible: r.isVisible,
         createdAt: r.createdAt.toISOString(),
       }))}
-      initialMessages={messages.map(m => ({
-        id: m.id,
-        senderName: m.sender.name,
-        creatorUsername: m.receiver.creatorProfile?.username ?? null,
-        creatorName: m.receiver.creatorProfile?.displayName ?? m.receiver.name ?? 'Unknown',
-        content: m.content,
-        createdAt: m.createdAt.toISOString(),
+      initialMessages={guestbook.map(e => ({
+        id: e.id,
+        senderName: e.author.name,
+        creatorUsername: e.creatorProfile.username,
+        creatorName: e.creatorProfile.displayName,
+        content: e.content,
+        createdAt: e.createdAt.toISOString(),
       }))}
     />
   )

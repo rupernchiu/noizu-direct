@@ -9,8 +9,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ use
   const userId = (session.user as any).id as string
   const userRole = (session.user as any).role as string
 
-  if (userRole !== 'BUYER') {
-    return NextResponse.json({ error: 'Only members can send messages' }, { status: 403 })
+  if (userRole === 'ADMIN') {
+    return NextResponse.json({ error: 'Admins cannot send messages' }, { status: 403 })
   }
 
   const { username } = await params

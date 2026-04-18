@@ -151,7 +151,7 @@ export default function Navbar() {
   )
 
   return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
+    <nav className="bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="max-w-screen-xl mx-auto px-6">
         {/* Outer: position:relative so absolute children are constrained to this container */}
         <div className="relative flex items-center h-14">

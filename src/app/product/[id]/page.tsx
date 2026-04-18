@@ -130,9 +130,9 @@ export default async function ProductPage({ params }: PageProps) {
   const userId = (session?.user as any)?.id as string | undefined
   const userRole = (session?.user as any)?.role as string | undefined
 
-  const [reviewsData, reviewBreakdown, eligibleOrder, existingReview] = await Promise.all([
+  const [reviewsData, reviewBreakdown, existingReview] = await Promise.all([
     prisma.productReview.findMany({
-      where: { productId: product.id, isVisible: true },
+      where: { productId: product.id, isVisible: true, status: 'APPROVED' },
       orderBy: { createdAt: 'desc' },
       take: 10,
       select: {
@@ -142,24 +142,20 @@ export default async function ProductPage({ params }: PageProps) {
     }),
     prisma.productReview.groupBy({
       by: ['rating'],
-      where: { productId: product.id, isVisible: true },
+      where: { productId: product.id, isVisible: true, status: 'APPROVED' },
       _count: { id: true },
     }),
-    userId && userRole === 'BUYER'
-      ? prisma.order.findFirst({
-          where: { productId: product.id, buyerId: userId, escrowStatus: 'RELEASED' },
-          select: { id: true },
-        })
-      : Promise.resolve(null),
-    userId && userRole === 'BUYER'
+    userId && (userRole === 'BUYER' || userRole === 'CREATOR')
       ? prisma.productReview.findFirst({
           where: { productId: product.id, buyerId: userId },
           select: { id: true },
         })
       : Promise.resolve(null),
   ])
-  const reviewTotal = product.reviewCount
-  const avgRating = product.averageRating
+  const reviewTotal = reviewBreakdown.reduce((sum, r) => sum + r._count.id, 0)
+  const avgRating = reviewTotal > 0
+    ? reviewBreakdown.reduce((sum, r) => sum + r.rating * r._count.id, 0) / reviewTotal
+    : 0
 
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
@@ -474,7 +470,6 @@ export default async function ProductPage({ params }: PageProps) {
         <ProductReviewForm
           productId={product.id}
           userRole={userRole ?? null}
-          eligibleOrderId={eligibleOrder?.id ?? null}
           alreadyReviewed={Boolean(existingReview)}
         />
       </div>

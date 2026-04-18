@@ -50,6 +50,7 @@ model User {
   creatorApplication  CreatorApplication?
   creatorAgreements   CreatorAgreement[]
   reviews             ProductReview[]
+  guestbookEntries    CreatorGuestbook[]
 }
 
 model CreatorProfile {
@@ -112,6 +113,7 @@ model CreatorProfile {
   supportTransactions SupportTransaction[]
   podProviders        CreatorPodProvider[]
   followers           CreatorFollow[]
+  guestbookEntries    CreatorGuestbook[]
 }
 
 // ── POD Provider ──────────────────────────────────────────────────────────────
@@ -236,25 +238,44 @@ model ProductRecommendation {
 // ── Product Reviews ────────────────────────────────────────────────────────────
 
 model ProductReview {
-  id          String   @id @default(cuid())
-  productId   String
-  orderId     String   @unique
-  buyerId     String
-  rating      Int
-  title       String?
-  body        String?
-  isVerified   Boolean  @default(true)
-  isVisible    Boolean  @default(true)
+  id           String   @id @default(cuid())
+  productId    String
+  orderId      String?  @unique
+  buyerId      String
+  rating       Int
+  title        String?
+  body         String?
+  isVerified   Boolean  @default(false)
+  isVisible    Boolean  @default(false)
+  status       String   @default("PENDING") // PENDING, APPROVED, REJECTED
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now())
 
-  product Product @relation(fields: [productId], references: [id])
-  order   Order   @relation(fields: [orderId], references: [id])
-  buyer   User    @relation(fields: [buyerId], references: [id])
+  product Product  @relation(fields: [productId], references: [id])
+  order   Order?   @relation(fields: [orderId], references: [id])
+  buyer   User     @relation(fields: [buyerId], references: [id])
 
+  @@unique([productId, buyerId])
   @@index([productId, createdAt])
   @@index([buyerId])
+}
+
+model CreatorGuestbook {
+  id               String   @id @default(cuid())
+  creatorProfileId String
+  authorId         String
+  content          String
+  rating           Int?
+  status           String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  isVisible        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id])
+  author           User           @relation(fields: [authorId], references: [id])
+
+  @@index([creatorProfileId, createdAt])
+  @@index([authorId])
 }
 
 // ── Order ─────────────────────────────────────────────────────────────────────

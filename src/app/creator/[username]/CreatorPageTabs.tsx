@@ -88,6 +88,29 @@ interface SupportGiftConfig {
   monthlyGifterCount: number
 }
 
+interface PodProvider {
+  id: string
+  name: string
+  customName: string | null
+  storeUrl: string | null
+  notes: string | null
+  isDefault: boolean
+  defaultProductionDays: number
+  shippingMY: number
+  shippingSG: number
+  shippingPH: number
+  shippingIntl: number
+}
+
+interface GuestbookEntry {
+  id: string
+  content: string
+  rating?: number | null
+  createdAt: string
+  authorName: string
+  authorAvatar: string | null
+}
+
 interface CreatorPageTabsProps {
   products: ProductWithCreator[]
   portfolioItems: PortfolioItem[]
@@ -108,12 +131,15 @@ interface CreatorPageTabsProps {
   creatorAvatar: string | null
   userRole: string | null
   creatorUserId: string
+  sessionUserId: string | null
   discoveryProducts: DiscoveryProduct[]
   discoveryCreators: DiscoveryCreator[]
   discoveryCommission: DiscoveryCreator[]
   discoveryPortfolio: DiscoveryPortfolioItem[]
   discoveryVideos: DiscoveryVideo[]
   discoverySupport: DiscoveryCreator[]
+  podProviders: PodProvider[]
+  guestbookEntries: GuestbookEntry[]
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -374,12 +400,15 @@ export function CreatorPageTabs({
   creatorAvatar,
   userRole,
   creatorUserId,
+  sessionUserId,
   discoveryProducts,
   discoveryCreators,
   discoveryCommission,
   discoveryPortfolio,
   discoveryVideos,
   discoverySupport,
+  podProviders,
+  guestbookEntries,
 }: CreatorPageTabsProps) {
   const showPortfolio  = true
   const showCommission = true
@@ -387,15 +416,19 @@ export function CreatorPageTabs({
   const activeGoals    = supportGoals.filter(g => g.status === 'ACTIVE' || g.status === 'COMPLETED')
   const showSupport    = supportTiers.length > 0 || activeGoals.length > 0 || (supportGift?.isActive ?? false)
 
-  type Tab = 'shop' | 'about' | 'portfolio' | 'videos' | 'commission' | 'support'
+  const podProducts = products.filter(p => p.type === 'POD')
+  const showPod     = podProviders.length > 0 || podProducts.length > 0
+
+  type Tab = 'shop' | 'about' | 'portfolio' | 'videos' | 'commission' | 'pod' | 'support'
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'shop', label: 'Shop' },
     { id: 'about', label: 'About' },
-    ...(showPortfolio  ? [{ id: 'portfolio'  as Tab, label: 'Portfolio'  }] : []),
-    ...(showVideos     ? [{ id: 'videos'     as Tab, label: 'Videos'     }] : []),
-    ...(showCommission ? [{ id: 'commission' as Tab, label: 'Commission' }] : []),
-    ...(showSupport    ? [{ id: 'support'    as Tab, label: 'Support'    }] : []),
+    ...(showPortfolio  ? [{ id: 'portfolio'      as Tab, label: 'Portfolio'       }] : []),
+    ...(showVideos     ? [{ id: 'videos'         as Tab, label: 'Videos'          }] : []),
+    ...(showCommission ? [{ id: 'commission'     as Tab, label: 'Commission'      }] : []),
+    ...(showPod        ? [{ id: 'pod'            as Tab, label: 'Print On Demand' }] : []),
+    ...(showSupport    ? [{ id: 'support'        as Tab, label: 'Support'         }] : []),
   ]
 
   const [activeTab, setActiveTab]       = useState<Tab>('shop')
@@ -408,6 +441,14 @@ export function CreatorPageTabs({
   const [giftCustom, setGiftCustom]     = useState('')
   const [giftMsg, setGiftMsg]           = useState('')
   const [giftAnon, setGiftAnon]         = useState(false)
+
+  // Fan Messages state
+  const [fanMsgText, setFanMsgText]           = useState('')
+  const [fanMsgRating, setFanMsgRating]       = useState(0)
+  const [fanMsgHoverRating, setFanMsgHoverRating] = useState(0)
+  const [fanMsgSending, setFanMsgSending]     = useState(false)
+  const [fanMsgSent, setFanMsgSent]           = useState(false)
+  const [fanMsgError, setFanMsgError]         = useState<string | null>(null)
 
   // Leave a Message state
   const [msgText, setMsgText]     = useState('')
@@ -440,6 +481,31 @@ export function CreatorPageTabs({
     }
   }
 
+  async function handleFanMessage(e: React.FormEvent) {
+    e.preventDefault()
+    if (!fanMsgText.trim()) return
+    setFanMsgSending(true)
+    setFanMsgError(null)
+    try {
+      const res = await fetch(`/api/creator/${creatorUsername}/guestbook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: fanMsgText.trim(), rating: fanMsgRating || undefined }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setFanMsgError(data.error ?? 'Failed to post message')
+      } else {
+        setFanMsgSent(true)
+        setFanMsgText('')
+      }
+    } catch {
+      setFanMsgError('Failed to post message')
+    } finally {
+      setFanMsgSending(false)
+    }
+  }
+
   function handleTabClick(id: Tab) {
     setActiveTab(id)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -460,7 +526,7 @@ export function CreatorPageTabs({
   return (
     <>
       {/* ── Sticky Tab Bar ─────────────────────────────────────────────────── */}
-      <div className="sticky top-[64px] z-30 border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="sticky top-[100px] z-30 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="relative">
             <div className="flex overflow-x-auto scrollbar-none pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -889,6 +955,91 @@ export function CreatorPageTabs({
           </section>
         )}
 
+        {/* PRINT ON DEMAND ────────────────────────────────────────────────── */}
+        {showPod && activeTab === 'pod' && (
+          <section className="pt-10 animate-in fade-in duration-200">
+            <h2 className="mb-6 text-xl font-bold text-foreground">Print On Demand</h2>
+            <div className="space-y-6">
+
+              {/* POD Products */}
+              {podProducts.length > 0 ? (
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-foreground">POD Products</p>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {podProducts.map(p => {
+                      const imgs: string[] = (() => { try { return JSON.parse(p.images) } catch { return [] } })()
+                      return (
+                        <div key={p.id} className="rounded-2xl border border-border bg-card overflow-hidden">
+                          {imgs[0] && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={imgs[0]} alt={p.title} className="w-full aspect-square object-cover" />
+                          )}
+                          <div className="p-3">
+                            <p className="text-sm font-semibold text-foreground line-clamp-2">{p.title}</p>
+                            <p className="mt-1 text-sm font-bold text-primary">{formatPrice(p.price)}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-border bg-card px-5 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">No POD products listed yet.</p>
+                </div>
+              )}
+
+              {/* POD Providers */}
+              {podProviders.length > 0 && (
+                <div>
+                  <p className="mb-3 text-sm font-semibold text-foreground">Print Partners</p>
+                  <div className="space-y-3">
+                    {podProviders.map(provider => {
+                      const displayName = provider.customName ?? provider.name.replace(/_/g, ' ')
+                      return (
+                        <div key={provider.id} className="rounded-2xl border border-border bg-card px-5 py-4">
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-foreground">{displayName}</p>
+                              {provider.isDefault && (
+                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary border border-primary/20">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                            {provider.storeUrl && (
+                              <a
+                                href={provider.storeUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline shrink-0"
+                              >
+                                Visit store ↗
+                              </a>
+                            )}
+                          </div>
+                          {provider.notes && (
+                            <p className="mt-1.5 text-sm text-muted-foreground">{provider.notes}</p>
+                          )}
+                          <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-4">
+                            <span>Production: <span className="font-medium text-foreground">{provider.defaultProductionDays}d</span></span>
+                            <span>Malaysia: <span className="font-medium text-foreground">{provider.shippingMY}d</span></span>
+                            <span>Singapore: <span className="font-medium text-foreground">{provider.shippingSG}d</span></span>
+                            <span>Philippines: <span className="font-medium text-foreground">{provider.shippingPH}d</span></span>
+                            {provider.shippingIntl > 0 && (
+                              <span>International: <span className="font-medium text-foreground">{provider.shippingIntl}d</span></span>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* SUPPORT ─────────────────────────────────────────────────────────── */}
         {showSupport && activeTab === 'support' && (
           <section className="pt-10 animate-in fade-in duration-200 space-y-10">
@@ -1162,56 +1313,101 @@ export function CreatorPageTabs({
 
       </div>
 
-      {/* ── Leave a Message ───────────────────────────────────────────────── */}
-      <div className="border-t border-border mt-8">
-        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-          <h2 className="text-xl font-bold text-foreground mb-1">Leave a Message</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Send {displayName} a direct message
-          </p>
-          {!userRole ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-4">Sign in to leave a message</p>
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
-              >
-                Sign In
-              </Link>
+      {/* ── Fan Messages ──────────────────────────────────────────────────── */}
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-12 mb-16">
+        <h2 className="text-lg font-bold text-foreground mb-4">Fan Messages</h2>
+
+        {/* Show approved entries */}
+        {guestbookEntries.length > 0 ? (
+          <div className="space-y-3 mb-6">
+            {guestbookEntries.map(entry => {
+              const initial = entry.authorName.slice(0, 1).toUpperCase()
+              const ts = (() => { try { return new Date(entry.createdAt).toLocaleDateString('en-MY', { month: 'short', day: 'numeric', year: 'numeric' }) } catch { return '' } })()
+              return (
+                <div key={entry.id} className="flex gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                  {entry.authorAvatar ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={entry.authorAvatar} alt={entry.authorName} className="size-8 shrink-0 rounded-full object-cover mt-0.5" />
+                  ) : (
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary mt-0.5">{initial}</div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground">{entry.authorName}</span>
+                      {entry.rating && (
+                        <span className="text-xs text-yellow-400">{'★'.repeat(entry.rating)}{'☆'.repeat(5 - entry.rating)}</span>
+                      )}
+                      <span className="text-xs text-muted-foreground">{ts}</span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-muted-foreground">{entry.content}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-6">No fan messages yet. Be the first to leave one!</p>
+        )}
+
+        {/* Leave a fan message form — below the list */}
+        {userRole === 'ADMIN' || sessionUserId === creatorUserId ? null : !userRole ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm text-muted-foreground mb-3">Sign in to leave a fan message</p>
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+        ) : fanMsgSent ? (
+          <div className="rounded-xl border border-border bg-card p-5 text-center">
+            <p className="text-sm font-medium text-success">Thank you! Your message has been submitted and is pending creator approval.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleFanMessage} className="rounded-xl border border-border bg-card p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Rating</label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setFanMsgRating(star)}
+                    onMouseEnter={() => setFanMsgHoverRating(star)}
+                    onMouseLeave={() => setFanMsgHoverRating(0)}
+                    className="text-2xl transition-colors"
+                    aria-label={`${star} star`}
+                  >
+                    <span className={(fanMsgHoverRating || fanMsgRating) >= star ? 'text-yellow-400' : 'text-border'}>★</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : userRole === 'CREATOR' || userRole === 'ADMIN' ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">Only members can leave messages</p>
-            </div>
-          ) : msgSent ? (
-            <div className="rounded-xl border border-border bg-card p-6 text-center">
-              <p className="text-sm font-medium text-success">
-                Message sent! {displayName} will reply in your Messages inbox.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSendMessage} className="space-y-3">
+            <div>
               <textarea
-                rows={4}
-                value={msgText}
-                onChange={e => setMsgText(e.target.value)}
-                maxLength={2000}
+                rows={3}
+                value={fanMsgText}
+                onChange={e => setFanMsgText(e.target.value.slice(0, 280))}
+                maxLength={280}
                 required
-                className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                placeholder={`Write a message to ${displayName}…`}
+                className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                placeholder={`Leave a public message for ${displayName}…`}
               />
-              {msgError && <p className="text-sm text-destructive">{msgError}</p>}
-              <button
-                type="submit"
-                disabled={msgSending || !msgText.trim()}
-                className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
-              >
-                {msgSending ? 'Sending…' : 'Send Message'}
-              </button>
-            </form>
-          )}
-        </div>
+              <span className="text-xs text-muted-foreground">{fanMsgText.length}/280</span>
+            </div>
+            {fanMsgError && <p className="text-sm text-destructive">{fanMsgError}</p>}
+            <button
+              type="submit"
+              disabled={fanMsgSending || !fanMsgText.trim()}
+              className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {fanMsgSending ? 'Submitting…' : 'Leave a Message'}
+            </button>
+          </form>
+        )}
       </div>
+
 
       {/* ── Portfolio Lightbox ─────────────────────────────────────────────── */}
       {lightboxIdx !== null && (
