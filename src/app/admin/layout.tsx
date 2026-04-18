@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
-import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -50,6 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>Platform</p>
                   <NavLink href="/admin/agreements"><ScrollText className="size-4" />Agreements</NavLink>
                   <NavLink href="/admin/creators/applications"><ClipboardList className="size-4" />Applications</NavLink>
+                  <NavLink href="/admin/reviews"><Star className="size-4" />Reviews</NavLink>
                 </>
               )}
               {showStaffSection && (

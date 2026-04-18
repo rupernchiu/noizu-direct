@@ -97,8 +97,15 @@
       "Bash(wmic process *)",
       "Bash(powershell -Command \"Start-Process 'C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe' -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\ruper\\\\AppData\\\\Local\\\\Google\\\\Chrome\\\\User Data','--no-first-run','about:blank'\")",
       "Bash(Start-Sleep 3)",
-      "Bash(git push *)"
-    ]
+      "Bash(git push *)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts|js|css\\)$\")",
+      "Bash(grep -v \"^//\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('SHA:', d['sha'][:7], '|', d['commit']['message'].split\\(chr\\(10\\)\\)[0]\\)\")",
+      "Bash(git ls-tree *)",
+      "Skill(update-config)",
+      "Bash(timeout 60 bash *)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "enabledPlugins": {
     "ui-ux-pro-max@ui-ux-pro-max-skill": true

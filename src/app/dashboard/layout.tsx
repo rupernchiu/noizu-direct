@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -96,6 +96,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* Content */}
               <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
               <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
+              {/* Separator */}
+              <div className="hidden md:block my-2 h-px bg-border" />
+              <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
+                Reviews
+              </p>
+              <NavLink href="/dashboard/reviews/products"><Star className="size-4" />Product Reviews</NavLink>
+              <NavLink href="/dashboard/reviews/messages"><MessageCircle className="size-4" />Storefront Messages</NavLink>
               <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
               <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
               {/* Separator */}

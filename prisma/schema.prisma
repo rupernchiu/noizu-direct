@@ -243,10 +243,11 @@ model ProductReview {
   rating      Int
   title       String?
   body        String?
-  isVerified  Boolean  @default(true)
-  isVisible   Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now())
+  isVerified   Boolean  @default(true)
+  isVisible    Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id])
   order   Order   @relation(fields: [orderId], references: [id])
@@ -422,8 +423,9 @@ model Message {
   content     String
   imageUrl    String?
   attachments String   @default("[]") // JSON: [{url, type, name, size}]
-  isRead      Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  isRead       Boolean  @default(false)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
 
   sender   User   @relation("SentMessages", fields: [senderId], references: [id])
   receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id])

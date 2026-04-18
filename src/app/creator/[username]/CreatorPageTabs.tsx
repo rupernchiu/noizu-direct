@@ -106,6 +106,8 @@ interface CreatorPageTabsProps {
   supportGoals: SupportGoalItem[]
   supportGift: SupportGiftConfig | null
   creatorAvatar: string | null
+  userRole: string | null
+  creatorUserId: string
   discoveryProducts: DiscoveryProduct[]
   discoveryCreators: DiscoveryCreator[]
   discoveryCommission: DiscoveryCreator[]
@@ -370,6 +372,8 @@ export function CreatorPageTabs({
   supportGoals,
   supportGift,
   creatorAvatar,
+  userRole,
+  creatorUserId,
   discoveryProducts,
   discoveryCreators,
   discoveryCommission,
@@ -404,6 +408,37 @@ export function CreatorPageTabs({
   const [giftCustom, setGiftCustom]     = useState('')
   const [giftMsg, setGiftMsg]           = useState('')
   const [giftAnon, setGiftAnon]         = useState(false)
+
+  // Leave a Message state
+  const [msgText, setMsgText]     = useState('')
+  const [msgSending, setMsgSending] = useState(false)
+  const [msgSent, setMsgSent]     = useState(false)
+  const [msgError, setMsgError]   = useState<string | null>(null)
+
+  async function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault()
+    if (!msgText.trim()) return
+    setMsgSending(true)
+    setMsgError(null)
+    try {
+      const res = await fetch(`/api/creator/${creatorUsername}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: msgText.trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setMsgError(data.error ?? 'Failed to send message')
+      } else {
+        setMsgSent(true)
+        setMsgText('')
+      }
+    } catch {
+      setMsgError('Failed to send message')
+    } finally {
+      setMsgSending(false)
+    }
+  }
 
   function handleTabClick(id: Tab) {
     setActiveTab(id)
@@ -1125,6 +1160,57 @@ export function CreatorPageTabs({
           </section>
         )}
 
+      </div>
+
+      {/* ── Leave a Message ───────────────────────────────────────────────── */}
+      <div className="border-t border-border mt-8">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+          <h2 className="text-xl font-bold text-foreground mb-1">Leave a Message</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Send {displayName} a direct message
+          </p>
+          {!userRole ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground mb-4">Sign in to leave a message</p>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              >
+                Sign In
+              </Link>
+            </div>
+          ) : userRole === 'CREATOR' || userRole === 'ADMIN' ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm text-muted-foreground">Only members can leave messages</p>
+            </div>
+          ) : msgSent ? (
+            <div className="rounded-xl border border-border bg-card p-6 text-center">
+              <p className="text-sm font-medium text-success">
+                Message sent! {displayName} will reply in your Messages inbox.
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSendMessage} className="space-y-3">
+              <textarea
+                rows={4}
+                value={msgText}
+                onChange={e => setMsgText(e.target.value)}
+                maxLength={2000}
+                required
+                className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                placeholder={`Write a message to ${displayName}…`}
+              />
+              {msgError && <p className="text-sm text-destructive">{msgError}</p>}
+              <button
+                type="submit"
+                disabled={msgSending || !msgText.trim()}
+                className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {msgSending ? 'Sending…' : 'Send Message'}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
 
       {/* ── Portfolio Lightbox ─────────────────────────────────────────────── */}

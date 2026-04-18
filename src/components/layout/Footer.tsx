@@ -67,12 +67,11 @@ export default async function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
-            &copy; 2026 NOIZU-DIRECT. All rights reserved.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Made with ♥ in Southeast Asia
+        <div className="border-t border-border pt-6 text-center">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            &copy; 2026 noizu.direct.{' '}
+            <a href="https://noizu.asia" title="Noizu is Malaysia's home for cosplay, anime, gaming, and pop culture." target="_blank" rel="noopener noreferrer" className="hover:underline">Noizu&reg;</a>
+            {' '}is a registered trademark owned by Thinkbig Sdn Bhd. All other logos, trademarks, and brand names mentioned are the property of their respective owners. Unauthorised use of these trademarks is strictly prohibited. &copy; 2026 Thinkbig Sdn Bhd. All rights reserved.
           </p>
         </div>
       </div>

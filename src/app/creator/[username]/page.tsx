@@ -395,7 +395,7 @@ export default async function CreatorPage({ params }: PageProps) {
     },
   }))
 
-  const joinDate = creator.user?.createdAt?.toISOString() ?? new Date().toISOString()
+  const joinDate = creator.user?.createdAt ? new Date(creator.user.createdAt).toISOString() : new Date().toISOString()
 
   const personSchema = {
     '@context': 'https://schema.org',
@@ -638,7 +638,7 @@ export default async function CreatorPage({ params }: PageProps) {
           supportGoals={creator.supportGoals.map(g => ({
             id: g.id, title: g.title, description: g.description ?? null,
             targetAmountUsd: g.targetAmountUsd, currentAmountUsd: g.currentAmountUsd,
-            deadline: g.deadline?.toISOString() ?? null, status: g.status,
+            deadline: g.deadline ? new Date(g.deadline).toISOString() : null, status: g.status,
             coverImage: g.coverImage ?? null,
           }))}
           supportGift={creator.supportGift ? {
@@ -650,6 +650,8 @@ export default async function CreatorPage({ params }: PageProps) {
             monthlyGifterCount: creator.supportGift.monthlyGifterCount,
           } : null}
           creatorAvatar={creator.avatar ?? null}
+          userRole={(session?.user as any)?.role ?? null}
+          creatorUserId={creator.user?.id ?? ''}
           discoveryProducts={discoveryProducts}
           discoveryCreators={discoveryCreators}
           discoveryCommission={discoveryCommission}

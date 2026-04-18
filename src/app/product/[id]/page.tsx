@@ -11,6 +11,7 @@ import { SEO_CONFIG } from '@/lib/seo-config'
 import { auth } from '@/lib/auth'
 import { ProductViewTracker } from '@/components/ui/ProductViewTracker'
 import { ProductCard } from '@/components/ui/ProductCard'
+import { ProductReviewForm } from '@/components/ui/ProductReviewForm'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -125,7 +126,11 @@ export default async function ProductPage({ params }: PageProps) {
     },
   })
 
-  const [reviewsData, reviewBreakdown] = await Promise.all([
+  const session = await auth()
+  const userId = (session?.user as any)?.id as string | undefined
+  const userRole = (session?.user as any)?.role as string | undefined
+
+  const [reviewsData, reviewBreakdown, eligibleOrder, existingReview] = await Promise.all([
     prisma.productReview.findMany({
       where: { productId: product.id, isVisible: true },
       orderBy: { createdAt: 'desc' },
@@ -140,11 +145,21 @@ export default async function ProductPage({ params }: PageProps) {
       where: { productId: product.id, isVisible: true },
       _count: { id: true },
     }),
+    userId && userRole === 'BUYER'
+      ? prisma.order.findFirst({
+          where: { productId: product.id, buyerId: userId, escrowStatus: 'RELEASED' },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+    userId && userRole === 'BUYER'
+      ? prisma.productReview.findFirst({
+          where: { productId: product.id, buyerId: userId },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
   ])
   const reviewTotal = product.reviewCount
   const avgRating = product.averageRating
-
-  const session = await auth()
 
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
@@ -440,7 +455,11 @@ export default async function ProductPage({ params }: PageProps) {
                         {review.isVerified && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-500 font-medium">Verified Purchase</span>
                         )}
-                        <span className="text-xs text-muted-foreground ml-auto">{new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          {' · '}
+                          {new Date(review.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                        </span>
                       </div>
                       <div className="text-yellow-400 text-sm mt-0.5">{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
                       {review.title && <p className="text-sm font-semibold text-foreground mt-1">{review.title}</p>}
@@ -452,6 +471,12 @@ export default async function ProductPage({ params }: PageProps) {
             </div>
           </>
         )}
+        <ProductReviewForm
+          productId={product.id}
+          userRole={userRole ?? null}
+          eligibleOrderId={eligibleOrder?.id ?? null}
+          alreadyReviewed={Boolean(existingReview)}
+        />
       </div>
 
       {/* Sticky mobile CTA bar */}

@@ -281,33 +281,29 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
             </div>
           )}
 
-          {/* Image counter */}
+          {/* Arrows + counter row at bottom-center */}
           {displayImages.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-background/80 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-foreground pointer-events-none">
-              {activeIdx + 1} / {displayImages.length}
-            </div>
-          )}
-
-          {/* Arrows */}
-          {displayImages.length > 1 && (
-            <>
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-full bg-background/80 backdrop-blur-sm px-1.5 py-1">
               <button
                 suppressHydrationWarning
                 onClick={prevImage}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background shadow-sm transition-colors"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-foreground hover:bg-background/60 transition-colors"
                 aria-label="Previous image"
               >
-                <ChevronLeft className="size-5" />
+                <ChevronLeft className="size-4" />
               </button>
+              <span className="text-xs font-medium text-foreground px-1 tabular-nums">
+                {activeIdx + 1} / {displayImages.length}
+              </span>
               <button
                 suppressHydrationWarning
                 onClick={nextImage}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background shadow-sm transition-colors"
+                className="w-7 h-7 rounded-full flex items-center justify-center text-foreground hover:bg-background/60 transition-colors"
                 aria-label="Next image"
               >
-                <ChevronRight className="size-5" />
+                <ChevronRight className="size-4" />
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
