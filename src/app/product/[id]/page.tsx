@@ -206,6 +206,28 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background py-8 pb-24 md:pb-8">
       <JsonLd data={[productSchema, productBreadcrumbSchema]} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Product',
+            name: product.title,
+            description: product.description || '',
+            url: `https://noizu.direct/product/${product.id}`,
+            offers: {
+              '@type': 'Offer',
+              price: ((product.price ?? 0) / 100).toFixed(2),
+              priceCurrency: 'MYR',
+              availability: 'https://schema.org/InStock',
+              seller: {
+                '@type': 'Person',
+                name: product.creator?.displayName ?? product.creator?.username ?? 'Creator',
+              },
+            },
+          }),
+        }}
+      />
       <ProductViewTracker productId={product.id} userId={(session?.user as any)?.id} />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}

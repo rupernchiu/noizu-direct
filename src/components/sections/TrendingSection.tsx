@@ -46,7 +46,7 @@ export default async function TrendingSection() {
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-background">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-foreground">Trending Now</h2>
+          <h2 className="text-2xl font-bold text-foreground">Trending in the SEA Creator Community</h2>
           <Link href="/marketplace?sort=TRENDING" className="text-sm text-primary hover:underline">
             View all →
           </Link>

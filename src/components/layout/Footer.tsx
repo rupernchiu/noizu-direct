@@ -12,7 +12,7 @@ const FALLBACK: Record<string, { label: string; href: string }[]> = {
     { label: 'Fees & Pricing', href: '/fees' },
   ],
   Creators: [
-    { label: 'Start Selling', href: '/register' },
+    { label: 'Start Selling', href: '/start-selling' },
   ],
   Support: [
     { label: 'Terms of Service', href: '/terms' },

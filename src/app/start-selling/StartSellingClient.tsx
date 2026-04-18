@@ -995,8 +995,7 @@ export function StartSellingClient({
               {errors.selfie && <p className="text-xs text-red-400 -mt-4">{errors.selfie}</p>}
 
               <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Note:</span> For prototype, documents
-                are reviewed manually by our team within 24–48 hours.
+                <span className="font-medium text-foreground">Note:</span> Your documents are reviewed securely by our team within 24–48 hours. You'll receive an email update.
               </div>
 
               {errors.general && (

@@ -1,19 +1,35 @@
+import React from 'react'
 import type { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { JsonLd } from '@/components/seo/JsonLd'
 
 export const metadata: Metadata = {
-  title: 'NOIZU-DIRECT — SEA Creator Marketplace | Buy Direct',
-  description: 'Shop directly from Southeast Asian cosplay, doujin, and anime art creators. Digital downloads, physical merch, and POD products with buyer protection.',
+  title: 'NOIZU-DIRECT — SEA Creator Marketplace for Cosplay, Doujin & Fan Art',
+  description: 'Buy original art, doujin prints, cosplay merch and commissions from verified Southeast Asian creators. Escrow-protected payments. Fan art friendly.',
   alternates: { canonical: 'https://noizu.direct/' },
   openGraph: {
-    title: 'NOIZU-DIRECT — SEA Creator Marketplace | Buy Direct',
-    description: 'Shop directly from Southeast Asian cosplay, doujin, and anime art creators.',
-    url: 'https://noizu.direct/',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'NOIZU-DIRECT — SEA Creator Marketplace' }],
+    type: 'website',
+    locale: 'en_MY',
+    siteName: 'NOIZU-DIRECT',
+    url: 'https://noizu.direct',
+    title: 'NOIZU-DIRECT — Buy Cosplay, Doujin & Fan Art from SEA Creators',
+    description: 'Buy from verified SEA creators. Escrow-protected payments. Fan art friendly.',
+    images: [{
+      url: 'https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-light.webp',
+      width: 1200,
+      height: 630,
+      alt: 'NOIZU-DIRECT — Southeast Asian Creator Marketplace',
+    }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NOIZU-DIRECT — SEA Creator Marketplace',
+    description: 'Buy from verified SEA creators. Escrow-protected. Fan art friendly.',
+    images: ['https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-light.webp'],
   },
 }
 import HeroSection from '@/components/sections/HeroSection'
+import { TrustBar } from '@/components/sections/TrustBar'
 import FeaturedCreatorsSection from '@/components/sections/FeaturedCreatorsSection'
 import CategoriesSection from '@/components/sections/CategoriesSection'
 import NewDropsSection from '@/components/sections/NewDropsSection'
@@ -91,7 +107,12 @@ export default async function HomePage() {
         const content = JSON.parse(section.content)
         switch (section.type) {
           case 'HERO':
-            return <HeroSection key={section.id} content={content} stats={{ creators: creatorCount, products: productCount, buyers: buyerCount }} />
+            return (
+              <React.Fragment key={section.id}>
+                <HeroSection content={content} stats={{ creators: creatorCount, products: productCount, buyers: buyerCount }} />
+                <TrustBar />
+              </React.Fragment>
+            )
           case 'FEATURED_CREATORS':
             return <FeaturedCreatorsSection key={section.id} content={content} />
           case 'CATEGORIES':

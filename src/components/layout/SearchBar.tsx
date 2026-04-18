@@ -113,7 +113,7 @@ function SearchBarInner() {
                   height: '40px',
                   paddingLeft: '36px',
                   paddingRight: '12px',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   color: 'var(--foreground)',
                   background: 'var(--card)',
                   border: '1px solid var(--border)',

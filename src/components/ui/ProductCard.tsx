@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 import { useState, useEffect } from 'react'
@@ -100,17 +101,11 @@ export function ProductCard({ product, initialInWishlist }: ProductCardProps) {
         {/* Image area */}
         <div className="relative aspect-[3/4] w-full overflow-hidden bg-surface">
           {firstImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={firstImage}
               alt={`${product.title} by ${product.creator?.displayName || 'creator'}`}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              onError={(e) => {
-                const target = e.currentTarget
-                target.style.display = 'none'
-                const fallback = target.nextElementSibling as HTMLElement | null
-                if (fallback) fallback.style.display = 'block'
-              }}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : null}
           <div
@@ -149,10 +144,11 @@ export function ProductCard({ product, initialInWishlist }: ProductCardProps) {
           {/* Creator row */}
           <div className="flex items-center gap-1.5">
             {product.creator.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={product.creator.avatar}
                 alt={`${product.creator?.displayName || 'creator'} profile photo`}
+                width={20}
+                height={20}
                 className="size-5 rounded-full object-cover"
               />
             ) : (

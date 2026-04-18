@@ -1,5 +1,16 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Poppins } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import Script from 'next/script'
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  variable: '--font-poppins',
+  display: 'swap',
+})
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import SessionProvider from '@/components/providers/SessionProvider';
 import AnnouncementBar from '@/components/ui/AnnouncementBar';
@@ -45,7 +56,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
       <body
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-background text-foreground font-sans antialiased"
@@ -72,6 +83,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FloatingScrollButtons />
           </SessionProvider>
         </ThemeProvider>
+        <Analytics />
+        <SpeedInsights />
+        {process.env.NEXT_PUBLIC_CLARITY_ID && (
+          <Script id="clarity" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${process.env.NEXT_PUBLIC_CLARITY_ID}");`}
+          </Script>
+        )}
       </body>
     </html>
   );

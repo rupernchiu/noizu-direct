@@ -70,6 +70,23 @@ function CartIcon() {
   )
 }
 
+// ── Mobile Cart Button ─────────────────────────────────────────────────────────
+
+function MobileCartButton() {
+  const { itemCount, openCart } = useCartStore()
+
+  return (
+    <button
+      type="button"
+      onClick={openCart}
+      className="flex items-center gap-3 w-full text-sm py-3 px-1 text-foreground hover:text-primary transition-colors"
+    >
+      <ShoppingCart className="w-4 h-4 flex-shrink-0" />
+      <span>Cart{itemCount > 0 ? ` (${itemCount})` : ''}</span>
+    </button>
+  )
+}
+
 // ── Navbar ─────────────────────────────────────────────────────────────────────
 
 export default function Navbar() {
@@ -204,6 +221,8 @@ export default function Navbar() {
                   <Link href="/" className="flex items-center">
                     <Logo />
                   </Link>
+                  {/* Mobile cart */}
+                  <MobileCartButton />
                   {/* Mobile nav links */}
                   <div className="flex flex-col gap-4">
                     <Link

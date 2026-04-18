@@ -19,9 +19,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Only WebP or JPG files are allowed' }, { status: 400 })
   }
 
+  const key = (form.get('key') as string | null) === 'thumbnail' ? 'cms/hero/hero-thumbnail.webp' : 'cms/hero/hero-bg.webp'
   const bytes = await file.arrayBuffer()
   const buffer = Buffer.from(bytes)
-  const url = await uploadToR2(buffer, 'cms/hero/hero-bg.webp', file.type)
+  const url = await uploadToR2(buffer, key, file.type)
 
   return NextResponse.json({ url })
 }
