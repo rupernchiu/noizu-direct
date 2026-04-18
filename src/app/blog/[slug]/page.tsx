@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       url,
       type: 'article',
-      images: [{ url: ogImage, width: 800, height: 400, alt: `${title} — NOIZU-DIRECT Blog` }],
+      images: [{ url: ogImage, width: 800, height: 400, alt: `${title} — noizu.direct Blog` }],
       authors: post.author?.name ? [post.author.name] : undefined,
       publishedTime: post.publishedAt?.toISOString(),
     },
@@ -77,8 +77,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     headline: post.title,
     description: post.excerpt || '',
     image: post.coverImage ? { '@type': 'ImageObject', url: post.coverImage, width: 800, height: 400 } : undefined,
-    author: { '@type': 'Person', name: 'NOIZU-DIRECT' },
-    publisher: { '@type': 'Organization', name: 'NOIZU-DIRECT', logo: { '@type': 'ImageObject', url: 'https://noizu.direct/logo.png' } },
+    author: { '@type': 'Person', name: 'noizu.direct' },
+    publisher: { '@type': 'Organization', name: 'noizu.direct', logo: { '@type': 'ImageObject', url: 'https://noizu.direct/logo.png' } },
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt?.toISOString(),
     mainEntityOfPage: { '@type': 'WebPage', '@id': `https://noizu.direct/blog/${post.slug}` },
@@ -121,7 +121,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {/* Header */}
         {post.coverImage && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.coverImage} alt={`${post.title} — NOIZU-DIRECT Blog`} className="w-full aspect-video object-cover rounded-2xl mb-8" />
+          <img src={post.coverImage} alt={`${post.title} — noizu.direct Blog`} className="w-full aspect-video object-cover rounded-2xl mb-8" />
         )}
 
         {tags.length > 0 && (
@@ -166,7 +166,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-colors">
                     {r.coverImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.coverImage} alt={`${r.title} — NOIZU-DIRECT Blog`} className="w-full aspect-video object-cover" />
+                      <img src={r.coverImage} alt={`${r.title} — noizu.direct Blog`} className="w-full aspect-video object-cover" />
                     ) : (
                       <div className="w-full aspect-video bg-surface" />
                     )}

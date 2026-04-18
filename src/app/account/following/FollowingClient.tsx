@@ -116,7 +116,7 @@ export function FollowingClient({ following: initialFollowing }: Props) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={creator.bannerImage}
-                  alt={`${creator.displayName} — creator banner on NOIZU-DIRECT`}
+                  alt={`${creator.displayName} — creator banner on noizu.direct`}
                   className="w-full h-full object-cover"
                 />
               ) : (

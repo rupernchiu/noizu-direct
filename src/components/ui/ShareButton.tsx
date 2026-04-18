@@ -146,7 +146,7 @@ export function ShareButton({ productTitle, creatorName, firstImage, className }
   }, [])
 
   async function handlePlatform(platform: Platform) {
-    const caption = `${productTitle} by ${creatorName} on NOIZU-DIRECT 🛒 ${currentUrl}`
+    const caption = `${productTitle} by ${creatorName} on noizu.direct 🛒 ${currentUrl}`
     if (platform.open) {
       window.open(platform.open(currentUrl, caption), '_blank', 'noopener,noreferrer')
     } else if (platform.copyMsg) {

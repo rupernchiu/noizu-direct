@@ -2,8 +2,8 @@ import { ContactForm } from '@/components/ui/ContactForm'
 import { Mail, MapPin, Clock } from 'lucide-react'
 
 export const metadata = {
-  title: 'Contact Us — NOIZU-DIRECT',
-  description: 'Get in touch with the NOIZU-DIRECT team.',
+  title: 'Contact Us — noizu.direct',
+  description: 'Get in touch with the noizu.direct team.',
 }
 
 export default function ContactPage() {

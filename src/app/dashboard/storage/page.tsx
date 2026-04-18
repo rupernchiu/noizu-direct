@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { StorageClient } from './StorageClient'
 import type { StorageFile, StorageBreakdown } from '@/app/api/creator/storage/route'
 
-export const metadata = { title: 'Storage Manager | NOIZU-DIRECT' }
+export const metadata = { title: 'Storage Manager | noizu.direct' }
 
 export default async function StoragePage() {
   const session = await auth()

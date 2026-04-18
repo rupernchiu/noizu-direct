@@ -1,6 +1,5 @@
 const conventions = [
-  { name: 'Comic Fiesta', note: "KL's biggest anime convention" },
-  { name: 'Animangaki', note: null },
+  { name: 'NoizuCon', note: "Our flagship SEA creator convention" },
   { name: 'WCS Malaysia', note: 'World Cosplay Summit' },
   { name: 'STGCC Singapore', note: null },
   { name: 'AniFest Philippines', note: null },
@@ -21,10 +20,10 @@ export default function CommunityProofSection() {
             From the community, for the community
           </p>
           <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-4">
-            If you&rsquo;ve been to Comic Fiesta or Animangaki, you already know this world.
+            If you&rsquo;ve been to NoizuCon or any SEA convention, you already know this world.
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            NOIZU-DIRECT was built by and for the SEA cosplay and doujin community. We know the table fees, the late-night printing runs, the three-hour commission queues. This platform exists because we lived it.
+            noizu.direct was built by and for the SEA cosplay and doujin community. We know the table fees, the late-night printing runs, the three-hour commission queues. This platform exists because we lived it.
           </p>
         </div>
 

@@ -148,7 +148,7 @@ export async function PATCH(
     const email = creator.email
     try {
       const { data } = await resend.emails.send({
-        from: 'NOIZU-DIRECT <noreply@noizu.direct>',
+        from: 'noizu.direct <noreply@noizu.direct>',
         to: [email],
         subject: emailSubject,
         html: emailHtml,

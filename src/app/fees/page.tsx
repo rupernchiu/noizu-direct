@@ -2,14 +2,14 @@ import type { Metadata } from 'next'
 import { JsonLd } from '@/components/seo/JsonLd'
 
 export const metadata: Metadata = {
-  title: 'Fees & Pricing | NOIZU-DIRECT',
-  description: 'Transparent pricing for NOIZU-DIRECT. 0% platform fee during launch. 2.5% processing fee for buyers. 4% withdrawal fee for creators.',
+  title: 'Fees & Pricing | noizu.direct',
+  description: 'Transparent pricing for noizu.direct. 0% platform fee during launch. 2.5% processing fee for buyers. 4% withdrawal fee for creators.',
   alternates: { canonical: 'https://noizu.direct/fees' },
   openGraph: {
-    title: 'Fees & Pricing | NOIZU-DIRECT',
+    title: 'Fees & Pricing | noizu.direct',
     description: 'Transparent fees: 0% platform fee, 2.5% buyer processing fee, 4% creator withdrawal fee.',
     url: 'https://noizu.direct/fees',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'NOIZU-DIRECT Fees' }],
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'noizu.direct Fees' }],
   },
 }
 
@@ -17,7 +17,7 @@ export default function FeesPage() {
   const feeTableSchema = {
     '@context': 'https://schema.org',
     '@type': 'Table',
-    about: 'NOIZU-DIRECT fee structure',
+    about: 'noizu.direct fee structure',
   }
 
   return (
@@ -25,7 +25,7 @@ export default function FeesPage() {
       <div className="max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold text-foreground mb-4">Fees &amp; Pricing</h1>
         <p className="text-muted-foreground mb-8">
-          NOIZU-DIRECT is committed to transparent, fair pricing. Here is a complete breakdown of all fees.
+          noizu.direct is committed to transparent, fair pricing. Here is a complete breakdown of all fees.
         </p>
 
         <JsonLd data={feeTableSchema} />
@@ -77,7 +77,7 @@ export default function FeesPage() {
 
         <h2 className="text-xl font-semibold text-foreground mb-3">Creator Fees</h2>
         <p className="text-muted-foreground mb-4">
-          During the launch period, NOIZU-DIRECT charges <strong className="text-foreground">0% platform fee</strong> on all sales.
+          During the launch period, noizu.direct charges <strong className="text-foreground">0% platform fee</strong> on all sales.
           Creators keep 100% of their listing price (minus payment processing, which is covered by the buyer fee).
         </p>
         <p className="text-muted-foreground mb-6">
@@ -87,7 +87,7 @@ export default function FeesPage() {
 
         <h2 className="text-xl font-semibold text-foreground mb-3">No Hidden Fees</h2>
         <p className="text-muted-foreground">
-          NOIZU-DIRECT does not charge for: listing products, creating an account, receiving orders,
+          noizu.direct does not charge for: listing products, creating an account, receiving orders,
           messaging buyers, or using the storefront. The only fees are the 2.5% buyer processing fee
           and the 4% creator withdrawal fee.
         </p>

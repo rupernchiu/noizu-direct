@@ -13,12 +13,12 @@ function approvedEmailHtml(name: string): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:24px;font-weight:700;color:#ffffff;">Congratulations, ${name}! 🎉</p>
           <p style="margin:0 0 24px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            Your creator application has been approved. You now have access to your Creator Dashboard and can start publishing content, setting up your store, and building your audience on NOIZU-DIRECT.
+            Your creator application has been approved. You now have access to your Creator Dashboard and can start publishing content, setting up your store, and building your audience on noizu.direct.
           </p>
           <p style="margin:0 0 16px;font-size:14px;color:#c4b5fd;font-weight:600;">Getting started:</p>
           <ul style="margin:0 0 24px;padding-left:20px;color:#8b8b9a;font-size:14px;line-height:1.8;">
@@ -32,7 +32,7 @@ function approvedEmailHtml(name: string): string {
           </td></tr></table>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p>
         </td></tr>
       </table>
     </td></tr>
@@ -47,12 +47,12 @@ function rejectedEmailHtml(name: string, reason: string): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Creator Application Update</p>
           <p style="margin:0 0 24px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            Hi ${name}, thank you for taking the time to apply to become a creator on NOIZU-DIRECT. After careful review, we were unable to approve your application at this time.
+            Hi ${name}, thank you for taking the time to apply to become a creator on noizu.direct. After careful review, we were unable to approve your application at this time.
           </p>
           <div style="background:#1a1a24;border:1px solid #3f3f4a;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
             <p style="margin:0 0 6px;font-size:12px;font-weight:600;color:#8b8b9a;text-transform:uppercase;letter-spacing:0.05em;">Reason</p>
@@ -66,7 +66,7 @@ function rejectedEmailHtml(name: string, reason: string): string {
           </td></tr></table>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p>
         </td></tr>
       </table>
     </td></tr>
@@ -188,7 +188,7 @@ export async function PATCH(
     await resend.emails.send({
       from: 'noreply@noizu.direct',
       to: [application.user.email],
-      subject: '🎉 Welcome to NOIZU-DIRECT Creators!',
+      subject: '🎉 Welcome to noizu.direct Creators!',
       html: approvedEmailHtml(application.user.name ?? 'Creator'),
     })
 
@@ -199,7 +199,7 @@ export async function PATCH(
           userId: application.userId,
           type: 'APPLICATION_APPROVED',
           title: 'Creator application approved 🎉',
-          message: 'Your creator application has been approved. Your store is now live on NOIZU-DIRECT.',
+          message: 'Your creator application has been approved. Your store is now live on noizu.direct.',
           actionUrl: '/dashboard',
           isRead: false,
         },
@@ -216,7 +216,7 @@ export async function PATCH(
           data: {
             senderId: adminUser.id,
             receiverId: application.userId,
-            content: `🎉 Welcome to NOIZU-DIRECT, ${application.displayName}!\n\nYour creator application has been approved. Here is everything you need to get started:\n\n✅ Your store URL: noizu.direct/creator/${application.username}\n✅ Your username: @${application.username}\n\nGETTING STARTED:\n1. Go to your Creator Dashboard\n2. Complete your store profile (add banner, bio, social links)\n3. List your first product\n4. Share your store link with your community\n\nIMPORTANT REMINDERS:\n- You must add tracking numbers within 7 days of receiving physical/POD orders\n- Your first payout requires verified account status\n- Keep your storage under 500MB (free plan)\n\nWe are excited to have you as part of the NOIZU-DIRECT creator community!\n\nThe NOIZU-DIRECT Team\nhello@noizu.direct`,
+            content: `🎉 Welcome to noizu.direct, ${application.displayName}!\n\nYour creator application has been approved. Here is everything you need to get started:\n\n✅ Your store URL: noizu.direct/creator/${application.username}\n✅ Your username: @${application.username}\n\nGETTING STARTED:\n1. Go to your Creator Dashboard\n2. Complete your store profile (add banner, bio, social links)\n3. List your first product\n4. Share your store link with your community\n\nIMPORTANT REMINDERS:\n- You must add tracking numbers within 7 days of receiving physical/POD orders\n- Your first payout requires verified account status\n- Keep your storage under 500MB (free plan)\n\nWe are excited to have you as part of the noizu.direct creator community!\n\nThe noizu.direct Team\nhello@noizu.direct`,
             isRead: false,
           },
         })
@@ -254,7 +254,7 @@ export async function PATCH(
   await resend.emails.send({
     from: 'noreply@noizu.direct',
     to: [application.user.email],
-    subject: 'NOIZU-DIRECT Creator Application Update',
+    subject: 'noizu.direct Creator Application Update',
     html: rejectedEmailHtml(application.user.name ?? 'Applicant', rejectionReason),
   })
 
@@ -282,7 +282,7 @@ export async function PATCH(
         data: {
           senderId: adminUser.id,
           receiverId: application.userId,
-          content: `Hi ${application.displayName || application.legalFullName},\n\nThank you for applying to become a NOIZU-DIRECT creator.\n\nUnfortunately we were unable to approve your application at this time.\n\nREASON:\n${rejectionReason}\n\nWHAT TO DO NEXT:\n- Address the issues mentioned above\n- Prepare any required documents\n- Visit noizu.direct/start-selling to reapply\n\nYou are welcome to reapply at any time after addressing the feedback above.\n\nIf you have questions about this decision please reply to this message and our team will assist you.\n\nThe NOIZU-DIRECT Team\nhello@noizu.direct`,
+          content: `Hi ${application.displayName || application.legalFullName},\n\nThank you for applying to become a noizu.direct creator.\n\nUnfortunately we were unable to approve your application at this time.\n\nREASON:\n${rejectionReason}\n\nWHAT TO DO NEXT:\n- Address the issues mentioned above\n- Prepare any required documents\n- Visit noizu.direct/start-selling to reapply\n\nYou are welcome to reapply at any time after addressing the feedback above.\n\nIf you have questions about this decision please reply to this message and our team will assist you.\n\nThe noizu.direct Team\nhello@noizu.direct`,
           isRead: false,
         },
       })

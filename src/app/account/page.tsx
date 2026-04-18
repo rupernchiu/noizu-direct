@@ -151,7 +151,7 @@ export default async function AccountPage() {
           <Palette size={20} color="#7c3aed" style={{ flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
             <p style={{ fontWeight: 600, color: '#6d28d9', margin: '0 0 4px', fontSize: '14px' }}>
-              🎨 Want to sell on NOIZU-DIRECT?
+              🎨 Want to sell on noizu.direct?
             </p>
             <p style={{ fontSize: '13px', color: '#7c3aed', margin: 0 }}>
               Join thousands of SEA creators selling directly to fans.

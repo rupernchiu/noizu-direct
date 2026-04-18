@@ -16,7 +16,7 @@ export async function GET() {
       const imageXml = [
         c.avatar ? `    <image:image>
       <image:loc>${escapeXml(c.avatar)}</image:loc>
-      <image:title>${escapeXml(c.displayName)} — NOIZU-DIRECT Creator</image:title>
+      <image:title>${escapeXml(c.displayName)} — noizu.direct Creator</image:title>
       ${bioSnippet ? `<image:caption>${escapeXml(bioSnippet)}</image:caption>` : ''}
     </image:image>` : '',
         c.bannerImage ? `    <image:image>

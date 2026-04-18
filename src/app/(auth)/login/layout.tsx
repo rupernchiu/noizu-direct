@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Log In | NOIZU-DIRECT',
+  title: 'Log In | noizu.direct',
   robots: { index: false, follow: true },
 }
 

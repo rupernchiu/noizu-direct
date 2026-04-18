@@ -4,14 +4,14 @@ import { prisma } from '@/lib/prisma'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 export const metadata: Metadata = {
-  title: 'Discover SEA Creators | NOIZU-DIRECT',
-  description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on NOIZU-DIRECT. Support independent SEA creators.',
+  title: 'Discover SEA Creators | noizu.direct',
+  description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on noizu.direct. Support independent SEA creators.',
   alternates: { canonical: 'https://noizu.direct/creators' },
   openGraph: {
-    title: 'Discover SEA Creators | NOIZU-DIRECT',
-    description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on NOIZU-DIRECT.',
+    title: 'Discover SEA Creators | noizu.direct',
+    description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on noizu.direct.',
     url: 'https://noizu.direct/creators',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'SEA Creators on NOIZU-DIRECT' }],
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'SEA Creators on noizu.direct' }],
   },
 }
 
@@ -71,7 +71,7 @@ export default async function CreatorsPage() {
         {creators.length === 0 ? (
           <EmptyState
             title="No creators yet"
-            description="Be the first to join NOIZU-DIRECT as a creator!"
+            description="Be the first to join noizu.direct as a creator!"
           />
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -94,7 +94,7 @@ export default async function CreatorsPage() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={creator.bannerImage!}
-                        alt={`${creator.displayName} — creator banner on NOIZU-DIRECT`}
+                        alt={`${creator.displayName} — creator banner on noizu.direct`}
                         className="h-full w-full object-cover"
                       />
                     ) : (

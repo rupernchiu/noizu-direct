@@ -11,9 +11,9 @@ function emailShell(body: string): string {
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 16px;">
 <tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
-<tr><td style="padding-bottom:32px;text-align:center;"><img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" /></td></tr>
+<tr><td style="padding-bottom:32px;text-align:center;"><img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" /></td></tr>
 <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">${body}</td></tr>
-<tr><td style="padding-top:24px;text-align:center;"><p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p></td></tr>
+<tr><td style="padding-top:24px;text-align:center;"><p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p></td></tr>
 </table></td></tr></table></body></html>`
 }
 
@@ -25,7 +25,7 @@ async function sendAndLog(
 ) {
   try {
     const { data } = await resend.emails.send({
-      from: 'NOIZU-DIRECT <noreply@noizu.direct>',
+      from: 'noizu.direct <noreply@noizu.direct>',
       to: [to],
       subject,
       html,
@@ -88,7 +88,7 @@ async function handlePaymentSucceeded(intentId: string) {
   const shortId = orders[0].id.slice(-8).toUpperCase()
   await sendAndLog(
     buyer.email,
-    'Payment successful — NOIZU-DIRECT',
+    'Payment successful — noizu.direct',
     emailShell(`
       <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payment received!</p>
       <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${buyer.name ?? 'there'}, your payment was successful and your order${orders.length !== 1 ? 's are' : ' is'} now being processed.</p>
@@ -104,7 +104,7 @@ async function handlePaymentSucceeded(intentId: string) {
     creatorEmails.add(order.creator.email)
     await sendAndLog(
       order.creator.email,
-      'New order — NOIZU-DIRECT',
+      'New order — noizu.direct',
       emailShell(`
         <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">New order received!</p>
         <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">You have a new paid order for <strong style="color:#e5e5f0;">${order.product.title}</strong>. Please fulfil it promptly.</p>
@@ -136,7 +136,7 @@ async function handleTransferSucceeded(transferId: string) {
 
   await sendAndLog(
     payout.creator.email,
-    'Your payout has been sent — NOIZU-DIRECT',
+    'Your payout has been sent — noizu.direct',
     emailShell(`
       <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout sent!</p>
       <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, your payout of <strong style="color:#e5e5f0;">RM ${(payout.amountUsd / 100).toFixed(2)}</strong> has been sent to your account. Please allow 1–3 business days for the funds to arrive.</p>
@@ -176,7 +176,7 @@ async function handleTransferFailed(transferId: string, failureReason?: string) 
 
   await sendAndLog(
     payout.creator.email,
-    'Your payout failed — NOIZU-DIRECT',
+    'Your payout failed — noizu.direct',
     emailShell(`
       <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payout failed</p>
       <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${payout.creator.name ?? 'there'}, unfortunately your payout of <strong style="color:#e5e5f0;">RM ${(payout.amountUsd / 100).toFixed(2)}</strong> could not be processed.</p>

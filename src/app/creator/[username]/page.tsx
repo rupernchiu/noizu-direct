@@ -25,10 +25,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const tags: string[] = (() => { try { return JSON.parse(creator.categoryTags) } catch { return [] } })()
   const tagStr = tags.length > 0 ? tags.slice(0, 2).join(' & ') + ' ' : ''
-  const title = `${creator.displayName} — ${tagStr}Creator | NOIZU-DIRECT`
+  const title = `${creator.displayName} — ${tagStr}Creator | noizu.direct`
   const description = creator.bio
-    ? `${creator.bio.slice(0, 120)}${creator.bio.length > 120 ? '…' : ''} — Browse ${creator.displayName}'s products on NOIZU-DIRECT.`
-    : `Browse products by ${creator.displayName} on NOIZU-DIRECT, the SEA creator marketplace.`
+    ? `${creator.bio.slice(0, 120)}${creator.bio.length > 120 ? '…' : ''} — Browse ${creator.displayName}'s products on noizu.direct.`
+    : `Browse products by ${creator.displayName} on noizu.direct, the SEA creator marketplace.`
   const url = `${SEO_CONFIG.siteUrl}/creator/${username}`
   const ogImage = creator.avatar || SEO_CONFIG.defaultOgImage
 
@@ -421,7 +421,7 @@ export default async function CreatorPage({ params }: PageProps) {
     description: creator.bio || undefined,
     knowsAbout: parseTags(creator.categoryTags),
     sameAs: Object.values(parseSocialLinks(creator.socialLinks || '{}')).filter((v) => v && v.startsWith('http')),
-    worksFor: { '@type': 'Organization', name: 'NOIZU-DIRECT', url: 'https://noizu.direct' },
+    worksFor: { '@type': 'Organization', name: 'noizu.direct', url: 'https://noizu.direct' },
   }
 
   const breadcrumbSchema = {
@@ -452,7 +452,7 @@ export default async function CreatorPage({ params }: PageProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={creator.bannerImage}
-            alt={`${creator.displayName} — creator banner on NOIZU-DIRECT`}
+            alt={`${creator.displayName} — creator banner on noizu.direct`}
             className="h-full w-full object-cover object-center"
             style={{ objectPosition: 'center top' }}
           />

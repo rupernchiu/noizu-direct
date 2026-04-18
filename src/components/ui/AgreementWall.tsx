@@ -90,12 +90,12 @@ export function AgreementWall({ agreements, userLegalName, gracePeriodEnd, daysR
         <div className="flex flex-col items-center mb-6">
           <img
             src="/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp"
-            alt="NOIZU-DIRECT"
+            alt="noizu.direct"
             className="h-8 dark:hidden mb-4"
           />
           <img
             src="/uploads/library/e17af218-b641-4ded-918e-a190d438eb3d.webp"
-            alt="NOIZU-DIRECT"
+            alt="noizu.direct"
             className="h-8 hidden dark:block mb-4"
           />
           <h1 className="text-xl font-bold text-foreground text-center">

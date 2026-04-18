@@ -9,7 +9,7 @@ void SITE_URL
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const type = searchParams.get('type') || 'default'
-  const title = searchParams.get('title') || 'NOIZU-DIRECT'
+  const title = searchParams.get('title') || 'noizu.direct'
   const subtitle = searchParams.get('subtitle') || ''
   const image = searchParams.get('image') || ''
   const price = searchParams.get('price') || ''
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
           }}
         >
           <div style={{ fontSize: '72px', fontWeight: 900, color: '#ffffff', letterSpacing: '-2px', marginBottom: '16px' }}>
-            NOIZU-DIRECT
+            noizu.direct
           </div>
           <div style={{ fontSize: '28px', color: '#a78bfa', fontWeight: 500 }}>
             Your fave creators. Direct to you.
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
                   {price}
                 </div>
               )}
-              <div style={{ fontSize: '16px', color: '#6ee7d6', fontWeight: 600 }}>NOIZU-DIRECT</div>
+              <div style={{ fontSize: '16px', color: '#6ee7d6', fontWeight: 600 }}>noizu.direct</div>
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
                 {subtitle && <div style={{ fontSize: '20px', color: '#a78bfa', marginTop: '4px' }}>{subtitle}</div>}
               </div>
             </div>
-            <div style={{ fontSize: '20px', color: '#6ee7d6', fontWeight: 600 }}>NOIZU-DIRECT</div>
+            <div style={{ fontSize: '20px', color: '#6ee7d6', fontWeight: 600 }}>noizu.direct</div>
           </div>
         </div>
       ),
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
             {title}
           </div>
           {subtitle && <div style={{ fontSize: '20px', color: '#94a3b8' }}>{subtitle}</div>}
-          <div style={{ marginTop: '16px', fontSize: '16px', color: '#6ee7d6' }}>NOIZU-DIRECT Blog</div>
+          <div style={{ marginTop: '16px', fontSize: '16px', color: '#6ee7d6' }}>noizu.direct Blog</div>
         </div>
       </div>
     ),

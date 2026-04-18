@@ -64,7 +64,7 @@ export default function RegisterPage() {
 
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-bold text-foreground">Create an account</h1>
-          <p className="text-sm text-muted-foreground">Join NOIZU-DIRECT as a buyer</p>
+          <p className="text-sm text-muted-foreground">Join noizu.direct as a buyer</p>
         </div>
 
         <button

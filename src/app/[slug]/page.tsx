@@ -39,13 +39,13 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     mainEntity: [
-      { '@type': 'Question', name: 'What is NOIZU-DIRECT?', acceptedAnswer: { '@type': 'Answer', text: 'NOIZU-DIRECT is a Southeast Asian creator marketplace where cosplayers, illustrators, and doujin artists sell directly to fans. Products include digital art, physical merchandise, doujin, cosplay prints, stickers, and print-on-demand items.' } },
-      { '@type': 'Question', name: 'How does buyer protection work on NOIZU-DIRECT?', acceptedAnswer: { '@type': 'Answer', text: 'All physical and POD orders are protected by escrow. Your payment is held securely until you receive your order. Digital purchases have a 7-day dispute window. Physical orders have 14-day protection. POD orders have 21-day protection.' } },
-      { '@type': 'Question', name: 'What fees does NOIZU-DIRECT charge?', acceptedAnswer: { '@type': 'Answer', text: 'NOIZU-DIRECT charges 0% platform fee during launch. Members pay a 2.5% processing fee at checkout. Creators pay a 4% withdrawal fee when requesting payouts.' } },
-      { '@type': 'Question', name: 'What countries does NOIZU-DIRECT serve?', acceptedAnswer: { '@type': 'Answer', text: 'NOIZU-DIRECT primarily serves Malaysia, Singapore, Philippines, Indonesia, and Thailand, though creators ship worldwide and digital products are available globally.' } },
+      { '@type': 'Question', name: 'What is noizu.direct?', acceptedAnswer: { '@type': 'Answer', text: 'noizu.direct is a Southeast Asian creator marketplace where cosplayers, illustrators, and doujin artists sell directly to fans. Products include digital art, physical merchandise, doujin, cosplay prints, stickers, and print-on-demand items.' } },
+      { '@type': 'Question', name: 'How does buyer protection work on noizu.direct?', acceptedAnswer: { '@type': 'Answer', text: 'All physical and POD orders are protected by escrow. Your payment is held securely until you receive your order. Digital purchases have a 7-day dispute window. Physical orders have 14-day protection. POD orders have 21-day protection.' } },
+      { '@type': 'Question', name: 'What fees does noizu.direct charge?', acceptedAnswer: { '@type': 'Answer', text: 'noizu.direct charges 0% platform fee during launch. Members pay a 2.5% processing fee at checkout. Creators pay a 4% withdrawal fee when requesting payouts.' } },
+      { '@type': 'Question', name: 'What countries does noizu.direct serve?', acceptedAnswer: { '@type': 'Answer', text: 'noizu.direct primarily serves Malaysia, Singapore, Philippines, Indonesia, and Thailand, though creators ship worldwide and digital products are available globally.' } },
       { '@type': 'Question', name: 'How do digital downloads work?', acceptedAnswer: { '@type': 'Answer', text: 'After payment, you receive an instant download link valid for 48 hours. Downloads are available anytime from your account downloads page.' } },
       { '@type': 'Question', name: 'What is print-on-demand (POD)?', acceptedAnswer: { '@type': 'Answer', text: "POD products are made to order by the creator's print provider after you purchase. Production takes 3-7 days plus shipping. Your payment is protected for 21 days." } },
-      { '@type': 'Question', name: 'How do I become a creator on NOIZU-DIRECT?', acceptedAnswer: { '@type': 'Answer', text: 'Register at noizu.direct/register/creator, complete your profile, and list your first product. The process takes under 10 minutes.' } },
+      { '@type': 'Question', name: 'How do I become a creator on noizu.direct?', acceptedAnswer: { '@type': 'Answer', text: 'Register at noizu.direct/register/creator, complete your profile, and list your first product. The process takes under 10 minutes.' } },
       { '@type': 'Question', name: 'What is World Cosplay Summit Malaysia?', acceptedAnswer: { '@type': 'Answer', text: 'World Cosplay Summit Malaysia (WCS Malaysia) is the official national qualifier for the World Cosplay Summit in Japan, organized by NOIZU. It is the top cosplay competition in Malaysia.' } },
       { '@type': 'Question', name: 'How do I track my order?', acceptedAnswer: { '@type': 'Answer', text: 'Once a creator adds a tracking number to your order, you will receive a notification. You can view tracking information in your account orders page.' } },
       { '@type': 'Question', name: 'Can I get a refund?', acceptedAnswer: { '@type': 'Answer', text: 'Refunds are available for items that never arrived, significantly damaged items, wrong items sent, or when a creator fails to fulfill. Raise a dispute from your orders page within the protection window.' } },
@@ -55,8 +55,8 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
   const howToBuySchema = page.slug === 'how-it-works' ? {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: 'How to Buy from NOIZU-DIRECT',
-    description: 'Step-by-step guide to purchasing from SEA creators on NOIZU-DIRECT',
+    name: 'How to Buy from noizu.direct',
+    description: 'Step-by-step guide to purchasing from SEA creators on noizu.direct',
     step: [
       { '@type': 'HowToStep', name: 'Browse', text: 'Browse products from Southeast Asian cosplayers, illustrators, and doujin artists on the marketplace.' },
       { '@type': 'HowToStep', name: 'Purchase', text: 'Add to cart and checkout securely. Your payment is protected by escrow for physical and POD orders.' },
@@ -67,8 +67,8 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
   const howToSellSchema = page.slug === 'start-selling' ? {
     '@context': 'https://schema.org',
     '@type': 'HowTo',
-    name: 'How to Sell on NOIZU-DIRECT',
-    description: 'Step-by-step guide to becoming a creator and selling on NOIZU-DIRECT',
+    name: 'How to Sell on noizu.direct',
+    description: 'Step-by-step guide to becoming a creator and selling on noizu.direct',
     step: [
       { '@type': 'HowToStep', name: 'Sign Up', text: 'Create your creator account at noizu.direct/register/creator.' },
       { '@type': 'HowToStep', name: 'Set Up Store', text: 'Complete your profile with a bio, banner, and category tags to attract the right buyers.' },

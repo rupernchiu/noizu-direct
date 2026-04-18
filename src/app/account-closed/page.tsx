@@ -4,7 +4,7 @@ export default function AccountClosedPage() {
       <div className="max-w-md text-center">
         <div className="text-5xl mb-4">🔒</div>
         <h1 className="text-2xl font-bold text-foreground mb-2">Account Closed</h1>
-        <p className="text-muted-foreground mb-6">Your NOIZU-DIRECT creator account has been closed. Your final balance will be paid out within 30 days.</p>
+        <p className="text-muted-foreground mb-6">Your noizu.direct creator account has been closed. Your final balance will be paid out within 30 days.</p>
         <p className="text-sm text-muted-foreground">Need help? Contact <a href="mailto:hello@noizu.direct" className="text-primary hover:underline">hello@noizu.direct</a></p>
       </div>
     </div>

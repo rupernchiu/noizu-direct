@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import StaffLoginForm from './StaffLoginForm'
 
 export const metadata: Metadata = {
-  title: 'Staff Login — NOIZU-DIRECT',
+  title: 'Staff Login — noizu.direct',
 }
 
 export default function StaffLoginPage() {

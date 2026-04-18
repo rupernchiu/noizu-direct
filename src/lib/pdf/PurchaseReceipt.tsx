@@ -61,7 +61,7 @@ export function PurchaseReceipt(props: PurchaseReceiptProps) {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>NOIZU-DIRECT</Text>
+          <Text style={styles.title}>noizu.direct</Text>
           <Text style={styles.subtitle}>Purchase Receipt</Text>
         </View>
 
@@ -125,7 +125,7 @@ export function PurchaseReceipt(props: PurchaseReceiptProps) {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>Thank you for your purchase on NOIZU-DIRECT.</Text>
+          <Text>Thank you for your purchase on noizu.direct.</Text>
           <Text>For support, contact support@noizu.direct</Text>
         </View>
       </Page>

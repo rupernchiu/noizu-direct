@@ -43,7 +43,7 @@ export async function createPaymentIntent({
       amount: amount / 100,
       currency,
       merchant_order_id: orderId,
-      descriptor: 'NOIZU-DIRECT',
+      descriptor: 'noizu.direct',
       metadata: { orderId },
     }),
   })
@@ -132,7 +132,7 @@ export async function executeTransfer({
       amount: amount / 100,
       currency,
       payment_method: 'LOCAL',
-      memo: 'NOIZU-DIRECT Creator Payout',
+      memo: 'noizu.direct Creator Payout',
     }),
   })
   if (!res.ok) {

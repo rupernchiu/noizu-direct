@@ -54,10 +54,10 @@ export const CATEGORY_META: Record<string, {
     description:
       'Professional cosplay photography prints and digital downloads from SEA cosplayers. Convention photos, character portraits and cosplay art prints.',
     longDescription:
-      'Get professional cosplay prints from Malaysia\'s top cosplayers. Convention photos from Comic Fiesta, Animangaki, and WCS Malaysia. Character portraits, full-body shoots, and group photos available as prints or digital downloads.',
+      'Get professional cosplay prints from Malaysia\'s top cosplayers. Convention photos from NoizuCon, NoizuCon, and WCS Malaysia. Character portraits, full-body shoots, and group photos available as prints or digital downloads.',
     keywords: [
       'cosplay print', 'cosplay photo', 'convention photo', 'cosplay art', 'SEA cosplay',
-      'Malaysia cosplay', 'Comic Fiesta', 'Animangaki', 'WCS Malaysia',
+      'Malaysia cosplay', 'NoizuCon', 'NoizuCon', 'WCS Malaysia',
     ],
     ogImage: '/images/categories/cosplay-print.jpg',
     icon: '📸',
@@ -104,9 +104,9 @@ export const CATEGORY_META: Record<string, {
   OTHER: {
     slug: 'other',
     name: 'Other',
-    h1: 'Unique Creator Goods on NOIZU-DIRECT',
+    h1: 'Unique Creator Goods on noizu.direct',
     description:
-      'Discover unique and miscellaneous creator goods from the NOIZU-DIRECT community of SEA artists and creators.',
+      'Discover unique and miscellaneous creator goods from the noizu.direct community of SEA artists and creators.',
     longDescription:
       'Explore one-of-a-kind creator goods that don\'t fit a single category. Handmade items, unique collaborations, and special releases from SEA creators.',
     keywords: ['creator goods', 'indie creator', 'SEA marketplace', 'unique art', 'handmade'],

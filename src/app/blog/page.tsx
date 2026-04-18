@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 
 export const metadata: Metadata = {
-  title: 'Creator Blog & Guides | NOIZU-DIRECT',
-  description: 'News, guides, and creator spotlights from the NOIZU-DIRECT community. Tips for SEA cosplayers, doujin artists, and indie creators.',
+  title: 'Creator Blog & Guides | noizu.direct',
+  description: 'News, guides, and creator spotlights from the noizu.direct community. Tips for SEA cosplayers, doujin artists, and indie creators.',
   alternates: { canonical: 'https://noizu.direct/blog' },
   openGraph: {
-    title: 'Creator Blog & Guides | NOIZU-DIRECT',
-    description: 'News, guides, and creator spotlights from the NOIZU-DIRECT community.',
+    title: 'Creator Blog & Guides | noizu.direct',
+    description: 'News, guides, and creator spotlights from the noizu.direct community.',
     url: 'https://noizu.direct/blog',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'NOIZU-DIRECT Blog' }],
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'noizu.direct Blog' }],
   },
 }
 
@@ -54,7 +54,7 @@ export default async function BlogPage() {
             <div className="rounded-2xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-colors">
               {featured.coverImage && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={featured.coverImage} alt={`${featured.title} — NOIZU-DIRECT Blog`} className="w-full aspect-[21/9] object-cover" />
+                <img src={featured.coverImage} alt={`${featured.title} — noizu.direct Blog`} className="w-full aspect-[21/9] object-cover" />
               )}
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
@@ -81,7 +81,7 @@ export default async function BlogPage() {
                   <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-colors h-full flex flex-col">
                     {post.coverImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={post.coverImage} alt={`${post.title} — NOIZU-DIRECT Blog`} className="w-full aspect-video object-cover" />
+                      <img src={post.coverImage} alt={`${post.title} — noizu.direct Blog`} className="w-full aspect-video object-cover" />
                     ) : (
                       <div className="w-full aspect-video bg-surface flex items-center justify-center">
                         <span className="text-muted-foreground text-3xl">📝</span>

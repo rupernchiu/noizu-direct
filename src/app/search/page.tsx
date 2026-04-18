@@ -3,8 +3,8 @@ import { Suspense } from 'react'
 import { SearchResults } from './SearchResults'
 
 export const metadata: Metadata = {
-  title: 'Search | NOIZU-DIRECT',
-  description: 'Search for products, creators, and posts on NOIZU-DIRECT.',
+  title: 'Search | noizu.direct',
+  description: 'Search for products, creators, and posts on noizu.direct.',
   robots: { index: false, follow: true },
 }
 

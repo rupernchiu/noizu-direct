@@ -14,7 +14,7 @@ function agreementReminderHtml(name: string, unsignedTypes: string[]): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Action required: Sign updated agreements</p>
@@ -33,7 +33,7 @@ function agreementReminderHtml(name: string, unsignedTypes: string[]): string {
           </td></tr></table>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p>
         </td></tr>
       </table>
     </td></tr>
@@ -49,12 +49,12 @@ function accountRestrictedHtml(name: string, unsignedTypes: string[]): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ef4444;">Account restricted</p>
           <p style="margin:0 0 16px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            Hi ${name}, your NOIZU-DIRECT creator account has been restricted because the following agreements were not signed within the required 30-day window.
+            Hi ${name}, your noizu.direct creator account has been restricted because the following agreements were not signed within the required 30-day window.
           </p>
           <div style="background:#1a1a24;border:1px solid #3f3f4a;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
             <p style="margin:0 0 8px;font-size:12px;font-weight:600;color:#8b8b9a;text-transform:uppercase;letter-spacing:0.05em;">Unsigned agreements</p>
@@ -68,7 +68,7 @@ function accountRestrictedHtml(name: string, unsignedTypes: string[]): string {
           </td></tr></table>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p>
         </td></tr>
       </table>
     </td></tr>
@@ -83,19 +83,19 @@ function accountClosureHtml(name: string): string {
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Account closure confirmed</p>
           <p style="margin:0 0 24px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            Hi ${name}, your NOIZU-DIRECT creator account has been closed as requested. All your listings have been deactivated.
+            Hi ${name}, your noizu.direct creator account has been closed as requested. All your listings have been deactivated.
           </p>
           <p style="margin:0 0 24px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            Thank you for being part of the NOIZU-DIRECT community. If you change your mind or have questions, please contact us at <a href="mailto:hello@noizu.direct" style="color:#7c3aed;">hello@noizu.direct</a>.
+            Thank you for being part of the noizu.direct community. If you change your mind or have questions, please contact us at <a href="mailto:hello@noizu.direct" style="color:#7c3aed;">hello@noizu.direct</a>.
           </p>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p>
         </td></tr>
       </table>
     </td></tr>
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
         await resend.emails.send({
           from: 'noreply@noizu.direct',
           to: [creator.email],
-          subject: 'Your NOIZU-DIRECT account has been restricted',
+          subject: 'Your noizu.direct account has been restricted',
           html: accountRestrictedHtml(creator.name ?? 'Creator', unsignedTypes),
         })
 
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
           await resend.emails.send({
             from: 'noreply@noizu.direct',
             to: [creator.email],
-            subject: 'Action required: Sign updated NOIZU-DIRECT agreements',
+            subject: 'Action required: Sign updated noizu.direct agreements',
             html: agreementReminderHtml(creator.name ?? 'Creator', unsignedTypes),
           })
 
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
     await resend.emails.send({
       from: 'noreply@noizu.direct',
       to: [user.email],
-      subject: 'Your NOIZU-DIRECT account has been closed',
+      subject: 'Your noizu.direct account has been closed',
       html: accountClosureHtml(user.name ?? 'Creator'),
     })
 

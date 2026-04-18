@@ -12,15 +12,15 @@ function emailShell(body: string, baseUrl: string): string {
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 16px;">
 <tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
-<tr><td style="padding-bottom:32px;text-align:center;"><img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" /></td></tr>
+<tr><td style="padding-bottom:32px;text-align:center;"><img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" /></td></tr>
 <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">${body}</td></tr>
-<tr><td style="padding-top:24px;text-align:center;"><p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace for SEA creators</p></td></tr>
+<tr><td style="padding-top:24px;text-align:center;"><p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p></td></tr>
 </table></td></tr></table></body></html>`
 }
 
 async function sendAndLog(prisma: any, { to, subject, html, type }: { to: string; subject: string; html: string; type: string }) {
   try {
-    const { data } = await resend.emails.send({ from: 'NOIZU-DIRECT <noreply@noizu.direct>', to: [to], subject, html })
+    const { data } = await resend.emails.send({ from: 'noizu.direct <noreply@noizu.direct>', to: [to], subject, html })
     await prisma.emailLog.create({ data: { to, subject, type, status: 'sent', resendId: data?.id ?? null } })
   } catch (e) {
     await prisma.emailLog.create({ data: { to, subject, type, status: 'failed', error: String(e) } }).catch(() => {})
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Dispute opened on your order</p>
           <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${creator.name}, a buyer has opened a dispute on order #${id.slice(-8).toUpperCase()}. Please respond within 48 hours.</p>
         `, baseUrl)
-        await sendAndLog(prisma, { to: creator.email, subject: 'Dispute opened — NOIZU-DIRECT', html, type: 'dispute_opened' })
+        await sendAndLog(prisma, { to: creator.email, subject: 'Dispute opened — noizu.direct', html, type: 'dispute_opened' })
       }
     } catch {}
   })()

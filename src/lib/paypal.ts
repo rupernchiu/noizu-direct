@@ -44,14 +44,14 @@ export async function executePayPalPayout({
     body: JSON.stringify({
       sender_batch_header: {
         sender_batch_id: payoutId,
-        email_subject: 'NOIZU-DIRECT Payout',
+        email_subject: 'noizu.direct Payout',
       },
       items: [
         {
           recipient_type: 'EMAIL',
           amount: { value: (amount / 100).toFixed(2), currency },
           receiver: paypalEmail,
-          note: 'NOIZU-DIRECT Creator Payout',
+          note: 'noizu.direct Creator Payout',
           sender_item_id: payoutId,
         },
       ],

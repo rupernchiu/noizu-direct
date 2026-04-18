@@ -190,7 +190,7 @@ export async function sendReminderEmail(
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;display:inline-block;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;display:inline-block;" />
         </td></tr>
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Agreement Signature Required</p>
@@ -212,7 +212,7 @@ export async function sendReminderEmail(
           </p>
         </td></tr>
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace</p>
         </td></tr>
       </table>
     </td></tr>

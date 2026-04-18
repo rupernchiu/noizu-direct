@@ -24,7 +24,7 @@ const cards: Card[] = [
     icon: MapPin,
     fear: 'Is this just another platform that\'ll disappear?',
     answer:
-      'Built in Malaysia. We\'re in the Animangaki halls, the Comic Fiesta lines. This community is ours too. We\'re not going anywhere.',
+      'Built in Malaysia. We\'re in the NoizuCon halls, the NoizuCon lines. This community is ours too. We\'re not going anywhere.',
   },
 ]
 

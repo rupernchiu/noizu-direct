@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     await resend.emails.send({
       from: 'noreply@noizu.direct',
       to: [email],
-      subject: 'Reset your NOIZU-DIRECT password',
+      subject: 'Reset your noizu.direct password',
       html: `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -42,13 +42,13 @@ export async function POST(req: Request) {
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
         <!-- Logo -->
         <tr><td style="padding-bottom:32px;text-align:center;">
-          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="NOIZU-DIRECT" height="50" style="height:50px;width:auto;display:inline-block;" />
+          <img src="${baseUrl}/uploads/library/38cf460d-b641-4ded-918e-a190d438eb3d.webp" alt="noizu.direct" height="50" style="height:50px;width:auto;display:inline-block;" />
         </td></tr>
         <!-- Card -->
         <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">
           <p style="margin:0 0 8px;font-size:20px;font-weight:700;color:#ffffff;">Reset your password</p>
           <p style="margin:0 0 24px;font-size:14px;color:#8b8b9a;line-height:1.6;">
-            We received a request to reset the password for your NOIZU-DIRECT account. Click the button below to choose a new password.
+            We received a request to reset the password for your noizu.direct account. Click the button below to choose a new password.
           </p>
           <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding-bottom:24px;">
             <a href="${resetUrl}" style="display:inline-block;background:#7c3aed;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:13px 32px;border-radius:10px;">Reset Password</a>
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         </td></tr>
         <!-- Footer -->
         <tr><td style="padding-top:24px;text-align:center;">
-          <p style="margin:0;font-size:12px;color:#4b4b5a;">NOIZU-DIRECT &mdash; Creator marketplace</p>
+          <p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace</p>
         </td></tr>
       </table>
     </td></tr>

@@ -48,7 +48,7 @@ export default function CommissionSpotlightSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center">
           <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20 mb-4">
-            Unique to NOIZU-DIRECT
+            Unique to noizu.direct
           </span>
           <h2 className="text-3xl font-extrabold text-foreground sm:text-4xl mb-4">
             Stop managing commissions in DMs and spreadsheets.

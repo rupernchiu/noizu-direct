@@ -224,7 +224,7 @@ function GoalsTab({ initial }: { initial: Goal[] }) {
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div>
             <label className="block text-xs font-medium mb-1">Goal Title *</label>
-            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputCls} placeholder="e.g. Comic Fiesta 2025 Table Fund" />
+            <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className={inputCls} placeholder="e.g. NoizuCon 2025 Table Fund" />
           </div>
           <div>
             <label className="block text-xs font-medium mb-1">Description</label>

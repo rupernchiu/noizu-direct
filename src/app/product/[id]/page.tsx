@@ -374,7 +374,7 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> Accessible from your Downloads page
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
+                    <span className="text-success">✓</span> noizu.direct Member Protection covers this purchase
                   </li>
                 </ul>
               )}
@@ -390,7 +390,7 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> 14-day dispute window after shipping
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
+                    <span className="text-success">✓</span> noizu.direct Member Protection covers this purchase
                   </li>
                 </ul>
               )}
@@ -406,7 +406,7 @@ export default async function ProductPage({ params }: PageProps) {
                     <span className="text-success">✓</span> Payment held in escrow until delivery
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-success">✓</span> NOIZU-DIRECT Member Protection covers this purchase
+                    <span className="text-success">✓</span> noizu.direct Member Protection covers this purchase
                   </li>
                 </ul>
               )}

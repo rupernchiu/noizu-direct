@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma'
 import sanitizeHtml from 'sanitize-html'
 
 export const metadata: Metadata = {
-  title: 'About NOIZU-DIRECT | SEA Creator Marketplace',
-  description: 'NOIZU-DIRECT is a Southeast Asian creator marketplace founded by NOIZU, organizer of World Cosplay Summit Malaysia. Connecting SEA cosplayers, illustrators, and doujin artists with fans.',
+  title: 'About noizu.direct | SEA Creator Marketplace',
+  description: 'noizu.direct is a Southeast Asian creator marketplace founded by NOIZU, organizer of World Cosplay Summit Malaysia. Connecting SEA cosplayers, illustrators, and doujin artists with fans.',
   alternates: { canonical: 'https://noizu.direct/about' },
   openGraph: {
-    title: 'About NOIZU-DIRECT | SEA Creator Marketplace',
-    description: 'NOIZU-DIRECT connects Southeast Asian cosplayers, illustrators, and doujin artists with fans. Founded by NOIZU, organizer of World Cosplay Summit Malaysia.',
+    title: 'About noizu.direct | SEA Creator Marketplace',
+    description: 'noizu.direct connects Southeast Asian cosplayers, illustrators, and doujin artists with fans. Founded by NOIZU, organizer of World Cosplay Summit Malaysia.',
     url: 'https://noizu.direct/about',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'About NOIZU-DIRECT' }],
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'About noizu.direct' }],
   },
 }
 
@@ -22,7 +22,7 @@ const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 export default async function AboutPage() {
   const page = await prisma.page.findUnique({ where: { slug: 'about' } })
 
-  const title = page?.title ?? 'About NOIZU-DIRECT'
+  const title = page?.title ?? 'About noizu.direct'
   const rawContent = page?.content
   const safeContent = rawContent ? sanitizeHtml(rawContent, SANITIZE_OPTIONS) : null
 
@@ -43,7 +43,7 @@ export default async function AboutPage() {
             <div className="rounded-xl bg-card border border-border p-8">
               <h2 className="mb-4 text-xl font-semibold text-foreground">Our Mission</h2>
               <p className="leading-relaxed text-muted-foreground">
-                NOIZU-DIRECT was built to give Southeast Asian creators a direct line to their fans —
+                noizu.direct was built to give Southeast Asian creators a direct line to their fans —
                 no middlemen, no barriers, just creators doing what they love and fans supporting them
                 directly.
               </p>
@@ -53,7 +53,7 @@ export default async function AboutPage() {
               <h2 className="mb-4 text-xl font-semibold text-foreground">Supporting SEA Creators</h2>
               <p className="leading-relaxed text-muted-foreground">
                 Southeast Asia is home to some of the world's most talented artists, illustrators,
-                cosplayers, and makers. NOIZU-DIRECT is built for them — offering low fees,
+                cosplayers, and makers. noizu.direct is built for them — offering low fees,
                 multi-currency support, and a community that celebrates SEA creative culture.
               </p>
             </div>

@@ -481,7 +481,7 @@ export function StartSellingClient({
       const today = new Date()
       const age = today.getFullYear() - dob.getFullYear() -
         (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0)
-      if (age < 18) e.dateOfBirth = 'You must be 18 or older to become a creator on NOIZU-DIRECT.'
+      if (age < 18) e.dateOfBirth = 'You must be 18 or older to become a creator on noizu.direct.'
     }
     if (!formData.nationality.trim()) e.nationality = 'Nationality is required'
     if (!formData.country.trim()) e.country = 'Country is required'

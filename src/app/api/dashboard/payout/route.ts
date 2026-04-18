@@ -135,7 +135,7 @@ export async function POST(req: Request) {
       const html = `<p>Hi ${creator.name ?? 'there'},</p><p>Your payout request of RM ${(amount / 100).toFixed(2)} has been received and is being reviewed.</p><p>We will notify you once it has been processed.</p><p>— NOIZU DIRECT</p>`
       const type = 'payout_requested'
       try {
-        const { data } = await resend.emails.send({ from: 'NOIZU-DIRECT <noreply@noizu.direct>', to: [email], subject, html })
+        const { data } = await resend.emails.send({ from: 'noizu.direct <noreply@noizu.direct>', to: [email], subject, html })
         await prisma.emailLog.create({ data: { to: email, subject, type, status: 'sent', resendId: data?.id ?? null } })
       } catch (e) {
         await prisma.emailLog.create({ data: { to: email, subject, type, status: 'failed', error: String(e) } }).catch(() => {})

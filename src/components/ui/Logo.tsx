@@ -9,7 +9,7 @@ export function Logo({ className }: Props) {
     <span className={cn('inline-flex items-center', className)}>
       <img
         src="https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-light.webp"
-        alt="NOIZU-DIRECT"
+        alt="noizu.direct"
         width={130}
         height={33}
         style={{ objectFit: 'contain' }}
@@ -17,7 +17,7 @@ export function Logo({ className }: Props) {
       />
       <img
         src="https://pub-7c92c7b3ba5f4f38a598ddc8e89ba361.r2.dev/logos/logo-dark.webp"
-        alt="NOIZU-DIRECT"
+        alt="noizu.direct"
         width={130}
         height={33}
         style={{ objectFit: 'contain' }}

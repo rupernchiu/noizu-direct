@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="max-w-screen-2xl mx-auto px-4 py-6">
         <div className="mb-4 flex items-center gap-3">
           <span className="px-2 py-0.5 rounded bg-destructive/20 text-destructive text-xs font-bold">ADMIN</span>
-          <h1 className="text-xl font-bold text-foreground">NOIZU-DIRECT Admin</h1>
+          <h1 className="text-xl font-bold text-foreground">noizu.direct Admin</h1>
         </div>
         <div className="flex gap-6 flex-col md:flex-row">
           <aside className="md:w-52 shrink-0">

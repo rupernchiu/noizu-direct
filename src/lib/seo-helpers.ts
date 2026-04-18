@@ -3,8 +3,8 @@ import { SEO_CONFIG } from './seo-config'
 /** "[pageTitle] | NOIZU-DIRECT", capped at 60 chars */
 export function generateTitle(pageTitle?: string): string {
   if (!pageTitle) return SEO_CONFIG.defaultTitle
-  const full = `${pageTitle} | NOIZU-DIRECT`
-  return full.length <= 60 ? full : pageTitle.slice(0, 45) + '… | NOIZU-DIRECT'
+  const full = `${pageTitle} | noizu.direct`
+  return full.length <= 60 ? full : pageTitle.slice(0, 45) + '… | noizu.direct'
 }
 
 /** Strip HTML tags, truncate at word boundary */
