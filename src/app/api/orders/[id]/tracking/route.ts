@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
+import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -20,9 +21,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const now = new Date()
+  const settings = await prisma.platformSettings.findFirst()
   const isPod = order.product.type === 'POD'
-  const releaseWindowDays = isPod ? 21 : 14
-  const autoReleaseAt = new Date(now.getTime() + releaseWindowDays * 24 * 60 * 60 * 1000)
+  const baseDays = isPod
+    ? (settings?.podEscrowDays ?? 30)
+    : (settings?.physicalEscrowDays ?? 14)
+
+  const extraDays = await getNewCreatorExtraDays(order.creatorId)
+  const autoReleaseAt = new Date(now.getTime() + (baseDays + extraDays) * 24 * 60 * 60 * 1000)
 
   await prisma.order.update({
     where: { id },

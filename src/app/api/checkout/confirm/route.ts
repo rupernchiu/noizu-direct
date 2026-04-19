@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { requireAuth, unauthorized } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
+import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 
 interface ShippingAddress {
   name: string
@@ -24,8 +25,9 @@ export async function POST(req: Request) {
     cartSessionId: string
     airwallexPaymentId?: string
     shippingAddress?: ShippingAddress
+    commissionBriefs?: { productId: string; briefText: string; referenceImages: string[] }[]
   }
-  const { cartSessionId, airwallexPaymentId, shippingAddress } = body
+  const { cartSessionId, airwallexPaymentId, shippingAddress, commissionBriefs } = body
 
   // Re-fetch buyer's cart
   const cartItems = await prisma.cartItem.findMany({
@@ -118,7 +120,28 @@ export async function POST(req: Request) {
     const hasPhysical = items.some(
       (item) => item.product.type === 'PHYSICAL' || item.product.type === 'POD',
     )
-    const allDigital = !hasPhysical
+    const hasCommission = items.some((item) => item.product.type === 'COMMISSION')
+    const allDigital = !hasPhysical && !hasCommission
+
+    const settings = await prisma.platformSettings.findFirst()
+    const digitalEscrowHours = settings?.digitalEscrowHours ?? 48
+    const extraDays = await getNewCreatorExtraDays(creatorUserId)
+
+    // For digital: hold for configured hours + new creator extra
+    const digitalReleaseMs =
+      (digitalEscrowHours * 60 * 60 * 1000) + (extraDays * 24 * 60 * 60 * 1000)
+    const digitalAutoReleaseAt = allDigital
+      ? new Date(Date.now() + digitalReleaseMs)
+      : null
+
+    // Commission: 48h for creator to accept
+    const commissionAcceptDeadlineAt = hasCommission
+      ? new Date(Date.now() + 48 * 60 * 60 * 1000)
+      : null
+
+    // Commission brief for this group's first commission product
+    const commissionItem = items.find((i) => i.product.type === 'COMMISSION')
+    const brief = commissionBriefs?.find((b) => b.productId === commissionItem?.productId)
 
     const order = await prisma.order.create({
       data: {
@@ -128,14 +151,29 @@ export async function POST(req: Request) {
         cartSessionId,
         amountUsd: orderAmount,
         status: 'PAID',
-        escrowStatus: allDigital ? 'RELEASED' : 'HELD',
+        escrowStatus: 'HELD',
         escrowHeldAt: new Date(),
+        escrowAutoReleaseAt: allDigital ? digitalAutoReleaseAt : null,
         fulfillmentDeadline: hasPhysical
           ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
           : null,
         shippingAddress:
           hasPhysical && shippingAddress ? JSON.stringify(shippingAddress) : null,
         airwallexIntentId: airwallexPaymentId ?? null,
+        // Commission fields
+        commissionStatus: hasCommission ? 'PENDING_ACCEPTANCE' : null,
+        commissionAcceptDeadlineAt,
+        commissionBriefText: brief?.briefText ?? null,
+        commissionReferenceImages: brief?.referenceImages
+          ? JSON.stringify(brief.referenceImages)
+          : null,
+        commissionDepositPercent: commissionItem?.product.commissionDepositPercent ?? null,
+        commissionDepositAmount: commissionItem?.product.commissionDepositPercent
+          ? Math.round(orderAmount * (commissionItem.product.commissionDepositPercent / 100))
+          : null,
+        commissionRevisionsAllowed: commissionItem?.product.commissionRevisionsIncluded ?? null,
+        // Buyer consents to deposit release at checkout
+        commissionDepositConsentAt: hasCommission ? new Date() : null,
       },
     })
 
@@ -161,7 +199,8 @@ export async function POST(req: Request) {
         processingFee: txProcessingFee,
         platformFee: 0,
         creatorAmount: orderAmount - txProcessingFee,
-        status: 'COMPLETED',
+        // Commission orders split into two payouts (deposit + balance); hold as ESCROW until released
+        status: hasCommission ? 'ESCROW' : 'COMPLETED',
       },
     })
 
@@ -185,7 +224,7 @@ export async function POST(req: Request) {
         title: item.product.title,
         quantity: item.quantity,
       })),
-      type: hasPhysical ? (items.some((i) => i.product.type === 'POD') ? 'POD' : 'PHYSICAL') : 'DIGITAL',
+      type: hasCommission ? 'COMMISSION' : hasPhysical ? (items.some((i) => i.product.type === 'POD') ? 'POD' : 'PHYSICAL') : 'DIGITAL',
       downloadToken: downloadToken ?? undefined,
       escrowStatus: order.escrowStatus,
     })

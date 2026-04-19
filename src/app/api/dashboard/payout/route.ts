@@ -73,16 +73,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Your account must be active to request a payout' }, { status: 400 })
     }
 
-    // 5. New creator hold (account <30 days AND 0 lifetime PAID payouts)
-    const accountAgeMs = Date.now() - creatorProfile.createdAt.getTime()
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000
-    if (accountAgeMs < thirtyDaysMs) {
-      const paidPayoutsCount = await prisma.payout.count({
-        where: { creatorId: userId, status: 'PAID' },
-      })
+    // 5. New creator check: must have KYC verified AND 10+ completed orders, or have a prior PAID payout
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { creatorVerificationStatus: true } })
+    const kycVerified = user?.creatorVerificationStatus === 'VERIFIED'
+    const settings = await prisma.platformSettings.findFirst()
+    const threshold = settings?.newCreatorTransactionThreshold ?? 10
+    const completedOrderCount = await prisma.order.count({ where: { creatorId: userId, status: 'COMPLETED' } })
+    const graduated = kycVerified && completedOrderCount >= threshold
+
+    if (!graduated) {
+      // Allow if they already have a prior successful payout (grandfathered)
+      const paidPayoutsCount = await prisma.payout.count({ where: { creatorId: userId, status: 'PAID' } })
       if (paidPayoutsCount === 0) {
+        const remaining = Math.max(0, threshold - completedOrderCount)
+        const kycMsg = kycVerified ? '' : ' Complete your KYC verification and'
         return NextResponse.json({
-          error: 'New creator accounts have a 7-day hold. Your account must be at least 30 days old for your first payout.',
+          error: `Your account is still in the new creator period.${kycMsg} complete ${remaining} more order${remaining !== 1 ? 's' : ''} before requesting your first payout.`,
         }, { status: 400 })
       }
     }

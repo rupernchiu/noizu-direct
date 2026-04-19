@@ -34,11 +34,12 @@ interface FormData {
   // Step 2
   legalFullName: string
   dateOfBirth: string
-  nationality: string
-  country: string
-  phone: string
-  idType: 'IC' | 'PASSPORT'
+  nationality: string    // stores citizenship country CODE (e.g. 'MY')
+  country: string        // stores residence country CODE (e.g. 'MY')
+  phone: string          // local number only — dial code derived from country
+  idType: IdType
   idNumber: string
+  idOtherDescription: string
   // Step 3
   idFrontFile: File | null
   idBackFile: File | null
@@ -50,10 +51,13 @@ interface FormData {
   idBackUrl: string
   selfieUrl: string
   // Step 4
-  bankName: string
-  bankAccountNumber: string
+  bankCountryCode: string
+  bankCurrency: string
   bankAccountName: string
-  bankCountry: string
+  bankName: string
+  bankCode: string
+  bankAccountNumber: string
+  bankRoutingCode: string
   paypalEmail: string
   // Step 5
   signedName: string
@@ -79,18 +83,142 @@ const CATEGORY_OPTIONS = [
   'Other',
 ]
 
-const BANK_OPTIONS = [
-  'Maybank',
-  'CIMB',
-  'Public Bank',
-  'RHB',
-  'Hong Leong',
-  'AmBank',
-  'Bank Islam',
-  'BSN',
-  'Affin Bank',
-  'Alliance Bank',
-  'Other',
+// ─── Country + ID types ───────────────────────────────────────────────────────
+
+interface Country {
+  code: string
+  name: string
+  dialCode: string
+  flag: string
+  idTier: 1 | 2   // 1 = has national ID, 2 = no national ID (passport/driver's/gov)
+}
+
+type IdType = 'NATIONAL_ID' | 'PASSPORT' | 'DRIVERS_LICENSE' | 'GOVERNMENT_ID' | 'OTHER'
+
+const COUNTRIES: Country[] = [
+  // Southeast Asia
+  { code: 'MY', name: 'Malaysia',          dialCode: '+60',  flag: '🇲🇾', idTier: 1 },
+  { code: 'SG', name: 'Singapore',         dialCode: '+65',  flag: '🇸🇬', idTier: 1 },
+  { code: 'ID', name: 'Indonesia',         dialCode: '+62',  flag: '🇮🇩', idTier: 1 },
+  { code: 'PH', name: 'Philippines',       dialCode: '+63',  flag: '🇵🇭', idTier: 1 },
+  { code: 'TH', name: 'Thailand',          dialCode: '+66',  flag: '🇹🇭', idTier: 1 },
+  { code: 'VN', name: 'Vietnam',           dialCode: '+84',  flag: '🇻🇳', idTier: 1 },
+  { code: 'MM', name: 'Myanmar',           dialCode: '+95',  flag: '🇲🇲', idTier: 1 },
+  { code: 'KH', name: 'Cambodia',          dialCode: '+855', flag: '🇰🇭', idTier: 1 },
+  { code: 'LA', name: 'Laos',              dialCode: '+856', flag: '🇱🇦', idTier: 1 },
+  { code: 'BN', name: 'Brunei',            dialCode: '+673', flag: '🇧🇳', idTier: 1 },
+  // East Asia
+  { code: 'HK', name: 'Hong Kong',         dialCode: '+852', flag: '🇭🇰', idTier: 1 },
+  { code: 'CN', name: 'China',             dialCode: '+86',  flag: '🇨🇳', idTier: 1 },
+  { code: 'TW', name: 'Taiwan',            dialCode: '+886', flag: '🇹🇼', idTier: 1 },
+  { code: 'JP', name: 'Japan',             dialCode: '+81',  flag: '🇯🇵', idTier: 1 },
+  { code: 'KR', name: 'South Korea',       dialCode: '+82',  flag: '🇰🇷', idTier: 1 },
+  { code: 'MN', name: 'Mongolia',          dialCode: '+976', flag: '🇲🇳', idTier: 1 },
+  // South Asia
+  { code: 'IN', name: 'India',             dialCode: '+91',  flag: '🇮🇳', idTier: 1 },
+  { code: 'BD', name: 'Bangladesh',        dialCode: '+880', flag: '🇧🇩', idTier: 1 },
+  { code: 'PK', name: 'Pakistan',          dialCode: '+92',  flag: '🇵🇰', idTier: 1 },
+  { code: 'LK', name: 'Sri Lanka',         dialCode: '+94',  flag: '🇱🇰', idTier: 1 },
+  { code: 'NP', name: 'Nepal',             dialCode: '+977', flag: '🇳🇵', idTier: 1 },
+  // Middle East
+  { code: 'AE', name: 'UAE',               dialCode: '+971', flag: '🇦🇪', idTier: 1 },
+  { code: 'SA', name: 'Saudi Arabia',      dialCode: '+966', flag: '🇸🇦', idTier: 1 },
+  { code: 'QA', name: 'Qatar',             dialCode: '+974', flag: '🇶🇦', idTier: 1 },
+  { code: 'KW', name: 'Kuwait',            dialCode: '+965', flag: '🇰🇼', idTier: 1 },
+  // Oceania
+  { code: 'AU', name: 'Australia',         dialCode: '+61',  flag: '🇦🇺', idTier: 2 },
+  { code: 'NZ', name: 'New Zealand',       dialCode: '+64',  flag: '🇳🇿', idTier: 2 },
+  // Europe
+  { code: 'GB', name: 'United Kingdom',    dialCode: '+44',  flag: '🇬🇧', idTier: 2 },
+  { code: 'IE', name: 'Ireland',           dialCode: '+353', flag: '🇮🇪', idTier: 2 },
+  { code: 'DE', name: 'Germany',           dialCode: '+49',  flag: '🇩🇪', idTier: 1 },
+  { code: 'FR', name: 'France',            dialCode: '+33',  flag: '🇫🇷', idTier: 1 },
+  { code: 'NL', name: 'Netherlands',       dialCode: '+31',  flag: '🇳🇱', idTier: 1 },
+  { code: 'IT', name: 'Italy',             dialCode: '+39',  flag: '🇮🇹', idTier: 1 },
+  { code: 'ES', name: 'Spain',             dialCode: '+34',  flag: '🇪🇸', idTier: 1 },
+  { code: 'PT', name: 'Portugal',          dialCode: '+351', flag: '🇵🇹', idTier: 1 },
+  { code: 'SE', name: 'Sweden',            dialCode: '+46',  flag: '🇸🇪', idTier: 1 },
+  { code: 'CH', name: 'Switzerland',       dialCode: '+41',  flag: '🇨🇭', idTier: 1 },
+  { code: 'PL', name: 'Poland',            dialCode: '+48',  flag: '🇵🇱', idTier: 1 },
+  { code: 'RU', name: 'Russia',            dialCode: '+7',   flag: '🇷🇺', idTier: 1 },
+  // Americas
+  { code: 'US', name: 'United States',     dialCode: '+1',   flag: '🇺🇸', idTier: 2 },
+  { code: 'CA', name: 'Canada',            dialCode: '+1',   flag: '🇨🇦', idTier: 2 },
+  { code: 'MX', name: 'Mexico',            dialCode: '+52',  flag: '🇲🇽', idTier: 1 },
+  { code: 'BR', name: 'Brazil',            dialCode: '+55',  flag: '🇧🇷', idTier: 1 },
+  // Africa
+  { code: 'ZA', name: 'South Africa',      dialCode: '+27',  flag: '🇿🇦', idTier: 1 },
+  { code: 'NG', name: 'Nigeria',           dialCode: '+234', flag: '🇳🇬', idTier: 1 },
+  { code: 'GH', name: 'Ghana',             dialCode: '+233', flag: '🇬🇭', idTier: 1 },
+]
+
+function getIdOptions(citizenshipCode: string): { value: IdType; label: string }[] {
+  const country = COUNTRIES.find(c => c.code === citizenshipCode)
+  if (!country || country.idTier === 1) {
+    return [
+      { value: 'NATIONAL_ID',   label: 'National ID Card' },
+      { value: 'PASSPORT',      label: 'Passport' },
+      { value: 'OTHER',         label: 'Other government document' },
+    ]
+  }
+  return [
+    { value: 'PASSPORT',        label: 'Passport' },
+    { value: 'DRIVERS_LICENSE', label: "Driver's Licence" },
+    { value: 'GOVERNMENT_ID',   label: 'State / Government ID' },
+    { value: 'OTHER',           label: 'Other government document' },
+  ]
+}
+
+function getIdNumberLabel(idType: IdType): string {
+  switch (idType) {
+    case 'NATIONAL_ID':       return 'National ID Number'
+    case 'PASSPORT':          return 'Passport Number'
+    case 'DRIVERS_LICENSE':   return "Driver's Licence Number"
+    case 'GOVERNMENT_ID':     return 'Government ID Number'
+    case 'OTHER':             return 'Document Reference Number (if any)'
+  }
+}
+
+interface PayoutCountry {
+  code: string
+  name: string
+  currency: string
+  currencyCode: string
+  routingLabel?: string  // e.g. "ABA Routing Number", "Sort Code", "BSB"
+  supported: boolean
+}
+
+const PAYOUT_COUNTRIES: PayoutCountry[] = [
+  // SEA
+  { code: 'MY', name: 'Malaysia', currency: 'Malaysian Ringgit', currencyCode: 'MYR', supported: true },
+  { code: 'SG', name: 'Singapore', currency: 'Singapore Dollar', currencyCode: 'SGD', supported: true },
+  { code: 'ID', name: 'Indonesia', currency: 'Indonesian Rupiah', currencyCode: 'IDR', supported: true },
+  { code: 'PH', name: 'Philippines', currency: 'Philippine Peso', currencyCode: 'PHP', supported: true },
+  { code: 'TH', name: 'Thailand', currency: 'Thai Baht', currencyCode: 'THB', supported: true },
+  { code: 'VN', name: 'Vietnam', currency: 'Vietnamese Dong', currencyCode: 'VND', supported: true },
+  { code: 'HK', name: 'Hong Kong', currency: 'Hong Kong Dollar', currencyCode: 'HKD', supported: true },
+  // East Asia
+  { code: 'JP', name: 'Japan', currency: 'Japanese Yen', currencyCode: 'JPY', supported: true },
+  { code: 'KR', name: 'South Korea', currency: 'South Korean Won', currencyCode: 'KRW', supported: true },
+  { code: 'TW', name: 'Taiwan', currency: 'New Taiwan Dollar', currencyCode: 'TWD', supported: true },
+  // Oceania
+  { code: 'AU', name: 'Australia', currency: 'Australian Dollar', currencyCode: 'AUD', routingLabel: 'BSB Number', supported: true },
+  { code: 'NZ', name: 'New Zealand', currency: 'New Zealand Dollar', currencyCode: 'NZD', supported: true },
+  // Europe
+  { code: 'GB', name: 'United Kingdom', currency: 'British Pound', currencyCode: 'GBP', routingLabel: 'Sort Code', supported: true },
+  { code: 'EU', name: 'Europe (SEPA)', currency: 'Euro', currencyCode: 'EUR', routingLabel: 'IBAN', supported: true },
+  // Americas
+  { code: 'US', name: 'United States', currency: 'US Dollar', currencyCode: 'USD', routingLabel: 'ABA Routing Number', supported: true },
+  { code: 'CA', name: 'Canada', currency: 'Canadian Dollar', currencyCode: 'CAD', routingLabel: 'Transit + Institution No.', supported: true },
+  { code: 'MX', name: 'Mexico', currency: 'Mexican Peso', currencyCode: 'MXN', supported: true },
+  { code: 'BR', name: 'Brazil', currency: 'Brazilian Real', currencyCode: 'BRL', supported: true },
+  // Middle East
+  { code: 'AE', name: 'United Arab Emirates', currency: 'UAE Dirham', currencyCode: 'AED', supported: true },
+  // Unsupported examples
+  { code: 'MM', name: 'Myanmar', currency: 'Myanmar Kyat', currencyCode: 'MMK', supported: false },
+  { code: 'KH', name: 'Cambodia', currency: 'Cambodian Riel', currencyCode: 'KHR', supported: false },
+  { code: 'LA', name: 'Laos', currency: 'Lao Kip', currencyCode: 'LAK', supported: false },
+  { code: 'OTHER', name: 'Other country', currency: '', currencyCode: '', supported: false },
 ]
 
 const STEP_NAMES = [
@@ -130,7 +258,57 @@ function formatDate(iso: string) {
 
 // ─── Progress bar ─────────────────────────────────────────────────────────────
 
-function ProgressBar({ step }: { step: number }) {
+// ─── Flag image component ─────────────────────────────────────────────────────
+
+function CountryFlag({ code, size = 18 }: { code: string; size?: number }) {
+  if (!code) return null
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
+      alt={code}
+      style={{ height: size, width: 'auto', display: 'inline-block' }}
+      className="rounded-sm shrink-0"
+    />
+  )
+}
+
+// ─── Country select with flag prefix ─────────────────────────────────────────
+
+function CountrySelect({
+  value,
+  onChange,
+  placeholder = 'Select country…',
+}: {
+  value: string
+  onChange: (code: string) => void
+  placeholder?: string
+}) {
+  return (
+    <div className="flex items-stretch border border-border rounded-lg overflow-hidden focus-within:border-primary transition-colors bg-background">
+      <div className="flex items-center justify-center px-3 bg-background border-r border-border min-w-[48px]">
+        {value ? (
+          <CountryFlag code={value} size={18} />
+        ) : (
+          <span className="text-muted-foreground text-xs">🌐</span>
+        )}
+      </div>
+      <select
+        suppressHydrationWarning
+        className="flex-1 px-3 py-2 bg-background text-foreground text-sm focus:outline-none appearance-none cursor-pointer"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">{placeholder}</option>
+        {COUNTRIES.map(c => (
+          <option key={c.code} value={c.code}>{c.name}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+function ProgressBar({ step, onGoTo }: { step: number; onGoTo: (idx: number) => void }) {
   return (
     <div className="mb-8">
       <div className="flex items-center justify-between gap-1">
@@ -138,6 +316,7 @@ function ProgressBar({ step }: { step: number }) {
           const idx = i + 1
           const isCompleted = step > idx
           const isCurrent = step === idx
+          const isClickable = isCompleted
           return (
             <div key={name} className="flex flex-col items-center flex-1 min-w-0">
               <div className="flex items-center w-full">
@@ -148,17 +327,21 @@ function ProgressBar({ step }: { step: number }) {
                     }`}
                   />
                 )}
-                <div
+                <button
+                  suppressHydrationWarning
+                  type="button"
+                  disabled={!isClickable}
+                  onClick={() => isClickable && onGoTo(idx)}
                   className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border-2 transition-colors ${
                     isCompleted
-                      ? 'bg-primary border-primary text-white'
+                      ? 'bg-primary border-primary text-white cursor-pointer hover:opacity-80'
                       : isCurrent
-                      ? 'border-primary text-primary bg-background'
-                      : 'border-border text-muted-foreground bg-background'
+                      ? 'border-primary text-primary bg-background cursor-default'
+                      : 'border-border text-muted-foreground bg-background cursor-default'
                   }`}
                 >
                   {isCompleted ? '✓' : idx}
-                </div>
+                </button>
                 {i < STEP_NAMES.length - 1 && (
                   <div
                     className={`flex-1 h-0.5 ${
@@ -168,11 +351,12 @@ function ProgressBar({ step }: { step: number }) {
                 )}
               </div>
               <span
+                onClick={() => isClickable && onGoTo(idx)}
                 className={`mt-1.5 text-xs text-center leading-tight hidden sm:block ${
                   isCurrent
                     ? 'text-primary font-semibold'
                     : isCompleted
-                    ? 'text-foreground'
+                    ? 'text-foreground cursor-pointer hover:text-primary hover:underline'
                     : 'text-muted-foreground'
                 }`}
               >
@@ -309,6 +493,8 @@ export function StartSellingClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submittedRefId, setSubmittedRefId] = useState<string | null>(null)
+  const [kycSkipped, setKycSkipped] = useState(false)
+  const [showKycSkipWarning, setShowKycSkipWarning] = useState(false)
 
   const [formData, setFormData] = useState<FormData>({
     displayName: userName || '',
@@ -321,8 +507,9 @@ export function StartSellingClient({
     nationality: '',
     country: '',
     phone: '',
-    idType: 'IC',
+    idType: 'NATIONAL_ID',
     idNumber: '',
+    idOtherDescription: '',
     idFrontFile: null,
     idBackFile: null,
     selfieFile: null,
@@ -332,10 +519,13 @@ export function StartSellingClient({
     idFrontUrl: '',
     idBackUrl: '',
     selfieUrl: '',
-    bankName: '',
-    bankAccountNumber: '',
+    bankCountryCode: '',
+    bankCurrency: '',
     bankAccountName: '',
-    bankCountry: '',
+    bankName: '',
+    bankCode: '',
+    bankAccountNumber: '',
+    bankRoutingCode: '',
     paypalEmail: '',
     signedName: '',
     agreeAll: false,
@@ -347,6 +537,15 @@ export function StartSellingClient({
   // Username check state
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const usernameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Bank search state
+  const [bankSearchQuery, setBankSearchQuery] = useState('')
+  const [bankSearchResults, setBankSearchResults] = useState<{ label: string; value: string }[]>([])
+  const [bankSearchLoading, setBankSearchLoading] = useState(false)
+  const [showBankDropdown, setShowBankDropdown] = useState(false)
+  const [bankApiAvailable, setBankApiAvailable] = useState<boolean | null>(null)
+  const bankSearchRef = useRef<HTMLDivElement>(null)
+  const bankDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Upload statuses
   const [uploadStatuses, setUploadStatuses] = useState<{
@@ -398,6 +597,55 @@ export function StartSellingClient({
       if (usernameDebounceRef.current) clearTimeout(usernameDebounceRef.current)
     }
   }, [formData.username])
+
+  // ── Reset idType when citizenship changes ───────────────────────────────────
+
+  useEffect(() => {
+    if (!formData.nationality) return
+    const validValues = getIdOptions(formData.nationality).map(o => o.value)
+    if (!validValues.includes(formData.idType)) {
+      setField('idType', validValues[0])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.nationality])
+
+  // ── Bank search ──────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!formData.bankCountryCode || !formData.bankCurrency || bankSearchQuery.length < 1) {
+      setBankSearchResults([])
+      setShowBankDropdown(false)
+      return
+    }
+    if (bankDebounceRef.current) clearTimeout(bankDebounceRef.current)
+    setBankSearchLoading(true)
+    bankDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/airwallex/banks?country=${formData.bankCountryCode}&currency=${formData.bankCurrency}&keyword=${encodeURIComponent(bankSearchQuery)}`,
+        )
+        if (res.ok) {
+          const data = await res.json() as { banks: { label: string; value: string }[]; apiAvailable: boolean }
+          setBankSearchResults(data.banks)
+          setBankApiAvailable(data.apiAvailable || data.banks.length > 0)
+          setShowBankDropdown(data.banks.length > 0)
+        }
+      } catch { /* ignore */ } finally {
+        setBankSearchLoading(false)
+      }
+    }, 300)
+    return () => { if (bankDebounceRef.current) clearTimeout(bankDebounceRef.current) }
+  }, [bankSearchQuery, formData.bankCountryCode, formData.bankCurrency])
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (bankSearchRef.current && !bankSearchRef.current.contains(e.target as Node)) {
+        setShowBankDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // ── File upload ─────────────────────────────────────────────────────────────
 
@@ -483,24 +731,19 @@ export function StartSellingClient({
         (today < new Date(today.getFullYear(), dob.getMonth(), dob.getDate()) ? 1 : 0)
       if (age < 18) e.dateOfBirth = 'You must be 18 or older to become a creator on noizu.direct.'
     }
-    if (!formData.nationality.trim()) e.nationality = 'Nationality is required'
-    if (!formData.country.trim()) e.country = 'Country is required'
-    if (!formData.phone.trim()) e.phone = 'Phone is required'
-    if (!formData.idNumber.trim()) e.idNumber = 'ID number is required'
+    if (!formData.nationality) e.nationality = 'Citizenship is required'
+    if (!formData.country) e.country = 'Country of residence is required'
+    if (!formData.phone.trim()) e.phone = 'Phone number is required'
+    if (!formData.idNumber.trim() && formData.idType !== 'OTHER') e.idNumber = 'ID number is required'
+    if (formData.idType === 'OTHER' && !formData.idOtherDescription.trim()) {
+      e.idOtherDescription = 'Please describe your document'
+    }
     return e
   }
 
   function validateStep3(): Record<string, string> {
     const e: Record<string, string> = {}
-    if (!formData.idFrontUrl && uploadStatuses.idFront !== 'done') {
-      e.idFront = 'ID front photo is required'
-    }
-    if (formData.idType === 'IC' && !formData.idBackUrl && uploadStatuses.idBack !== 'done') {
-      e.idBack = 'ID back photo is required for IC'
-    }
-    if (!formData.selfieUrl && uploadStatuses.selfie !== 'done') {
-      e.selfie = 'Selfie with ID is required'
-    }
+    if (kycSkipped) return e
     if (uploadStatuses.idFront === 'uploading' || uploadStatuses.idBack === 'uploading' || uploadStatuses.selfie === 'uploading') {
       e.general = 'Please wait for uploads to complete'
     }
@@ -509,12 +752,18 @@ export function StartSellingClient({
 
   function validateStep4(): Record<string, string> {
     const e: Record<string, string> = {}
-    if (!formData.bankAccountNumber.trim() && !formData.paypalEmail.trim()) {
-      e.bankAccountNumber = 'Please provide at least one payout method'
+    if (!formData.bankCountryCode) {
+      e.bankCountryCode = 'Please select your country'
+      return e
     }
-    if (formData.bankAccountNumber.trim()) {
-      if (!formData.bankName) e.bankName = 'Please select a bank'
+    const selectedCountry = PAYOUT_COUNTRIES.find(c => c.code === formData.bankCountryCode)
+    if (selectedCountry?.supported) {
+      if (!formData.bankAccountNumber.trim()) e.bankAccountNumber = 'Account number is required'
       if (!formData.bankAccountName.trim()) e.bankAccountName = 'Account holder name is required'
+      if (!formData.bankName.trim()) e.bankName = 'Bank name is required'
+    } else {
+      // Unsupported country — PayPal required
+      if (!formData.paypalEmail.trim()) e.paypalEmail = 'PayPal email is required for your country'
     }
     return e
   }
@@ -560,17 +809,23 @@ export function StartSellingClient({
           categoryTags: formData.categoryTags,
           legalFullName: formData.legalFullName,
           dateOfBirth: formData.dateOfBirth,
-          nationality: formData.nationality,
-          country: formData.country,
-          phone: formData.phone,
+          nationality: COUNTRIES.find(c => c.code === formData.nationality)?.name ?? formData.nationality,
+          country: COUNTRIES.find(c => c.code === formData.country)?.name ?? formData.country,
+          phone: (COUNTRIES.find(c => c.code === formData.country)?.dialCode ?? '') + formData.phone,
           idType: formData.idType,
           idNumber: formData.idNumber,
+          idOtherDescription: formData.idOtherDescription,
           idFrontImage: formData.idFrontUrl,
           idBackImage: formData.idBackUrl,
           selfieImage: formData.selfieUrl,
-          bankName: formData.bankName,
-          bankAccountNumber: formData.bankAccountNumber,
+          kycCompleted: !kycSkipped && !!(formData.idFrontUrl && formData.selfieUrl),
+          bankCountryCode: formData.bankCountryCode,
+          bankCurrency: formData.bankCurrency,
           bankAccountName: formData.bankAccountName,
+          bankName: formData.bankName,
+          bankCode: formData.bankCode,
+          bankAccountNumber: formData.bankAccountNumber,
+          bankRoutingCode: formData.bankRoutingCode,
           paypalEmail: formData.paypalEmail,
         }),
       })
@@ -580,8 +835,8 @@ export function StartSellingClient({
         throw new Error(body.error ?? 'Failed to submit application')
       }
 
-      const applyData = await applyRes.json() as { id: string }
-      setSubmittedRefId(applyData.id)
+      const applyData = await applyRes.json() as { ok: boolean; applicationId: string }
+      setSubmittedRefId(applyData.applicationId)
 
       // POST agreement signatures
       // Route expects: { signatures: [{templateId, signedName}], agreedToAll: true }
@@ -652,7 +907,16 @@ export function StartSellingClient({
         {/* Card */}
         <div className="bg-surface border border-border rounded-2xl p-8">
           {/* Progress bar (steps 1–5 only) */}
-          {step <= 5 && <ProgressBar step={step} />}
+          {step <= 5 && (
+            <ProgressBar
+              step={step}
+              onGoTo={(idx) => {
+                setErrors({})
+                setStep(idx)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            />
+          )}
 
           {/* ── STEP 1: Store Profile ── */}
           {step === 1 && (
@@ -802,7 +1066,12 @@ export function StartSellingClient({
           )}
 
           {/* ── STEP 2: Personal Details ── */}
-          {step === 2 && (
+          {step === 2 && (() => {
+            const citizenshipCountry = COUNTRIES.find(c => c.code === formData.nationality)
+            const residenceCountry   = COUNTRIES.find(c => c.code === formData.country)
+            const dialCode           = residenceCountry?.dialCode ?? ''
+            const idOptions          = getIdOptions(formData.nationality)
+            return (
             <div className="space-y-6">
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Personal details</h1>
@@ -852,19 +1121,18 @@ export function StartSellingClient({
                 )}
               </div>
 
-              {/* Nationality + Country */}
+              {/* Citizenship + Country of Residence */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="block text-sm font-medium text-foreground">
-                    Nationality <span className="text-red-400">*</span>
+                    Citizenship <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    className={inputCls}
+                  <CountrySelect
                     value={formData.nationality}
-                    onChange={(e) => setField('nationality', e.target.value)}
-                    placeholder="e.g. Malaysian"
+                    onChange={(code) => {
+                      setField('nationality', code)
+                      setField('idOtherDescription', '')
+                    }}
                   />
                   {errors.nationality && (
                     <p className="text-xs text-red-400">{errors.nationality}</p>
@@ -874,13 +1142,9 @@ export function StartSellingClient({
                   <label className="block text-sm font-medium text-foreground">
                     Country of Residence <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    className={inputCls}
+                  <CountrySelect
                     value={formData.country}
-                    onChange={(e) => setField('country', e.target.value)}
-                    placeholder="e.g. Malaysia"
+                    onChange={(code) => setField('country', code)}
                   />
                   {errors.country && (
                     <p className="text-xs text-red-400">{errors.country}</p>
@@ -893,47 +1157,81 @@ export function StartSellingClient({
                 <label className="block text-sm font-medium text-foreground">
                   Phone Number <span className="text-red-400">*</span>
                 </label>
-                <input
-                  suppressHydrationWarning
-                  type="tel"
-                  className={inputCls}
-                  value={formData.phone}
-                  onChange={(e) => setField('phone', e.target.value)}
-                  placeholder="+60 12-345 6789"
-                />
+                <div className="flex gap-2">
+                  {dialCode && (
+                    <div className="shrink-0 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground font-medium select-none whitespace-nowrap flex items-center gap-2">
+                      <CountryFlag code={formData.country} size={16} />
+                      <span className="text-muted-foreground">{dialCode}</span>
+                    </div>
+                  )}
+                  <input
+                    suppressHydrationWarning
+                    type="tel"
+                    className={inputCls}
+                    value={formData.phone}
+                    onChange={(e) => setField('phone', e.target.value)}
+                    placeholder={dialCode ? 'Local number e.g. 16-123 4567' : 'Select country of residence first'}
+                    disabled={!dialCode}
+                  />
+                </div>
                 {errors.phone && <p className="text-xs text-red-400">{errors.phone}</p>}
               </div>
 
-              {/* ID Type */}
-              <div className="space-y-1.5">
+              {/* ID Document Type — driven by citizenship */}
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">
-                  ID Type <span className="text-red-400">*</span>
+                  Identity Document <span className="text-red-400">*</span>
                 </label>
-                <div className="flex gap-6">
-                  {(['IC', 'PASSPORT'] as const).map((type) => (
-                    <label key={type} className="flex items-center gap-2 cursor-pointer">
+                {!formData.nationality && (
+                  <p className="text-xs text-muted-foreground">Select your citizenship above to see available ID options.</p>
+                )}
+                <div className="flex flex-wrap gap-4">
+                  {idOptions.map(opt => (
+                    <label key={opt.value} className="flex items-center gap-2 cursor-pointer">
                       <input
                         suppressHydrationWarning
                         type="radio"
                         name="idType"
-                        value={type}
-                        checked={formData.idType === type}
-                        onChange={() => setField('idType', type)}
+                        value={opt.value}
+                        checked={formData.idType === opt.value}
+                        onChange={() => {
+                          setField('idType', opt.value)
+                          setField('idOtherDescription', '')
+                          setField('idNumber', '')
+                        }}
                         className="accent-primary"
                       />
-                      <span className="text-sm text-foreground">
-                        {type === 'IC' ? 'MyKad / IC' : 'Passport'}
-                      </span>
+                      <span className="text-sm text-foreground">{opt.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
+              {/* ID Description — only for OTHER */}
+              {formData.idType === 'OTHER' && (
+                <div className="space-y-1.5">
+                  <label className="block text-sm font-medium text-foreground">
+                    Document Description <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    suppressHydrationWarning
+                    type="text"
+                    className={inputCls}
+                    value={formData.idOtherDescription}
+                    onChange={(e) => setField('idOtherDescription', e.target.value)}
+                    placeholder="e.g. Refugee travel document, Birth certificate"
+                  />
+                  <p className="text-xs text-muted-foreground">Our admin will review and confirm if this is acceptable.</p>
+                  {errors.idOtherDescription && <p className="text-xs text-red-400">{errors.idOtherDescription}</p>}
+                </div>
+              )}
+
               {/* ID Number */}
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-foreground">
-                  {formData.idType === 'IC' ? 'IC Number' : 'Passport Number'}{' '}
-                  <span className="text-red-400">*</span>
+                  {formData.idType ? getIdNumberLabel(formData.idType) : 'ID Number'}{' '}
+                  {formData.idType !== 'OTHER' && <span className="text-red-400">*</span>}
+                  {formData.idType === 'OTHER' && <span className="text-muted-foreground font-normal">(optional)</span>}
                 </label>
                 <input
                   suppressHydrationWarning
@@ -941,7 +1239,7 @@ export function StartSellingClient({
                   className={inputCls}
                   value={formData.idNumber}
                   onChange={(e) => setField('idNumber', e.target.value)}
-                  placeholder={formData.idType === 'IC' ? 'e.g. 900101-01-1234' : 'e.g. A12345678'}
+                  placeholder="Reference number on the document"
                 />
                 {errors.idNumber && <p className="text-xs text-red-400">{errors.idNumber}</p>}
               </div>
@@ -955,48 +1253,99 @@ export function StartSellingClient({
                 </button>
               </div>
             </div>
-          )}
+            )
+          })()}
 
           {/* ── STEP 3: Identity Verification ── */}
           {step === 3 && (
             <div className="space-y-6">
+              {/* KYC Skip Warning Modal */}
+              {showKycSkipWarning && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+                  <div className="bg-surface border border-border rounded-2xl p-6 max-w-md w-full space-y-4 shadow-xl">
+                    <div className="text-2xl text-center">⚠️</div>
+                    <h2 className="text-lg font-bold text-foreground text-center">Skip identity verification?</h2>
+                    <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                      Your store can still be <span className="font-semibold text-foreground">approved and sell</span> without KYC documents, but you will <span className="font-semibold text-foreground">not receive a Verified badge</span>. Buyers will see your store as unverified.
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center">
+                      You can complete verification anytime from your creator dashboard.
+                    </p>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        suppressHydrationWarning
+                        type="button"
+                        className={btnSecondaryCls + ' flex-1'}
+                        onClick={() => setShowKycSkipWarning(false)}
+                      >
+                        Go back
+                      </button>
+                      <button
+                        suppressHydrationWarning
+                        type="button"
+                        className="flex-1 px-6 py-2.5 bg-amber-400 hover:bg-amber-500 text-amber-950 rounded-lg text-sm font-semibold transition-colors"
+                        onClick={() => {
+                          setKycSkipped(true)
+                          setShowKycSkipWarning(false)
+                          setErrors({})
+                          setStep((s) => s + 1)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                      >
+                        Skip for now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <h1 className="text-2xl font-bold text-foreground">Verify your identity</h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Documents are encrypted and admin-only.
+                  Documents are encrypted and admin-only. <span className="text-amber-400 font-medium">Optional — you can skip and complete later.</span>
                 </p>
               </div>
 
-              <UploadZone
-                label="ID Front Photo"
-                required
-                preview={formData.idFrontPreview}
-                uploadStatus={uploadStatuses.idFront}
-                onFile={(f) => handleFileUpload(f, 'idFront')}
-              />
-              {errors.idFront && <p className="text-xs text-red-400 -mt-4">{errors.idFront}</p>}
+              {kycSkipped && (
+                <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-400">
+                  ⚠️ KYC skipped. Your store can be approved but will show as <span className="font-semibold">Unverified</span> to buyers. Complete verification from your dashboard to get the Verified badge.
+                </div>
+              )}
 
-              <UploadZone
-                label={`ID Back Photo${formData.idType === 'PASSPORT' ? ' (not required for Passport)' : ''}`}
-                required={formData.idType === 'IC'}
-                preview={formData.idBackPreview}
-                uploadStatus={uploadStatuses.idBack}
-                onFile={(f) => handleFileUpload(f, 'idBack')}
-              />
-              {errors.idBack && <p className="text-xs text-red-400 -mt-4">{errors.idBack}</p>}
+              {!kycSkipped && (
+                <>
+                  <UploadZone
+                    label="ID Front Photo"
+                    required={false}
+                    preview={formData.idFrontPreview}
+                    uploadStatus={uploadStatuses.idFront}
+                    onFile={(f) => handleFileUpload(f, 'idFront')}
+                  />
+                  {errors.idFront && <p className="text-xs text-red-400 -mt-4">{errors.idFront}</p>}
 
-              <UploadZone
-                label="Selfie Holding Your ID"
-                required
-                preview={formData.selfiePreview}
-                uploadStatus={uploadStatuses.selfie}
-                onFile={(f) => handleFileUpload(f, 'selfie')}
-              />
-              {errors.selfie && <p className="text-xs text-red-400 -mt-4">{errors.selfie}</p>}
+                  <UploadZone
+                    label={`ID Back Photo${formData.idType === 'PASSPORT' ? ' (not required for Passport)' : ''}`}
+                    required={false}
+                    preview={formData.idBackPreview}
+                    uploadStatus={uploadStatuses.idBack}
+                    onFile={(f) => handleFileUpload(f, 'idBack')}
+                  />
+                  {errors.idBack && <p className="text-xs text-red-400 -mt-4">{errors.idBack}</p>}
 
-              <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Note:</span> Your documents are reviewed securely by our team within 24–48 hours. You'll receive an email update.
-              </div>
+                  <UploadZone
+                    label="Selfie Holding Your ID"
+                    required={false}
+                    preview={formData.selfiePreview}
+                    uploadStatus={uploadStatuses.selfie}
+                    onFile={(f) => handleFileUpload(f, 'selfie')}
+                  />
+                  {errors.selfie && <p className="text-xs text-red-400 -mt-4">{errors.selfie}</p>}
+
+                  <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Note:</span> Your documents are reviewed securely by our team within 24–48 hours. You'll receive an email update.
+                  </div>
+                </>
+              )}
 
               {errors.general && (
                 <p className="text-xs text-red-400">{errors.general}</p>
@@ -1006,141 +1355,293 @@ export function StartSellingClient({
                 <button suppressHydrationWarning type="button" className={btnSecondaryCls} onClick={goBack}>
                   ← Back
                 </button>
-                <button suppressHydrationWarning type="button" className={btnPrimaryCls} onClick={goNext}>
-                  Continue →
-                </button>
+                <div className="flex gap-3">
+                  {!kycSkipped && (
+                    <button
+                      suppressHydrationWarning
+                      type="button"
+                      className="px-6 py-2.5 border border-amber-500 text-amber-600 dark:text-amber-400 rounded-lg text-sm font-medium hover:bg-amber-500/10 transition-colors"
+                      onClick={() => setShowKycSkipWarning(true)}
+                    >
+                      Skip for now
+                    </button>
+                  )}
+                  <button suppressHydrationWarning type="button" className={btnPrimaryCls} onClick={goNext}>
+                    Continue →
+                  </button>
+                </div>
               </div>
             </div>
           )}
 
           {/* ── STEP 4: Payout Setup ── */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">Set up your payouts</h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Choose how you want to receive your earnings.
-                </p>
-              </div>
+          {step === 4 && (() => {
+            const selectedCountry = PAYOUT_COUNTRIES.find(c => c.code === formData.bankCountryCode)
+            const isSupported = selectedCountry?.supported ?? false
+            const isUnsupported = !!selectedCountry && !selectedCountry.supported
+            return (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">Set up your payouts</h1>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Choose how you want to receive your earnings. Powered by Airwallex.
+                  </p>
+                </div>
 
-              {/* Bank section */}
-              <div className="rounded-xl border border-border p-5 space-y-4">
-                <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  Bank Transfer
-                </h2>
-
+                {/* Country selector */}
                 <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-foreground">Bank</label>
+                  <label className="block text-sm font-medium text-foreground">
+                    Country of Bank Account <span className="text-red-400">*</span>
+                  </label>
                   <select
                     suppressHydrationWarning
                     className={inputCls}
-                    value={formData.bankName}
-                    onChange={(e) => setField('bankName', e.target.value)}
+                    value={formData.bankCountryCode}
+                    onChange={(e) => {
+                      const country = PAYOUT_COUNTRIES.find(c => c.code === e.target.value)
+                      setField('bankCountryCode', e.target.value)
+                      setField('bankCurrency', country?.currencyCode ?? '')
+                      setField('bankName', '')
+                      setField('bankCode', '')
+                      setBankApiAvailable(null)
+                      setBankSearchQuery('')
+                      setBankSearchResults([])
+                    }}
                   >
-                    <option value="">Select bank...</option>
-                    {BANK_OPTIONS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
+                    <option value="">Select country...</option>
+                    {PAYOUT_COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>{c.name}</option>
                     ))}
                   </select>
-                  {errors.bankName && (
-                    <p className="text-xs text-red-400">{errors.bankName}</p>
-                  )}
+                  {errors.bankCountryCode && <p className="text-xs text-red-400">{errors.bankCountryCode}</p>}
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-foreground">
-                    Account Number
-                  </label>
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    className={inputCls}
-                    value={formData.bankAccountNumber}
-                    onChange={(e) => setField('bankAccountNumber', e.target.value)}
-                    placeholder="e.g. 1234567890"
-                  />
-                  {errors.bankAccountNumber && (
-                    <p className="text-xs text-red-400">{errors.bankAccountNumber}</p>
-                  )}
+                {/* Currency display */}
+                {formData.bankCurrency && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Payout currency:</span>
+                    <span className="font-semibold text-foreground">{formData.bankCurrency} — {selectedCountry?.currency}</span>
+                  </div>
+                )}
+
+                {/* Unsupported country */}
+                {isUnsupported && (
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-sm text-amber-400">
+                    ⚠️ Bank transfer is not yet available for your country. Please use PayPal to receive your earnings.
+                  </div>
+                )}
+
+                {/* Local bank fields — supported countries */}
+                {isSupported && (
+                  <div className="rounded-xl border border-border p-5 space-y-4">
+                    <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">Bank Transfer</h2>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-foreground">
+                        Account Holder Name <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        suppressHydrationWarning
+                        type="text"
+                        className={inputCls}
+                        value={formData.bankAccountName}
+                        onChange={(e) => setField('bankAccountName', e.target.value)}
+                        placeholder="As shown on bank account"
+                      />
+                      {errors.bankAccountName && <p className="text-xs text-red-400">{errors.bankAccountName}</p>}
+                    </div>
+
+                    <div className="space-y-1.5 relative" ref={bankSearchRef}>
+                      <label className="block text-sm font-medium text-foreground">
+                        Bank Name <span className="text-red-400">*</span>
+                      </label>
+                      {/* Free-text fallback: API unavailable or returned nothing after a search */}
+                      {bankApiAvailable === false ? (
+                        <input
+                          suppressHydrationWarning
+                          type="text"
+                          className={inputCls}
+                          value={formData.bankName}
+                          onChange={(e) => {
+                            setField('bankName', e.target.value)
+                            setField('bankCode', e.target.value)
+                          }}
+                          placeholder="e.g. Maybank, CIMB, Public Bank"
+                        />
+                      ) : formData.bankCode ? (
+                        /* Selected from API dropdown */
+                        <div className="flex items-center gap-2">
+                          <div className={`${inputCls} flex-1 bg-primary/5 border-primary/30`}>
+                            {formData.bankName}
+                          </div>
+                          <button
+                            suppressHydrationWarning
+                            type="button"
+                            className="shrink-0 px-3 py-2 text-xs text-muted-foreground border border-border rounded-lg hover:bg-border/40 transition-colors"
+                            onClick={() => {
+                              setField('bankName', '')
+                              setField('bankCode', '')
+                              setBankSearchQuery('')
+                              setBankSearchResults([])
+                              setBankApiAvailable(null)
+                            }}
+                          >
+                            Change
+                          </button>
+                        </div>
+                      ) : (
+                        /* Search input */
+                        <div className="relative">
+                          <input
+                            suppressHydrationWarning
+                            type="text"
+                            className={inputCls}
+                            value={bankSearchQuery}
+                            onChange={(e) => setBankSearchQuery(e.target.value)}
+                            onFocus={() => bankSearchResults.length > 0 && setShowBankDropdown(true)}
+                            placeholder={formData.bankCountryCode ? 'Type to search your bank…' : 'Select a country first'}
+                            disabled={!formData.bankCountryCode}
+                            autoComplete="off"
+                          />
+                          {bankSearchLoading && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Searching…</span>
+                          )}
+                          {showBankDropdown && bankSearchResults.length > 0 && (
+                            <div className="absolute z-20 w-full mt-1 bg-surface border border-border rounded-lg shadow-xl max-h-52 overflow-y-auto">
+                              {bankSearchResults.map((bank) => (
+                                <button
+                                  suppressHydrationWarning
+                                  key={bank.value}
+                                  type="button"
+                                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-primary/10 text-foreground transition-colors"
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setField('bankName', bank.label)
+                                    setField('bankCode', bank.value)
+                                    setBankSearchQuery('')
+                                    setShowBankDropdown(false)
+                                    setBankSearchResults([])
+                                  }}
+                                >
+                                  {bank.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {bankSearchQuery.length >= 1 && !bankSearchLoading && bankSearchResults.length === 0 && !showBankDropdown && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              No results — enter bank name manually below
+                              <button
+                                suppressHydrationWarning
+                                type="button"
+                                className="ml-2 underline text-primary"
+                                onClick={() => setBankApiAvailable(false)}
+                              >
+                                Type manually
+                              </button>
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {errors.bankName && <p className="text-xs text-red-400">{errors.bankName}</p>}
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-foreground">
+                        Account Number <span className="text-red-400">*</span>
+                      </label>
+                      <input
+                        suppressHydrationWarning
+                        type="text"
+                        className={inputCls}
+                        value={formData.bankAccountNumber}
+                        onChange={(e) => setField('bankAccountNumber', e.target.value)}
+                        placeholder="Your bank account number"
+                      />
+                      {errors.bankAccountNumber && <p className="text-xs text-red-400">{errors.bankAccountNumber}</p>}
+                    </div>
+
+                    {/* Routing code — only for countries that need it */}
+                    {selectedCountry?.routingLabel && (
+                      <div className="space-y-1.5">
+                        <label className="block text-sm font-medium text-foreground">
+                          {selectedCountry.routingLabel}
+                        </label>
+                        <input
+                          suppressHydrationWarning
+                          type="text"
+                          className={inputCls}
+                          value={formData.bankRoutingCode}
+                          onChange={(e) => setField('bankRoutingCode', e.target.value)}
+                          placeholder={selectedCountry.routingLabel}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Divider — only if supported (bank OR PayPal) */}
+                {isSupported && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground font-medium">OR</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                )}
+
+                {/* PayPal — always shown, disabled if not set up */}
+                {(isSupported || isUnsupported) && (
+                  <div className="rounded-xl border border-border p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">PayPal</h2>
+                      {isSupported && (
+                        <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30 rounded-full px-2 py-0.5">Coming soon</span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-foreground">
+                        PayPal Email
+                        {isSupported && <span className="text-muted-foreground font-normal ml-1">(optional)</span>}
+                        {isUnsupported && <span className="text-red-400 ml-1">*</span>}
+                      </label>
+                      <input
+                        suppressHydrationWarning
+                        type="email"
+                        className={`${inputCls} ${isSupported ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        value={formData.paypalEmail}
+                        onChange={(e) => setField('paypalEmail', e.target.value)}
+                        placeholder="paypal@example.com"
+                        disabled={isSupported}
+                      />
+                      {isSupported && (
+                        <p className="text-xs text-muted-foreground">PayPal payouts are coming soon. Enter your email now and we'll activate it when ready.</p>
+                      )}
+                      {errors.paypalEmail && <p className="text-xs text-red-400">{errors.paypalEmail}</p>}
+                    </div>
+                  </div>
+                )}
+
+                {!formData.bankCountryCode && (
+                  <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
+                    Select your country above to see available payout options.
+                  </div>
+                )}
+
+                <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Note:</span> Your payout details are reviewed during verification. You can update them anytime from your dashboard.
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-foreground">
-                    Account Holder Name
-                  </label>
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    className={inputCls}
-                    value={formData.bankAccountName}
-                    onChange={(e) => setField('bankAccountName', e.target.value)}
-                    placeholder="As shown on bank account"
-                  />
-                  {errors.bankAccountName && (
-                    <p className="text-xs text-red-400">{errors.bankAccountName}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-foreground">
-                    Bank Country
-                  </label>
-                  <input
-                    suppressHydrationWarning
-                    type="text"
-                    className={inputCls}
-                    value={formData.bankCountry}
-                    onChange={(e) => setField('bankCountry', e.target.value)}
-                    placeholder="e.g. Malaysia"
-                  />
+                <div className="flex justify-between pt-2">
+                  <button suppressHydrationWarning type="button" className={btnSecondaryCls} onClick={goBack}>
+                    ← Back
+                  </button>
+                  <button suppressHydrationWarning type="button" className={btnPrimaryCls} onClick={goNext}>
+                    Continue →
+                  </button>
                 </div>
               </div>
-
-              {/* OR separator */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground font-medium">OR</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
-
-              {/* PayPal */}
-              <div className="rounded-xl border border-border p-5 space-y-4">
-                <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide">
-                  PayPal
-                </h2>
-                <div className="space-y-1.5">
-                  <label className="block text-sm font-medium text-foreground">
-                    PayPal Email{' '}
-                    <span className="text-muted-foreground font-normal">(optional)</span>
-                  </label>
-                  <input
-                    suppressHydrationWarning
-                    type="email"
-                    className={inputCls}
-                    value={formData.paypalEmail}
-                    onChange={(e) => setField('paypalEmail', e.target.value)}
-                    placeholder="paypal@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-lg bg-background border border-border px-4 py-3 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Note:</span> Your payout method is
-                reviewed during verification. You can update it later from your dashboard.
-              </div>
-
-              <div className="flex justify-between pt-2">
-                <button suppressHydrationWarning type="button" className={btnSecondaryCls} onClick={goBack}>
-                  ← Back
-                </button>
-                <button suppressHydrationWarning type="button" className={btnPrimaryCls} onClick={goNext}>
-                  Continue →
-                </button>
-              </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* ── STEP 5: Agreements ── */}
           {step === 5 && (
@@ -1153,7 +1654,8 @@ export function StartSellingClient({
               </div>
 
               {/* Tabs */}
-              <div className="border-b border-border overflow-x-auto">
+              <div className="relative">
+                <div className="border-b border-border overflow-x-auto">
                 <div className="flex gap-0 min-w-max">
                   {agreements.map((ag) => {
                     const isRead = formData.readAgreements.has(ag.id)
@@ -1176,6 +1678,14 @@ export function StartSellingClient({
                   })}
                 </div>
               </div>
+                {/* Fade + scroll hint — hidden once all tabs read */}
+                {!allAgreementsRead && (
+                  <>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-surface to-transparent" />
+                    <p className="text-xs text-muted-foreground mt-1 text-right pr-1">← scroll tabs to see all</p>
+                  </>
+                )}
+              </div>
 
               {/* Read counter */}
               <p className="text-xs text-muted-foreground">
@@ -1185,7 +1695,7 @@ export function StartSellingClient({
                 </span>{' '}
                 of {agreements.length}
                 {!allAgreementsRead && (
-                  <span className="text-yellow-400/80 ml-2">
+                  <span className="text-amber-600 dark:text-amber-400 ml-2">
                     — click each tab to mark as read
                   </span>
                 )}

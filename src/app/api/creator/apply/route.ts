@@ -76,12 +76,18 @@ export async function POST(req: NextRequest) {
     phone?: string
     idType?: string
     idNumber?: string
+    idOtherDescription?: string
     idFrontImage?: string
     idBackImage?: string
     selfieImage?: string
-    bankName?: string
-    bankAccountNumber?: string
+    kycCompleted?: boolean
+    bankCountryCode?: string
+    bankCurrency?: string
     bankAccountName?: string
+    bankName?: string
+    bankCode?: string
+    bankAccountNumber?: string
+    bankRoutingCode?: string
     paypalEmail?: string
   }
 
@@ -99,51 +105,76 @@ export async function POST(req: NextRequest) {
     phone: body.phone ?? '',
     idType: body.idType ?? 'IC',
     idNumber: body.idNumber ?? '',
+    idOtherDescription: body.idOtherDescription ?? '',
     idFrontImage: body.idFrontImage ?? null,
     idBackImage: body.idBackImage ?? null,
     selfieImage: body.selfieImage ?? null,
-    bankName: body.bankName ?? '',
-    bankAccountNumber: body.bankAccountNumber ?? '',
+    kycCompleted: body.kycCompleted ?? false,
+    bankCountryCode: body.bankCountryCode ?? '',
+    bankCurrency: body.bankCurrency ?? '',
     bankAccountName: body.bankAccountName ?? '',
+    bankName: body.bankName ?? '',
+    bankCode: body.bankCode ?? '',
+    bankAccountNumber: body.bankAccountNumber ?? '',
+    bankRoutingCode: body.bankRoutingCode ?? '',
     paypalEmail: body.paypalEmail ?? null,
     status: 'SUBMITTED',
     submittedAt: new Date(),
   }
 
-  const application = await prisma.creatorApplication.upsert({
-    where: { userId },
-    update: data,
-    create: { userId, ...data },
-  })
+  let application
+  try {
+    application = await prisma.creatorApplication.upsert({
+      where: { userId },
+      update: data,
+      create: { userId, ...data },
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Database error'
+    console.error('[apply POST] prisma upsert failed:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { creatorVerificationStatus: 'PENDING' },
-  })
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { creatorVerificationStatus: 'PENDING' },
+    })
+  } catch (err) {
+    console.error('[apply POST] user update failed:', err)
+  }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  await resend.emails.send({
-    from: 'noreply@noizu.direct',
-    to: [userEmail],
-    subject: 'Application received — noizu.direct Creator',
-    html: submittedEmailHtml(
-      userName ?? 'Applicant',
-      userEmail,
-      application.id,
-      application.username,
-    ),
-  })
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    await resend.emails.send({
+      from: 'noreply@noizu.direct',
+      to: [userEmail],
+      subject: 'Application received — noizu.direct Creator',
+      html: submittedEmailHtml(
+        userName ?? 'Applicant',
+        userEmail,
+        application.id,
+        application.username,
+      ),
+    })
+  } catch (err) {
+    console.error('[apply POST] email send failed:', err)
+  }
 
-  await prisma.notification.create({
-    data: {
-      userId,
-      type: 'CREATOR_APPLICATION_SUBMITTED',
-      title: 'Application received',
-      message: "Your creator application is under review. We'll notify you once it's been reviewed.",
-      actionUrl: '/account',
-      isRead: false,
-    },
-  })
+  try {
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'CREATOR_APPLICATION_SUBMITTED',
+        title: 'Application received',
+        message: "Your creator application is under review. We'll notify you once it's been reviewed.",
+        actionUrl: '/account',
+        isRead: false,
+      },
+    })
+  } catch (err) {
+    console.error('[apply POST] notification failed:', err)
+  }
 
   return NextResponse.json({ ok: true, applicationId: application.id })
 }

@@ -149,7 +149,11 @@ model Product {
   description      String
   price            Int
   category         String
-  type             String   // DIGITAL | PHYSICAL | POD
+  type             String   // DIGITAL | PHYSICAL | POD | COMMISSION
+  // Commission-specific
+  commissionDepositPercent   Int?
+  commissionRevisionsIncluded Int?
+  commissionTurnaroundDays   Int?
   images           String   @default("[]")
   digitalFile      String?
   stock            Int?
@@ -317,6 +321,22 @@ model Order {
   buyerConfirmedAt         DateTime?
   discountCodeId           String?
   discountAmount           Int       @default(0)
+  // Commission fields
+  commissionStatus           String?   // PENDING_ACCEPTANCE|ACCEPTED|DELIVERED|REVISION_REQUESTED|COMPLETED
+  commissionBriefText        String?
+  commissionReferenceImages  String?   // JSON array of URLs
+  commissionDepositPercent   Int?      // snapshot at order time
+  commissionDepositAmount    Int?      // cents
+  commissionRevisionsAllowed Int?      // snapshot
+  commissionRevisionsUsed    Int       @default(0)
+  commissionAcceptedAt       DateTime?
+  commissionDeliveredAt      DateTime?
+  commissionDeliveryFiles    String?   // JSON array of URLs
+  commissionAcceptDeadlineAt    DateTime? // 48h from order creation
+  commissionBuyerAcceptedAt     DateTime?
+  commissionDepositConsentAt    DateTime? // when buyer consented to deposit release at checkout
+  commissionDepositAutoReleaseAt DateTime? // 48h after creator acceptance + new creator modifier
+  commissionDepositReleasedAt   DateTime? // when deposit portion was actually released to creator
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
@@ -646,11 +666,18 @@ model PopupAd {
 }
 
 model PlatformSettings {
-  id                   String @id @default(cuid())
-  processingFeePercent Float  @default(2.5)
-  platformFeePercent   Float  @default(0.0)
-  withdrawalFeePercent Float  @default(4.0)
-  topCreatorThreshold  Int    @default(100)
+  id                             String @id @default(cuid())
+  processingFeePercent           Float  @default(2.5)
+  platformFeePercent             Float  @default(0.0)
+  withdrawalFeePercent           Float  @default(4.0)
+  topCreatorThreshold            Int    @default(100)
+  // Escrow policy
+  digitalEscrowHours             Int    @default(48)
+  physicalEscrowDays             Int    @default(14)
+  podEscrowDays                  Int    @default(30)
+  commissionEscrowDays           Int    @default(30)
+  newCreatorEscrowExtraDays      Int    @default(7)
+  newCreatorTransactionThreshold Int    @default(10)
 }
 
 model NavItem {
@@ -846,13 +873,19 @@ model CreatorApplication {
   country           String    @default("")
   phone             String    @default("")
   idType            String    @default("IC")    // IC|PASSPORT
-  idNumber          String    @default("")
+  idNumber              String    @default("")
+  idOtherDescription    String    @default("")
   idFrontImage      String?
   idBackImage       String?
   selfieImage       String?
-  bankName          String    @default("")
-  bankAccountNumber String    @default("")
+  kycCompleted      Boolean   @default(false)
+  bankCountryCode   String    @default("")
+  bankCurrency      String    @default("")
   bankAccountName   String    @default("")
+  bankName          String    @default("")
+  bankCode          String    @default("")
+  bankAccountNumber String    @default("")
+  bankRoutingCode   String    @default("")
   paypalEmail       String?
   adminNote         String?
   rejectionReason   String?
