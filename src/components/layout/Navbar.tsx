@@ -170,44 +170,37 @@ export default function Navbar() {
   return (
     <nav className="bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="max-w-screen-xl mx-auto px-6">
-        {/* Outer: position:relative so absolute children are constrained to this container */}
-        <div className="relative flex items-center h-14">
-          {/* Left — Logo (absolute so it doesn't participate in centering calc) */}
-          <div className="absolute left-0 flex items-center">
-            <Link href="/" className="flex items-center shrink-0">
-              <Logo />
-            </Link>
-          </div>
+        <div className="flex items-center h-14 gap-4">
+          {/* Logo */}
+          <Link href="/" className="flex items-center shrink-0">
+            <Logo />
+          </Link>
 
-          {/* Center — truly centered links */}
-          <div
-            className="hidden md:flex items-center gap-1"
-            style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}
-          >
+          {/* Links — left-aligned, small gap after logo */}
+          <div className="flex items-center gap-1">
             <Link
               href="/marketplace"
-              className="px-3 py-1.5 text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40"
+              className="px-2 md:px-3 py-1.5 text-[13px] md:text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
             >
               Marketplace
             </Link>
             <Link
               href="/creators"
-              className="px-3 py-1.5 text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40"
+              className="px-2 md:px-3 py-1.5 text-[13px] md:text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
             >
               Creators
             </Link>
           </div>
 
-          {/* Right — icons (margin-left: auto pushes to right edge) */}
-          <div className="hidden md:flex items-center gap-1 ml-auto">
-            <CurrencySelector />
+          {/* Right — icons always visible; auth desktop-only (hamburger handles mobile) */}
+          <div className="flex items-center gap-1 ml-auto">
             <ThemeToggle />
             <CartIcon />
-            {authSection}
+            <div className="hidden md:block">{authSection}</div>
           </div>
 
-          {/* Mobile hamburger (always visible on small screens, sits at right) */}
-          <div className="md:hidden ml-auto">
+          {/* Mobile hamburger — auth only */}
+          <div className="md:hidden">
             <Sheet>
               <SheetTrigger
                 className="inline-flex items-center justify-center rounded-lg p-2 hover:bg-border/60 transition-colors outline-none"
@@ -221,25 +214,11 @@ export default function Navbar() {
                   <Link href="/" className="flex items-center">
                     <Logo />
                   </Link>
-                  {/* Mobile cart */}
-                  <MobileCartButton />
-                  {/* Mobile nav links */}
-                  <div className="flex flex-col gap-4">
-                    <Link
-                      href="/marketplace"
-                      className="text-sm font-medium text-foreground hover:text-secondary transition-colors"
-                    >
-                      Marketplace
-                    </Link>
-                    <Link
-                      href="/creators"
-                      className="text-sm font-medium text-foreground hover:text-secondary transition-colors"
-                    >
-                      Creators
-                    </Link>
+                  {/* Currency selector */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Select Currency</span>
+                    <CurrencySelector />
                   </div>
-                  {/* Theme toggle */}
-                  <ThemeToggle mobile />
                   {/* Mobile auth */}
                   <div className="flex flex-col gap-2">
                     {session ? (

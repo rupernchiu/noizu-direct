@@ -63,6 +63,7 @@ const KF = `
 // ── Root component ─────────────────────────────────────────────────────────────
 
 export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
+  const { data: session } = useSession()
   const [openId, setOpenId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -110,6 +111,7 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
               onOpen={() => { cancelClose(); setOpenId(item.id) }}
               onCancelClose={cancelClose}
               onScheduleClose={scheduleClose}
+              session={session}
             />
           ))}
         </div>
@@ -123,6 +125,7 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
               onOpen={() => { cancelClose(); setOpenId(item.id) }}
               onCancelClose={cancelClose}
               onScheduleClose={scheduleClose}
+              session={session}
             />
           ))}
         </div>
@@ -151,13 +154,14 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
 // ── Nav trigger (button or pill) ───────────────────────────────────────────────
 
 function NavTrigger({
-  item, isOpen, onOpen, onCancelClose, onScheduleClose,
+  item, isOpen, onOpen, onCancelClose, onScheduleClose, session,
 }: {
   item: NavItemData
   isOpen: boolean
   onOpen: () => void
   onCancelClose: () => void
   onScheduleClose: () => void
+  session: ReturnType<typeof useSession>['data']
 }) {
   const [hovered, setHovered] = useState(false)
   const isMega = item.dropdownType === 'MEGA_MENU'
@@ -165,7 +169,6 @@ function NavTrigger({
   const isWCS = item.label === 'WCS Malaysia'
   const isSell = item.label === 'Start Selling'
 
-  const { data: session } = useSession()
   const user = session?.user as { role?: string } | undefined
 
   const content = parseSafe<unknown>(item.dropdownContent, {})

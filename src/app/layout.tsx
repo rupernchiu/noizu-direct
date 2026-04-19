@@ -20,6 +20,7 @@ import { SearchBar } from '@/components/layout/SearchBar';
 import Footer from '@/components/layout/Footer';
 import { Toaster } from '@/components/ui/sonner'
 import { FloatingScrollButtons } from '@/components/ui/FloatingScrollButtons'
+import { MobileBottomNavServer } from '@/components/layout/MobileBottomNavServer'
 import { CartProvider } from '@/components/layout/CartProvider';
 import { RejectionBannerWrapper } from '@/components/ui/RejectionBannerWrapper'
 import { ApprovalBannerWrapper } from '@/components/ui/ApprovalBannerWrapper'
@@ -77,8 +78,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SecondaryNav />
             </header>
             <SearchBar />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 pb-16 md:pb-0">{children}</main>
             <Footer />
+            <MobileBottomNavServer />
             <Toaster position="bottom-right" />
             <FloatingScrollButtons />
           </SessionProvider>
