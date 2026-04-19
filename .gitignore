@@ -45,3 +45,5 @@ private-uploads/
 
 .vercel
 .tmp-chrome-profile/
+
+.env*.local
