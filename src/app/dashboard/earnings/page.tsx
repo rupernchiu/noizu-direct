@@ -52,13 +52,17 @@ export default async function EarningsPage({
   const txWhere: any = { creatorId: userId }
   if (txStatus) txWhere.status = txStatus
 
-  const [completedTxAgg, payoutsAgg, txTotal, transactions, payoutTotal, payouts] = await Promise.all([
+  const [completedTxAgg, escrowTxAgg, payoutsAgg, txTotal, transactions, payoutTotal, payouts, profile] = await Promise.all([
     prisma.transaction.aggregate({
       where: { creatorId: userId, status: 'COMPLETED' },
       _sum: { creatorAmount: true },
     }),
+    prisma.transaction.aggregate({
+      where: { creatorId: userId, status: 'ESCROW' },
+      _sum: { creatorAmount: true },
+    }),
     prisma.payout.aggregate({
-      where: { creatorId: userId, status: { not: 'FAILED' } },
+      where: { creatorId: userId, status: { in: ['PENDING', 'PROCESSING', 'PAID'] } },
       _sum: { amountUsd: true },
     }),
     prisma.transaction.count({ where: txWhere }),
@@ -75,11 +79,17 @@ export default async function EarningsPage({
       skip: (payoutPage - 1) * PAYOUT_PER_PAGE,
       take: PAYOUT_PER_PAGE,
     }),
+    prisma.creatorProfile.findUnique({
+      where: { userId },
+      select: { payoutCurrency: true },
+    }),
   ])
 
-  const totalEarned = completedTxAgg._sum.creatorAmount ?? 0
-  const totalPaidOut = payoutsAgg._sum.amountUsd ?? 0
-  const available = Math.max(0, totalEarned - totalPaidOut)
+  const totalEarnedCents = completedTxAgg._sum.creatorAmount ?? 0
+  const totalEscrowCents = escrowTxAgg._sum.creatorAmount ?? 0
+  const totalPaidOutCents = payoutsAgg._sum.amountUsd ?? 0
+  const availableCents = Math.max(0, totalEarnedCents - totalPaidOutCents)
+  const payoutCurrency = profile?.payoutCurrency ?? 'USD'
 
   return (
     <div className="space-y-8">
@@ -88,27 +98,43 @@ export default async function EarningsPage({
           <h1 className="text-2xl font-bold text-foreground">Earnings</h1>
           <p className="text-sm text-muted-foreground mt-1">Track your revenue and request payouts</p>
         </div>
-        <Link
-          href="/dashboard/earnings/payout"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
-        >
-          Request Payout
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/statement"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            View Statement
+          </Link>
+          <Link
+            href="/dashboard/earnings/payout"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
+          >
+            Request Payout
+          </Link>
+        </div>
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="rounded-xl border border-border bg-secondary/10 p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">Available Balance</p>
-          <p className="text-2xl font-bold text-secondary">${available.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-secondary">${(availableCents / 100).toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Escrow cleared</p>
+        </div>
+        <div className="rounded-xl border border-border bg-yellow-500/10 p-4">
+          <p className="text-xs font-medium text-muted-foreground mb-1">In Escrow</p>
+          <p className="text-2xl font-bold text-yellow-400">${(totalEscrowCents / 100).toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Pending release</p>
         </div>
         <div className="rounded-xl border border-border bg-primary/10 p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">Total Earned</p>
-          <p className="text-2xl font-bold text-primary">${totalEarned.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-primary">${(totalEarnedCents / 100).toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">All time</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">Total Paid Out</p>
-          <p className="text-2xl font-bold text-foreground">${totalPaidOut.toFixed(2)}</p>
+          <p className="text-2xl font-bold text-foreground">${(totalPaidOutCents / 100).toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">Payout currency: {payoutCurrency}</p>
         </div>
       </div>
 
@@ -182,7 +208,12 @@ export default async function EarningsPage({
                   {payouts.map((p) => (
                     <tr key={p.id} className="border-b border-border last:border-0 hover:bg-card/50">
                       <td className="px-5 py-3 text-muted-foreground">{formatDate(p.requestedAt)}</td>
-                      <td className="px-5 py-3 text-foreground font-medium">${(p.amountUsd / 100).toFixed(2)}</td>
+                      <td className="px-5 py-3 text-foreground font-medium">
+                        USD {(p.amountUsd / 100).toFixed(2)}
+                        {p.currency && p.currency !== 'USD' && (
+                          <span className="text-xs text-muted-foreground ml-1">({p.currency})</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${payoutStatusStyles[p.status] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
                           {p.status}

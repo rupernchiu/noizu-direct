@@ -91,6 +91,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <NavLink href="/dashboard/orders"><ShoppingBag className="size-4" />Orders</NavLink>
               <NavLink href="/dashboard/messages"><MessageCircle className="size-4" />Messages</NavLink>
               <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
+              <NavLink href="/dashboard/statement"><FileText className="size-4" />Statement</NavLink>
               <NavLink href="/dashboard/fans"><Users className="size-4" />Fans</NavLink>
               {/* Separator */}
               <div className="hidden md:block my-2 h-px bg-border" />

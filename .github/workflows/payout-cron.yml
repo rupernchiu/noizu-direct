@@ -1,0 +1,38 @@
+name: Weekly Payout Sweep
+
+on:
+  schedule:
+    # Every Friday at 2:00 AM UTC = 10:00 AM Malaysia Time (MYT, UTC+8)
+    - cron: '0 2 * * 5'
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  payout:
+    name: Run payout sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger payout cron
+        run: |
+          response=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/payout")
+
+          echo "HTTP status: $response"
+          echo "Response body:"
+          cat /tmp/response.json
+
+          if [ "$response" != "200" ]; then
+            echo "Payout cron failed with status $response"
+            exit 1
+          fi
+
+      - name: Trigger payout reconciler
+        run: |
+          curl -s \
+            -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/payout-reconciler"
