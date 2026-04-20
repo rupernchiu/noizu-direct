@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
-import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +36,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <NavLink href="/admin/orders"><ShoppingBag className="size-4" />Orders</NavLink>
                   <NavLink href="/admin/transactions"><DollarSign className="size-4" />Transactions</NavLink>
                   <NavLink href="/admin/payouts"><DollarSign className="size-4" />Payouts</NavLink>
+                  <NavLink href="/admin/finance"><TrendingUp className="size-4" />Finance</NavLink>
+                  <NavLink href="/admin/chargebacks"><AlertTriangle className="size-4" />Chargebacks</NavLink>
+                  <NavLink href="/admin/fraud"><Shield className="size-4" />Fraud</NavLink>
                   <NavLink href="/admin/emails"><Mail className="size-4" />Emails</NavLink>
                   <NavLink href="/admin/cms"><FileText className="size-4" />CMS</NavLink>
                   <NavLink href="/admin/cms/navigation"><Menu className="size-4" />Navigation</NavLink>

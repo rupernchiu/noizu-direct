@@ -18,6 +18,8 @@ model User {
   phone              String?
   warningCount       Int      @default(0)
   isFlaggedForReview Boolean  @default(false)
+  payoutFrozen       Boolean  @default(false)
+  payoutFrozenReason String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -350,6 +352,7 @@ model Order {
   escrowTransactions EscrowTransaction[]
   review            ProductReview?
   discountCode      DiscountCode?      @relation(fields: [discountCodeId], references: [id])
+  chargebacks       ChargebackDispute[]
 }
 
 // ── Dispute ───────────────────────────────────────────────────────────────────
@@ -986,4 +989,40 @@ model CreatorSpotlight {
   isActive       Boolean  @default(true)
   order          Int      @default(0)
   createdAt      DateTime @default(now())
+}
+
+// ── Chargeback Disputes ───────────────────────────────────────────────────────
+
+model ChargebackDispute {
+  id                 String    @id @default(cuid())
+  airwallexDisputeId String    @unique
+  orderId            String
+  paymentIntentId    String
+  amountUsd          Int
+  currency           String    @default("USD")
+  reason             String    // FRAUD|DUPLICATE|PRODUCT_NOT_RECEIVED|CREDIT_NOT_PROCESSED|GENERAL
+  status             String    @default("OPEN") // OPEN|UNDER_REVIEW|WON|LOST|CANCELLED
+  evidenceDeadline   DateTime?
+  adminNotes         String?
+  outcome            String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id])
+}
+
+// ── Fraud Flags ───────────────────────────────────────────────────────────────
+
+model FraudFlag {
+  id          String    @id @default(cuid())
+  type        String    // VELOCITY|AMOUNT_THRESHOLD|CHARGEBACK_PATTERN|MANUAL
+  severity    String    @default("MEDIUM") // LOW|MEDIUM|HIGH|CRITICAL
+  status      String    @default("OPEN")   // OPEN|REVIEWED|DISMISSED|ACTIONED
+  description String
+  orderId     String?
+  userId      String?
+  createdAt   DateTime  @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  reviewNote  String?
 }

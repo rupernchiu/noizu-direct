@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Noizu Direct — Payment System Guide</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; line-height: 1.6; }
+
+    @page { margin: 20mm 15mm; }
+    @media print {
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      body { font-size: 11px; }
+      .cover { page-break-after: always; }
+    }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 60%, #2d1b69 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 60px 70px;
+    }
+    .cover .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; color: #a78bfa; margin-bottom: 60px; }
+    .cover h1 { font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 16px; }
+    .cover .subtitle { font-size: 16px; color: #94a3b8; margin-bottom: 48px; }
+    .cover .meta { font-size: 12px; color: #64748b; border-top: 1px solid #334155; padding-top: 20px; width: 100%; }
+    .cover .meta span { margin-right: 32px; }
+    .cover .tag {
+      display: inline-block; background: rgba(167,139,250,0.15); border: 1px solid rgba(167,139,250,0.3);
+      color: #a78bfa; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 20px;
+    }
+
+    /* Layout */
+    .content { max-width: 820px; margin: 0 auto; padding: 40px 40px; }
+    @media print { .content { padding: 20px 0; } }
+
+    /* Section headers */
+    .section-title {
+      font-size: 22px; font-weight: 800; color: #0f0f23;
+      border-left: 5px solid #7c3aed; padding-left: 14px;
+      margin: 40px 0 20px;
+    }
+    .section-title.green { border-color: #059669; }
+    .section-title.blue  { border-color: #2563eb; }
+    .section-title.amber { border-color: #d97706; }
+    .section-title.red   { border-color: #dc2626; }
+
+    h2 { font-size: 16px; font-weight: 700; color: #1e1b4b; margin: 28px 0 10px; }
+    h3 { font-size: 13px; font-weight: 700; color: #4c1d95; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    p  { margin-bottom: 10px; color: #374151; }
+
+    /* Cards */
+    .card {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;
+      padding: 18px 20px; margin-bottom: 16px;
+    }
+    .card.purple { background: #f5f3ff; border-color: #c4b5fd; }
+    .card.green  { background: #f0fdf4; border-color: #86efac; }
+    .card.amber  { background: #fffbeb; border-color: #fcd34d; }
+    .card.blue   { background: #eff6ff; border-color: #93c5fd; }
+    .card.red    { background: #fef2f2; border-color: #fca5a5; }
+    .card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+    .card.purple h4 { color: #6d28d9; }
+    .card.green  h4 { color: #065f46; }
+    .card.amber  h4 { color: #92400e; }
+    .card.blue   h4 { color: #1e40af; }
+    .card.red    h4 { color: #991b1b; }
+
+    /* Flow steps */
+    .steps { counter-reset: step; list-style: none; }
+    .steps li {
+      counter-increment: step;
+      display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      min-width: 28px; height: 28px; border-radius: 50%;
+      background: #7c3aed; color: #fff;
+      font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .steps.green li::before { background: #059669; }
+    .steps.blue  li::before { background: #2563eb; }
+
+    .step-body strong { display: block; font-size: 13px; color: #1e1b4b; }
+    .step-body span   { font-size: 12px; color: #64748b; }
+
+    /* Grid */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+    @media print { .grid2 { grid-template-columns: 1fr 1fr; } }
+
+    /* Badge / pill */
+    .pill {
+      display: inline-block; padding: 2px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .pill.done   { background: #d1fae5; color: #065f46; }
+    .pill.tba    { background: #fef3c7; color: #92400e; }
+    .pill.blocker { background: #fee2e2; color: #991b1b; }
+    .pill.note   { background: #ede9fe; color: #5b21b6; }
+
+    /* Checklist */
+    .checklist { list-style: none; }
+    .checklist li { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12.5px; }
+    .checklist li:last-child { border-bottom: none; }
+    .check-icon { font-size: 16px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+    .checklist .note { font-size: 11px; color: #94a3b8; display: block; margin-top: 2px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 12px; }
+    th { background: #f1f5f9; text-align: left; padding: 8px 12px; font-weight: 700; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; color: #374151; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+
+    /* Print button */
+    .print-bar {
+      position: fixed; bottom: 20px; right: 20px;
+      background: #7c3aed; color: #fff;
+      padding: 12px 22px; border-radius: 10px;
+      font-weight: 700; font-size: 13px; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+      border: none; z-index: 100;
+    }
+    .print-bar:hover { background: #6d28d9; }
+
+    /* Formula box */
+    .formula {
+      background: #1e1b4b; color: #e0e7ff;
+      border-radius: 8px; padding: 14px 18px;
+      font-family: monospace; font-size: 12px;
+      margin: 12px 0 18px; line-height: 1.8;
+    }
+    .formula .comment { color: #64748b; }
+    .formula .highlight { color: #a78bfa; font-weight: 700; }
+
+    /* Warning box */
+    .warning {
+      background: #fffbeb; border: 1px solid #fcd34d; border-left: 4px solid #f59e0b;
+      border-radius: 8px; padding: 12px 16px; margin: 14px 0;
+      font-size: 12px; color: #78350f;
+    }
+    .info {
+      background: #eff6ff; border: 1px solid #93c5fd; border-left: 4px solid #3b82f6;
+      border-radius: 8px; padding: 12px 16px; margin: 14px 0;
+      font-size: 12px; color: #1e3a5f;
+    }
+  </style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<div class="cover">
+  <div class="logo">Noizu Direct</div>
+  <div class="tag">INTERNAL DOCUMENTATION</div>
+  <h1>Payment System<br/>Explained Simply</h1>
+  <p class="subtitle">How money flows in, how creators get paid,<br/>and what's left to do before we go live.</p>
+  <div class="meta">
+    <span>Version 1.0</span>
+    <span>April 2026</span>
+    <span>Status: Pre-Production</span>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="content">
+
+  <!-- ============================================================ -->
+  <div class="section-title">Part 1 — The Big Picture</div>
+
+  <p>Noizu Direct is a marketplace where <strong>creators</strong> (artists, makers, digital sellers) sell products to <strong>buyers</strong>. Money flows through the platform. We take a cut, release earnings to creators after a safety window, and pay them out in their local currency.</p>
+
+  <div class="grid2">
+    <div class="card purple">
+      <h4>🛒 Buyer Pays</h4>
+      <p>Buyer checks out using their card or Google Pay. We collect the money via Airwallex (our payment processor).</p>
+    </div>
+    <div class="card green">
+      <h4>💰 Creator Earns</h4>
+      <p>Creator's share sits safely in the platform. After the escrow window clears, it's ready for payout every Friday.</p>
+    </div>
+  </div>
+
+  <div class="formula">
+    <span class="comment">// Simple money math:</span><br/>
+    Buyer pays → <span class="highlight">Gross Amount</span><br/>
+    − Processing fee (Airwallex charge to us)<br/>
+    − Platform fee (our commission)<br/>
+    = <span class="highlight">Creator's Net</span>  ← what the creator actually earns
+  </div>
+
+  <!-- ============================================================ -->
+  <div class="section-title blue page-break">Part 2 — Payment IN (Buyer Pays)</div>
+
+  <h2>How a buyer completes a purchase</h2>
+
+  <ol class="steps blue">
+    <li>
+      <div class="step-body">
+        <strong>Buyer adds to cart &amp; checks out</strong>
+        <span>They pick a product, click Buy, and reach the checkout page.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Currency is detected automatically</strong>
+        <span>The platform detects the buyer's region and suggests the matching currency (e.g. MYR for Malaysia, SGD for Singapore, USD as default).</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Live FX rate is fetched</strong>
+        <span>We call Frankfurter API to get the real USD → local currency rate. The buyer sees the price converted live.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Payment widget loads (Airwallex Drop-in)</strong>
+        <span>The buyer sees a payment form from Airwallex — card details, Google Pay, and eventually local methods like FPX (Malaysia) or PayNow (Singapore).</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Buyer pays</strong>
+        <span>Airwallex processes the payment securely. We never touch raw card numbers — Airwallex handles PCI compliance.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Webhook fires &amp; order is created</strong>
+        <span>Airwallex sends us a webhook saying "payment confirmed". Our server creates the Order and Transaction records in the database.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Funds go into Escrow</strong>
+        <span>The transaction is marked <strong>ESCROW</strong>. Money is held for a safety window (configurable — e.g. 7 or 14 days) before being released to the creator.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Escrow clears → COMPLETED</strong>
+        <span>After the window passes, the transaction moves to <strong>COMPLETED</strong>. The creator's net amount is now available for payout.</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="card amber">
+    <h4>⏳ What is Escrow and why do we use it?</h4>
+    <p>Escrow is a temporary hold on funds. If a buyer disputes a charge or requests a refund within the window, we can return the money without chasing the creator. Once the window passes safely, the money is released. Think of it like a cooling-off period before the creator can take the money out.</p>
+  </div>
+
+  <h2>Supported Payment Methods</h2>
+  <table>
+    <tr><th>Method</th><th>Status</th><th>Notes</th></tr>
+    <tr><td>💳 Credit / Debit Card</td><td><span class="pill done">LIVE</span></td><td>Visa, Mastercard, etc.</td></tr>
+    <tr><td>🍎 Google Pay</td><td><span class="pill done">LIVE</span></td><td>Works on supported browsers/devices</td></tr>
+    <tr><td>🏦 FPX (Malaysia)</td><td><span class="pill tba">PENDING</span></td><td>Requires Airwallex to enable on our account — contact support</td></tr>
+    <tr><td>🏦 PayNow (Singapore)</td><td><span class="pill tba">PENDING</span></td><td>Same — requires Airwallex account enablement</td></tr>
+    <tr><td>🍎 Apple Pay</td><td><span class="pill tba">TBA</span></td><td>Possible via Airwallex Drop-in, needs domain verification</td></tr>
+  </table>
+
+  <div class="info">
+    <strong>Why don't FPX/PayNow show yet?</strong> These local payment methods require Airwallex to activate them on your merchant account. This is an account configuration step — the code is already ready to handle them automatically once enabled.
+  </div>
+
+  <!-- ============================================================ -->
+  <div class="section-title green page-break">Part 3 — Payment OUT (Creator Gets Paid)</div>
+
+  <h2>How creators receive their earnings</h2>
+
+  <ol class="steps green">
+    <li>
+      <div class="step-body">
+        <strong>Creator checks their Earnings dashboard</strong>
+        <span>Shows Available Balance, In Escrow, Total Earned, and Total Paid Out. All updated in real-time.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Creator sets their payout currency (one-time setup)</strong>
+        <span>In their Profile settings, the creator selects what currency they want to receive (e.g. MYR, SGD, IDR, USD). This is locked until they change it again.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Every Friday at 10am Malaysia Time — automated sweep runs</strong>
+        <span>A scheduled job (GitHub Actions → our server) automatically checks all creators with cleared earnings.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Minimum threshold check: USD 10</strong>
+        <span>If a creator's available balance is less than USD 10 (or equivalent), the payout is skipped that week and accumulates for next Friday.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Payout is calculated &amp; sent via Airwallex</strong>
+        <span>We call Airwallex's transfer API. The creator's USD earnings are converted to their chosen currency at the live rate and sent to their bank.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Creator receives a payout email</strong>
+        <span>Notification sent with the amount and status. Payout appears in their dashboard history.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Reconciler runs &amp; updates status</strong>
+        <span>A second job checks Airwallex for the transfer outcome and marks payouts as PAID, PROCESSING, or FAILED accordingly.</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="formula">
+    <span class="comment">// Payout calculation:</span><br/>
+    Available = <span class="highlight">Total COMPLETED earnings</span> − Total already paid out<br/>
+    <br/>
+    <span class="comment">// Minimum check:</span><br/>
+    If Available &lt; <span class="highlight">USD 10</span> → skip, roll over to next Friday<br/>
+    <br/>
+    <span class="comment">// Currency conversion:</span><br/>
+    Payout Amount = Available (USD) × <span class="highlight">Live FX rate</span> → Creator's currency
+  </div>
+
+  <h2>Payout Schedule</h2>
+  <table>
+    <tr><th>When</th><th>What happens</th></tr>
+    <tr><td>Every Friday 2:00 AM UTC<br/><em>(10:00 AM Malaysia time)</em></td><td>Automated payout sweep runs for all eligible creators</td></tr>
+    <tr><td>Within minutes</td><td>Airwallex transfer initiated, creator emailed</td></tr>
+    <tr><td>Shortly after</td><td>Reconciler checks transfer status, updates records</td></tr>
+    <tr><td>1–3 business days</td><td>Money lands in creator's bank (varies by bank/country)</td></tr>
+  </table>
+
+  <div class="grid2">
+    <div class="card green">
+      <h4>✅ What counts as Available</h4>
+      <p>Transactions in <strong>COMPLETED</strong> status only. Escrow transactions are not included until they clear.</p>
+    </div>
+    <div class="card amber">
+      <h4>⏳ What's still in Escrow</h4>
+      <p>Transactions in <strong>ESCROW</strong> status. Visible on the earnings dashboard but not payable yet.</p>
+    </div>
+  </div>
+
+  <h2>Monthly Statement</h2>
+  <p>Creators can view a full monthly breakdown at <strong>Dashboard → Statement</strong>:</p>
+  <ul style="padding-left:20px;color:#374151;margin-bottom:12px;">
+    <li>Every sale, fee, and net amount — grouped by month</li>
+    <li>Every payout — grouped by the month it was requested</li>
+    <li>Toggle between USD and their local payout currency</li>
+    <li>Download as CSV for their accountant</li>
+  </ul>
+
+  <!-- ============================================================ -->
+  <div class="section-title amber page-break">Part 4 — Fees &amp; Policies</div>
+
+  <h2>Fee Structure</h2>
+  <table>
+    <tr><th>Fee Type</th><th>Who pays</th><th>Notes</th></tr>
+    <tr><td>Processing Fee</td><td>Deducted from gross</td><td>Airwallex's charge for handling the transaction (varies by currency/method)</td></tr>
+    <tr><td>Platform Fee</td><td>Deducted from gross</td><td>Noizu Direct's commission — configured per transaction type</td></tr>
+    <tr><td>Creator's Net</td><td>Creator receives</td><td>Gross − Processing Fee − Platform Fee</td></tr>
+    <tr><td>FX Spread</td><td>Implicit in rate</td><td>Live rate used; actual payout rate locked at Airwallex transfer time</td></tr>
+  </table>
+
+  <h2>Transaction Statuses</h2>
+  <table>
+    <tr><th>Status</th><th>Meaning</th><th>Payable?</th></tr>
+    <tr><td><span class="pill note">ESCROW</span></td><td>Payment received, holding for safety window</td><td>No</td></tr>
+    <tr><td><span class="pill done">COMPLETED</span></td><td>Escrow cleared, funds available</td><td>Yes</td></tr>
+    <tr><td><span class="pill tba">PENDING</span></td><td>Payment being processed</td><td>No</td></tr>
+    <tr><td><span class="pill blocker">FAILED</span></td><td>Payment failed or reversed</td><td>No</td></tr>
+    <tr><td><span class="pill blocker">REFUNDED</span></td><td>Buyer refunded</td><td>No</td></tr>
+  </table>
+
+  <h2>Payout Statuses</h2>
+  <table>
+    <tr><th>Status</th><th>Meaning</th></tr>
+    <tr><td><span class="pill tba">PENDING</span></td><td>Payout created, queued for transfer</td></tr>
+    <tr><td><span class="pill note">PROCESSING</span></td><td>Airwallex transfer initiated, in transit</td></tr>
+    <tr><td><span class="pill done">PAID</span></td><td>Money delivered to creator's bank</td></tr>
+    <tr><td><span class="pill blocker">FAILED</span></td><td>Transfer failed — requires investigation</td></tr>
+  </table>
+
+  <!-- ============================================================ -->
+  <div class="section-title page-break">Part 5 — What's Done ✅ &amp; What's Pending 🔲</div>
+
+  <h2>✅ Completed &amp; Working</h2>
+  <ul class="checklist">
+    <li><span class="check-icon">✅</span><div>
+      <strong>Airwallex Drop-in checkout widget</strong>
+      <span class="note">Card payment + Google Pay live. Currency-aware (buyer sees price in their local currency).</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Multi-currency checkout</strong>
+      <span class="note">Auto-detects region, fetches live FX rates, lets buyer change currency without losing their cart or address details.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Webhook &rarr; Order + Transaction creation</strong>
+      <span class="note">When Airwallex confirms payment, our server records the order, sets status to ESCROW, splits fees correctly.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Escrow tracking</strong>
+      <span class="note">Funds held until configurable window clears, then status moves to COMPLETED automatically.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Creator Earnings dashboard</strong>
+      <span class="note">Shows Available Balance, In Escrow, Total Earned, Total Paid Out. Real-time from database.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Monthly Statement page with CSV export</strong>
+      <span class="note">Full breakdown by month. Buyer names, product titles, fees, net. USD ↔ local currency toggle. Downloadable CSV.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Automated weekly payout cron (code complete)</strong>
+      <span class="note">Friday 10am MYT sweep. USD 10 minimum threshold. Groups by creator, converts to payout currency, transfers via Airwallex.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>GitHub Actions scheduler</strong>
+      <span class="note">Cron job configured. Triggers payout sweep + reconciler every Friday automatically. Manual trigger also available.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Payout reconciler</strong>
+      <span class="note">Checks Airwallex transfer status after payout, updates PENDING → PAID / FAILED in database.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Creator payout currency selection</strong>
+      <span class="note">Creator sets preferred payout currency once in their profile. Used for all future payouts.</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Zero-decimal currency support</strong>
+      <span class="note">IDR, JPY, KRW, VND handled correctly (no cents — just whole units).</span>
+    </div></li>
+    <li><span class="check-icon">✅</span><div>
+      <strong>Payout email notification</strong>
+      <span class="note">Creator receives email when payout is initiated.</span>
+    </div></li>
+  </ul>
+
+  <hr/>
+
+  <h2>🔲 Pending / TBA Before Go-Live</h2>
+  <ul class="checklist">
+    <li><span class="check-icon">🚀</span><div>
+      <strong>Deploy code to Vercel production</strong>
+      <span class="note">Both commits (multi-currency checkout + payout system) are on master branch but not yet deployed. GitHub Actions 404s until this is done.</span>
+      <span class="pill blocker" style="margin-top:4px;display:inline-block;">BLOCKER</span>
+    </div></li>
+    <li><span class="check-icon">🔗</span><div>
+      <strong>Update GitHub Secret: APP_URL → main domain</strong>
+      <span class="note">Currently set to <code>https://noizu-direct.vercel.app</code>. Once you switch to <code>noizu.direct</code> as primary domain, update this secret in GitHub → Settings → Secrets → Actions → APP_URL.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TBA — domain migration</span>
+    </div></li>
+    <li><span class="check-icon">🏦</span><div>
+      <strong>Enable FPX (Malaysia) on Airwallex account</strong>
+      <span class="note">Contact Airwallex support and request FPX activation on your sandbox merchant account. Code is ready — it appears automatically once enabled.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TBA — Airwallex support</span>
+    </div></li>
+    <li><span class="check-icon">🏦</span><div>
+      <strong>Enable PayNow (Singapore) on Airwallex account</strong>
+      <span class="note">Same process as FPX. Request activation from Airwallex. Code handles it automatically.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TBA — Airwallex support</span>
+    </div></li>
+    <li><span class="check-icon">🧪</span><div>
+      <strong>End-to-end payment test (sandbox)</strong>
+      <span class="note">Use Airwallex sandbox test card → complete checkout → verify webhook fires → check order in database → confirm transaction created with correct status → wait for escrow → verify COMPLETED.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TEST BEFORE LIVE</span>
+    </div></li>
+    <li><span class="check-icon">🧪</span><div>
+      <strong>Test payout cron manually after deploy</strong>
+      <span class="note">After deploy, run the GitHub Actions workflow manually (Actions → Weekly Payout Sweep → Run workflow). Check logs confirm 200 OK. Verify payout records created in database.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TEST AFTER DEPLOY</span>
+    </div></li>
+    <li><span class="check-icon">🧪</span><div>
+      <strong>Test USD 10 minimum threshold</strong>
+      <span class="note">Create a transaction with less than USD 10 net. Run payout sweep. Confirm creator is skipped. Create one with more. Confirm payout is triggered.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TEST AFTER DEPLOY</span>
+    </div></li>
+    <li><span class="check-icon">🔐</span><div>
+      <strong>Verify Airwallex webhook secret is set in production</strong>
+      <span class="note">The <code>AIRWALLEX_WEBHOOK_SECRET</code> environment variable must be set in Vercel production environment for webhooks to be verified correctly.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">CHECK ON DEPLOY</span>
+    </div></li>
+    <li><span class="check-icon">📊</span><div>
+      <strong>Admin view of all payouts &amp; creator balances</strong>
+      <span class="note">Currently creators see their own data. An admin panel to see all creators, their balances, and trigger manual payouts is not yet built.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">FUTURE</span>
+    </div></li>
+    <li><span class="check-icon">🛡️</span><div>
+      <strong>Dispute &amp; refund flow integration with payouts</strong>
+      <span class="note">If a buyer raises a dispute, the escrow window helps, but a full refund-reversal flow that claws back from creator payouts is not yet implemented.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">FUTURE</span>
+    </div></li>
+    <li><span class="check-icon">🌐</span><div>
+      <strong>Migrate custom domain noizu.direct as primary on Vercel</strong>
+      <span class="note">Set <code>noizu.direct</code> as the production domain in Vercel. Update GitHub Secret APP_URL. Update Airwallex webhook URL in Airwallex dashboard to point to <code>https://noizu.direct/api/webhooks/airwallex</code>.</span>
+      <span class="pill tba" style="margin-top:4px;display:inline-block;">TBA — domain migration</span>
+    </div></li>
+  </ul>
+
+  <hr/>
+
+  <!-- ============================================================ -->
+  <div class="section-title red">Part 6 — Deploy Checklist</div>
+  <p>When you are ready to go live, do these steps in order:</p>
+
+  <ol class="steps">
+    <li>
+      <div class="step-body">
+        <strong>Deploy to Vercel</strong>
+        <span>Push triggers auto-deploy, OR go to Vercel dashboard → noizu-direct → Deployments → Promote to Production.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Verify all Vercel environment variables are set</strong>
+        <span>Check: <code>AIRWALLEX_API_KEY</code>, <code>AIRWALLEX_CLIENT_ID</code>, <code>AIRWALLEX_WEBHOOK_SECRET</code>, <code>CRON_SECRET</code>, <code>DATABASE_URL</code>, <code>NEXTAUTH_SECRET</code>, <code>NEXT_PUBLIC_AIRWALLEX_ENV=prod</code></span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Update Airwallex webhook URL</strong>
+        <span>In Airwallex dashboard → Webhooks → update endpoint to <code>https://noizu.direct/api/webhooks/airwallex</code></span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Update GitHub Secret APP_URL</strong>
+        <span>GitHub → repo Settings → Secrets &amp; Variables → Actions → APP_URL → update to <code>https://noizu.direct</code></span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Run the payout workflow manually to test</strong>
+        <span>GitHub → Actions → Weekly Payout Sweep → Run workflow. Check logs for 200 OK.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Make a test purchase with a real card (small amount)</strong>
+        <span>Verify: payment succeeds → order created → transaction in ESCROW → email received.</span>
+      </div>
+    </li>
+    <li>
+      <div class="step-body">
+        <strong>Contact Airwallex to enable FPX and PayNow</strong>
+        <span>Provide your merchant account ID. They activate within a few business days. No code change needed.</span>
+      </div>
+    </li>
+  </ol>
+
+  <div class="warning" style="margin-top:24px;">
+    <strong>⚠️ Before going live with real payments:</strong> Make sure <code>NEXT_PUBLIC_AIRWALLEX_ENV</code> is set to <code>prod</code> in Vercel (not <code>demo</code> or <code>sandbox</code>). Sandbox payments are test-only and will not process real money.
+  </div>
+
+  <div style="margin-top:40px;padding:20px;background:#f8fafc;border-radius:12px;text-align:center;color:#94a3b8;font-size:11px;">
+    Noizu Direct — Payment System Guide v1.0 — April 2026 — Internal Use Only
+  </div>
+
+</div>
+
+<!-- PRINT BUTTON -->
+<button class="print-bar no-print" onclick="window.print()">🖨️ Save as PDF</button>
+
+</body>
+</html>

@@ -158,3 +158,20 @@ export async function getTransferStatus(transferId: string): Promise<{ status: s
   if (!res.ok) throw new Error(`Get transfer status failed: ${res.status}`)
   return res.json()
 }
+
+export type AirwallexBalance = {
+  currency: string
+  available_amount: number
+  pending_amount: number
+  total_amount: number
+}
+
+export async function getAirwallexBalances(): Promise<AirwallexBalance[]> {
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/balances`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return []
+  const data = await res.json() as { items?: AirwallexBalance[] } | AirwallexBalance[]
+  return Array.isArray(data) ? data : (data.items ?? [])
+}

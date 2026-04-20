@@ -99,10 +99,11 @@ async function runPayoutSweep() {
     })
     const user = await prisma.user.findUnique({
       where: { id: row.creatorId },
-      select: { email: true, name: true },
+      select: { email: true, name: true, payoutFrozen: true, payoutFrozenReason: true },
     })
 
     if (!profile?.payoutDetails || !user) { skipped++; continue }
+    if (user.payoutFrozen) { skipped++; continue }
 
     const payoutCurrency = profile.payoutCurrency ?? 'USD'
     const rate = await getUsdRate(payoutCurrency)
