@@ -73,8 +73,7 @@ export function CheckoutClient({
       if (data.hppUrl) {
         window.location.href = data.hppUrl
       } else {
-        // Sandbox credentials not configured — simulate success
-        router.push(`/order/success?orderId=${orderId}`)
+        throw new Error('Payment gateway is not configured. Please contact support.')
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Payment failed'

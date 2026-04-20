@@ -6,6 +6,41 @@ import { Shield, CheckCircle2, Package, X, ShoppingCart, Minus, Plus } from 'luc
 import Image from 'next/image'
 import Link from 'next/link'
 
+const CURRENCIES = [
+  { code: 'USD', label: 'USD – US Dollar',           symbol: '$',   flag: '🇺🇸' },
+  { code: 'MYR', label: 'MYR – Malaysian Ringgit',   symbol: 'RM',  flag: '🇲🇾' },
+  { code: 'SGD', label: 'SGD – Singapore Dollar',    symbol: 'S$',  flag: '🇸🇬' },
+  { code: 'PHP', label: 'PHP – Philippine Peso',      symbol: '₱',   flag: '🇵🇭' },
+  { code: 'THB', label: 'THB – Thai Baht',            symbol: '฿',   flag: '🇹🇭' },
+  { code: 'IDR', label: 'IDR – Indonesian Rupiah',    symbol: 'Rp',  flag: '🇮🇩' },
+] as const
+
+type CurrencyCode = typeof CURRENCIES[number]['code']
+
+// IDR has no decimal sub-units — display as whole number
+const ZERO_DECIMAL = new Set(['IDR'])
+
+function detectCurrencyFromLocale(): CurrencyCode {
+  if (typeof navigator === 'undefined') return 'USD'
+  const lang = navigator.language.toLowerCase()
+  if (lang.startsWith('ms') || lang.includes('-my')) return 'MYR'
+  if (lang.includes('-sg') || lang === 'zh-sg') return 'SGD'
+  if (lang.startsWith('fil') || lang.includes('-ph')) return 'PHP'
+  if (lang.startsWith('th')) return 'THB'
+  if (lang.startsWith('id')) return 'IDR'
+  return 'USD'
+}
+
+function formatDisplay(amount: number, currency: CurrencyCode): string {
+  const info = CURRENCIES.find(c => c.code === currency)!
+  const factor = ZERO_DECIMAL.has(currency) ? 1 : 100
+  const value = amount / factor
+  if (ZERO_DECIMAL.has(currency)) {
+    return `${info.symbol} ${value.toLocaleString('en', { maximumFractionDigits: 0 })}`
+  }
+  return `${info.symbol}${value.toFixed(2)}`
+}
+
 function formatPrice(cents: number): string {
   return '$' + (cents / 100).toFixed(2)
 }
@@ -133,14 +168,20 @@ function applyQtyChange(groups: GroupInfo[], cartItemId: string, newQty: number)
 
 export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initialHasPhysical }: Props) {
   const router = useRouter()
+  const dropinContainerRef = useRef<HTMLDivElement>(null)
   const [liveGroups, setLiveGroups] = useState<GroupInfo[]>(initialGroups)
   const [loading, setLoading] = useState(false)
   const [confirmedOrders, setConfirmedOrders] = useState<ConfirmedOrder[] | null>(null)
   const [shipping, setShipping] = useState<ShippingAddress>({
     fullName: '', line1: '', line2: '', city: '', state: '', postal: '', country: '', phone: '',
   })
-  const [awPayment, setAwPayment] = useState<{ intentId: string; clientSecret: string } | null>(null)
+  const [awPayment, setAwPayment] = useState<{ intentId: string; clientSecret: string; currency: string } | null>(null)
+  const [dropinReady, setDropinReady] = useState(false)
   const [paymentError, setPaymentError] = useState<string | null>(null)
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('USD')
+  const [displayRate, setDisplayRate] = useState<number | null>(null)
+  const [displayTotal, setDisplayTotal] = useState<number | null>(null)
+  const [rateLoading, setRateLoading] = useState(false)
   const [discountCode, setDiscountCode] = useState('')
   const [discountApplying, setDiscountApplying] = useState(false)
   const [appliedDiscount, setAppliedDiscount] = useState<{ discountCodeId: string; discountAmount: number; message: string } | null>(null)
@@ -157,6 +198,33 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
   const liveHasPhysical  = liveGroups.some(g =>
     g.items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
   )
+
+  // Auto-detect currency from browser locale on mount
+  useEffect(() => {
+    setSelectedCurrency(detectCurrencyFromLocale())
+  }, [])
+
+  // Fetch live FX rate whenever currency or total changes
+  useEffect(() => {
+    if (selectedCurrency === 'USD') {
+      setDisplayRate(null)
+      setDisplayTotal(null)
+      return
+    }
+    if (liveTotal === 0) return
+    setRateLoading(true)
+    fetch(`/api/airwallex/fx-rate?to=${selectedCurrency}&amountUsd=${liveTotal}`)
+      .then(r => r.json())
+      .then((d: { rate?: number; displayAmount?: number }) => {
+        if (d.rate && d.displayAmount) {
+          setDisplayRate(d.rate)
+          setDisplayTotal(d.displayAmount)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRateLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCurrency, liveTotal])
 
   // Price freshness check on mount
   useEffect(() => {
@@ -264,41 +332,35 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     return true
   }
 
-  function loadAirwallexScript(): Promise<void> {
-    if ((window as any).Airwallex) return Promise.resolve()
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = 'https://checkout.airwallex.com/assets/bundle.x.min.js'
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error('Failed to load Airwallex SDK'))
-      document.head.appendChild(script)
-    })
-  }
-
   useEffect(() => {
     if (!awPayment) return
     let dropIn: any = null
+    setDropinReady(false)
 
     async function mountDropin() {
-      await loadAirwallexScript()
-      const aw = (window as any).Airwallex
-      aw.init({
-        env: process.env.NEXT_PUBLIC_AIRWALLEX_ENV ?? 'demo',
+      const { init, createElement } = await import('@airwallex/components-sdk')
+      await init({
+        env: (process.env.NEXT_PUBLIC_AIRWALLEX_ENV ?? 'demo') as 'demo' | 'prod',
         origin: window.location.origin,
       })
-      dropIn = aw.createElement('dropIn', {
+      if (!dropinContainerRef.current) throw new Error('Payment container not found')
+      dropIn = await createElement('dropIn' as any, {
         intent_id: awPayment!.intentId,
         client_secret: awPayment!.clientSecret,
-        currency: 'USD',
+        currency: awPayment!.currency,
       })
-      dropIn.mount('#airwallex-dropin')
+      dropIn.mount(dropinContainerRef.current)
+      setDropinReady(true)
       dropIn.on('success', () => router.push('/orders?success=1'))
       dropIn.on('error', (e: any) => {
         setPaymentError(e?.detail?.error?.message ?? 'Payment failed. Please try again.')
       })
     }
 
-    mountDropin().catch(err => setPaymentError((err as Error).message))
+    mountDropin().catch(err => {
+      setDropinReady(true)
+      setPaymentError((err as Error).message)
+    })
 
     return () => {
       if (dropIn) { try { dropIn.unmount() } catch {} }
@@ -322,14 +384,15 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           orderId: cartSessionId,
+          currency: selectedCurrency,
           shippingAddress: liveHasPhysical ? shipping : undefined,
           discountCodeId: appliedDiscount?.discountCodeId,
           discountAmount: appliedDiscount?.discountAmount,
         }),
       })
-      const data = await res.json() as { intentId?: string; clientSecret?: string; error?: string }
+      const data = await res.json() as { intentId?: string; clientSecret?: string; currency?: string; error?: string }
       if (!res.ok) throw new Error(data.error ?? 'Failed to create payment intent')
-      setAwPayment({ intentId: data.intentId!, clientSecret: data.clientSecret! })
+      setAwPayment({ intentId: data.intentId!, clientSecret: data.clientSecret!, currency: data.currency ?? selectedCurrency })
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Something went wrong')
     } finally {
@@ -689,11 +752,51 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                 </div>
               </div>
 
-              <div className="border-t border-border pt-3 flex items-center justify-between font-bold">
-                <span className="text-foreground">Total</span>
-                <span className="text-xl text-primary">{formatPrice(liveTotal)}</span>
+              {/* Currency selector */}
+              <div className="border-t border-border pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Pay in</label>
+                  <select
+                    value={selectedCurrency}
+                    onChange={e => {
+                      setSelectedCurrency(e.target.value as CurrencyCode)
+                      setAwPayment(null)
+                      setDropinReady(false)
+                      setPaymentError(null)
+                    }}
+                    className="flex-1 min-w-0 rounded-lg bg-background border border-border px-2 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-colors"
+                  >
+                    {CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.flag} {c.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">Payments processed in USD via Airwallex</p>
+
+              <div className="flex items-center justify-between font-bold pt-1">
+                <span className="text-foreground">Total</span>
+                <div className="text-right">
+                  {selectedCurrency === 'USD' || displayTotal === null ? (
+                    <span className="text-xl text-primary">{formatPrice(liveTotal)}</span>
+                  ) : (
+                    <>
+                      <span className="text-xl text-primary">
+                        {rateLoading ? '…' : formatDisplay(displayTotal, selectedCurrency)}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground font-normal">
+                        ≈ {formatPrice(liveTotal)} USD
+                        {displayRate && !rateLoading && (
+                          <> · 1 USD = {displayRate.toFixed(ZERO_DECIMAL.has(selectedCurrency) ? 0 : 2)} {selectedCurrency}</>
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Processed via Airwallex
+                {selectedCurrency !== 'USD' && ' · Rate is indicative; exact amount locked at payment'}
+              </p>
 
               {/* Buyer protection */}
               <div className="rounded-lg bg-success/5 border border-success/20 p-3 flex items-center gap-2.5 mt-1">
@@ -709,7 +812,18 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                       {paymentError}
                     </div>
                   )}
-                  <div id="airwallex-dropin" className="min-h-[320px]" />
+                  <div className="relative min-h-[320px]">
+                    {!dropinReady && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground bg-background z-10">
+                        <svg className="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        <span className="text-sm">Loading payment form…</span>
+                      </div>
+                    )}
+                    <div ref={dropinContainerRef} className="min-h-[320px]" />
+                  </div>
                   <button
                     onClick={() => router.push('/marketplace')}
                     className="w-full py-2.5 border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 rounded-xl transition-all"

@@ -56,6 +56,7 @@ export default async function ApplicationReviewPage({
         idFrontImage: application.idFrontImage ?? null,
         idBackImage: application.idBackImage ?? null,
         selfieImage: application.selfieImage ?? null,
+        kycCompleted: application.kycCompleted ?? false,
         bankName: application.bankName,
         bankAccountNumber: application.bankAccountNumber,
         bankAccountName: application.bankAccountName,

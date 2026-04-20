@@ -1,5 +1,13 @@
 const BASE_URL = process.env.AIRWALLEX_BASE_URL ?? 'https://api-demo.airwallex.com'
 
+// Currencies with no sub-units — Airwallex expects whole numbers (e.g. 160000 IDR, not 1600.00)
+export const ZERO_DECIMAL_CURRENCIES = new Set(['IDR', 'JPY', 'KRW', 'VND'])
+
+// Returns the divisor to convert our internal minor-unit storage to Airwallex's expected decimal amount
+export function getCurrencyFactor(currency: string): number {
+  return ZERO_DECIMAL_CURRENCIES.has(currency) ? 1 : 100
+}
+
 let _cachedToken: { value: string; expiresAt: number } | null = null
 
 export async function getAirwallexToken(): Promise<string> {
@@ -40,7 +48,7 @@ export async function createPaymentIntent({
     },
     body: JSON.stringify({
       request_id: orderId,
-      amount: amount / 100,
+      amount: amount / getCurrencyFactor(currency),
       currency,
       merchant_order_id: orderId,
       descriptor: 'noizu.direct',

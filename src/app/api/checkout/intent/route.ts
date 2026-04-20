@@ -60,9 +60,18 @@ export async function POST(req: Request) {
       },
     })
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
+    const isDemo = (process.env.AIRWALLEX_BASE_URL ?? '').includes('demo')
+    const checkoutBase = isDemo ? 'https://checkout-demo.airwallex.com' : 'https://checkout.airwallex.com'
+    const successUrl = `${appUrl}/order/success?orderId=${orderId}`
+    const cancelUrl = `${appUrl}/checkout/${orderId}`
+    const hppUrl = intent.client_secret
+      ? `${checkoutBase}/#/payment/?intent_id=${intent.id as string}&client_secret=${intent.client_secret as string}&currency=${currency}&successUrl=${encodeURIComponent(successUrl)}&cancelUrl=${encodeURIComponent(cancelUrl)}`
+      : null
+
     return NextResponse.json({
       intentId: intent.id as string,
-      hppUrl: (intent.next_action?.url as string) ?? null,
+      hppUrl,
     })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Unknown error'

@@ -22,6 +22,7 @@ interface ApplicationData {
   idFrontImage: string | null
   idBackImage: string | null
   selfieImage: string | null
+  kycCompleted: boolean
   bankName: string
   bankAccountNumber: string
   bankAccountName: string
@@ -404,12 +405,17 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
 
             {isActionable && (
               <div className="space-y-2">
+                {!application.kycCompleted && (
+                  <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2.5 text-xs text-amber-400">
+                    ⚠️ <span className="font-semibold">KYC documents not submitted.</span> This creator skipped identity verification. Store can be approved but will show as <span className="font-semibold">Unverified</span> to buyers.
+                  </div>
+                )}
                 <button
                   onClick={handleApprove}
                   disabled={actionLoading}
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  ✅ Approve Application
+                  ✅ Approve Application {!application.kycCompleted && '(Unverified)'}
                 </button>
                 <button
                   onClick={() => { setRejectModalOpen(true); setActionError('') }}

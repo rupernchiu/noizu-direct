@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 
@@ -48,14 +49,56 @@ async function handlePaymentSucceeded(intentId: string) {
 
   if (orders.length === 0) return
 
+  const settings = await prisma.platformSettings.findFirst()
+  const feeRate = (settings?.processingFeePercent ?? 2.5) / 100
+  const digitalEscrowHours = settings?.digitalEscrowHours ?? 48
+  const now = new Date()
+
   for (const order of orders) {
     const isDigital = order.product.type === 'DIGITAL'
+    const isCommission = !!order.commissionStatus
+
+    const extraDays = await getNewCreatorExtraDays(order.creatorId)
+
+    // Digital: hold with configurable auto-release window
+    const digitalReleaseMs = (digitalEscrowHours * 60 * 60 * 1000) + (extraDays * 24 * 60 * 60 * 1000)
+    const escrowAutoReleaseAt = isDigital ? new Date(now.getTime() + digitalReleaseMs) : null
+
+    // Download token generated now for digital orders
+    const downloadToken = isDigital ? crypto.randomUUID() : null
+    const downloadExpiry = isDigital ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) : null
+
     await prisma.order.update({
       where: { id: order.id },
       data: {
         status: 'PROCESSING',
-        escrowStatus: isDigital ? 'RELEASED' : 'HELD',
-        escrowHeldAt: new Date(),
+        escrowStatus: 'HELD',
+        escrowHeldAt: now,
+        ...(isDigital ? {
+          escrowAutoReleaseAt,
+          downloadToken,
+          downloadExpiry,
+        } : {}),
+      },
+    })
+
+    // Create Transaction record
+    const processingFee = Math.round(order.amountUsd * feeRate / (1 + feeRate))
+    const creatorAmount = order.amountUsd - processingFee
+    await prisma.transaction.create({
+      data: {
+        orderId: order.id,
+        buyerId: order.buyerId,
+        creatorId: order.creatorId,
+        grossAmountUsd: order.amountUsd,
+        processingFee,
+        platformFee: 0,
+        withdrawalFee: 0,
+        creatorAmount,
+        currency: order.displayCurrency ?? 'USD',
+        airwallexReference: intentId,
+        // Commission funds are held as ESCROW until deposit/balance portions release
+        status: isCommission ? 'ESCROW' : 'COMPLETED',
       },
     })
 
@@ -64,8 +107,10 @@ async function handlePaymentSucceeded(intentId: string) {
       data: {
         userId: order.creatorId,
         type: 'NEW_ORDER',
-        title: 'New order received',
-        message: `You have a new order for "${order.product.title}".`,
+        title: isCommission ? 'New commission received' : 'New order received',
+        message: isCommission
+          ? `You have a new commission request for "${order.product.title}". You have 48 hours to accept or it will auto-cancel.`
+          : `You have a new paid order for "${order.product.title}".`,
         orderId: order.id,
         actionUrl: `/dashboard/orders/${order.id}`,
       },

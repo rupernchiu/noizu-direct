@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent } from '@/lib/airwallex'
-import crypto from 'crypto'
+import { createPaymentIntent, getCurrencyFactor } from '@/lib/airwallex'
+
+const SUPPORTED_CURRENCIES = ['USD', 'MYR', 'SGD', 'PHP', 'THB', 'IDR']
+
+/** Convert a USD-cents amount to the target currency's minor units using live rates. */
+async function convertToDisplayCurrency(amountUsdCents: number, currency: string): Promise<number> {
+  if (currency === 'USD') return amountUsdCents
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
+  const res = await fetch(`${appUrl}/api/airwallex/fx-rate?to=${currency}&amountUsd=${amountUsdCents}`)
+  if (!res.ok) throw new Error(`FX rate unavailable for ${currency}`)
+  const { displayAmount } = await res.json() as { displayAmount: number }
+  return displayAmount
+}
 
 interface ShippingAddress {
   fullName: string
@@ -24,11 +35,15 @@ export async function POST(req: Request) {
 
   const body = await req.json() as {
     orderId: string
+    currency?: string
     shippingAddress?: ShippingAddress
     discountCodeId?: string
     discountAmount?: number
   }
   const { orderId: cartSessionId, shippingAddress, discountCodeId, discountAmount: requestedDiscount } = body
+  const currency = SUPPORTED_CURRENCIES.includes((body.currency ?? '').toUpperCase())
+    ? body.currency!.toUpperCase()
+    : 'USD'
 
   if (!cartSessionId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
 
@@ -38,17 +53,22 @@ export async function POST(req: Request) {
   })
 
   if (existingOrder) {
+    const displayAmount = await convertToDisplayCurrency(existingOrder.amountUsd, currency)
     const intent = await createPaymentIntent({
-      amount: existingOrder.amountUsd,
-      currency: existingOrder.displayCurrency ?? 'USD',
+      amount: displayAmount,
+      currency,
       orderId: existingOrder.id,
       buyerEmail: buyer?.email,
     })
     await prisma.order.update({
       where: { id: existingOrder.id },
-      data: { airwallexIntentId: intent.id as string },
+      data: {
+        airwallexIntentId: intent.id as string,
+        displayCurrency: currency,
+        displayAmount,
+      },
     })
-    return NextResponse.json({ intentId: intent.id, clientSecret: intent.client_secret })
+    return NextResponse.json({ intentId: intent.id, clientSecret: intent.client_secret, currency, displayAmount })
   }
 
   // Cart flow: cartSessionId is client-generated. Create PENDING orders from cart.
@@ -143,17 +163,21 @@ export async function POST(req: Request) {
     const groupDiscountShare = verifiedDiscountAmount > 0
       ? Math.round((groupSubtotal / subtotal) * verifiedDiscountAmount)
       : 0
+    const isCommissionGroup = items.some(i => i.product.type === 'COMMISSION')
+    const commissionItem = isCommissionGroup ? items.find(i => i.product.type === 'COMMISSION') : null
+
+    const orderAmountUsd = orderAmount - groupDiscountShare
     const order = await prisma.order.create({
       data: {
         buyerId: userId,
         creatorId: items[0].product.creator.userId,
         productId: items[0].productId,
         cartSessionId,
-        amountUsd: orderAmount - groupDiscountShare,
-        displayCurrency: 'USD',
-        displayAmount: orderAmount - groupDiscountShare,
+        amountUsd: orderAmountUsd,
+        displayCurrency: currency,   // updated after intent creation below
+        displayAmount: orderAmountUsd, // updated after intent creation below
         status: 'PENDING',
-        escrowStatus: isDigitalGroup ? 'RELEASED' : 'HELD',
+        escrowStatus: 'HELD',
         escrowHeldAt: new Date(),
         fulfillmentDeadline: isPhysicalGroup
           ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -161,12 +185,20 @@ export async function POST(req: Request) {
         shippingAddress: isPhysicalGroup && shippingAddress
           ? JSON.stringify(shippingAddress)
           : null,
-        downloadToken: isDigitalGroup ? crypto.randomUUID() : null,
-        downloadExpiry: isDigitalGroup
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-          : null,
+        // Download token is generated in webhook after payment confirmed — not here
         discountCodeId: verifiedDiscountCodeId,
         discountAmount: groupDiscountShare,
+        // Commission fields
+        commissionStatus: isCommissionGroup ? 'PENDING_ACCEPTANCE' : null,
+        commissionAcceptDeadlineAt: isCommissionGroup
+          ? new Date(Date.now() + 48 * 60 * 60 * 1000)
+          : null,
+        commissionDepositPercent: commissionItem?.product.commissionDepositPercent ?? null,
+        commissionDepositAmount: commissionItem?.product.commissionDepositPercent
+          ? Math.round((orderAmount - groupDiscountShare) * (commissionItem.product.commissionDepositPercent / 100))
+          : null,
+        commissionRevisionsAllowed: commissionItem?.product.commissionRevisionsIncluded ?? null,
+        commissionDepositConsentAt: isCommissionGroup ? new Date() : null,
       },
     })
     createdOrderIds.push(order.id)
@@ -174,19 +206,31 @@ export async function POST(req: Request) {
 
   // Discount code usedCount was already incremented atomically above during validation.
 
-  // Create payment intent for the full cart total
+  // Convert grand total to the buyer's selected display currency
+  const grandTotalDisplay = await convertToDisplayCurrency(grandTotal, currency)
+
+  // Create payment intent in the buyer's currency — enables local payment methods (FPX, PayNow, etc.)
   const intent = await createPaymentIntent({
-    amount: grandTotal,
-    currency: 'USD',
+    amount: grandTotalDisplay,
+    currency,
     orderId: cartSessionId,
     buyerEmail: buyer?.email,
   })
 
-  // Store intentId on all created orders
+  // Store intentId and resolved display currency/amount on all created orders
   await prisma.order.updateMany({
     where: { id: { in: createdOrderIds } },
-    data: { airwallexIntentId: intent.id as string },
+    data: {
+      airwallexIntentId: intent.id as string,
+      displayCurrency: currency,
+      displayAmount: Math.round(grandTotalDisplay / createdOrderIds.length), // proportional split
+    },
   })
 
-  return NextResponse.json({ intentId: intent.id, clientSecret: intent.client_secret })
+  return NextResponse.json({
+    intentId: intent.id,
+    clientSecret: intent.client_secret,
+    currency,
+    displayAmount: grandTotalDisplay,
+  })
 }

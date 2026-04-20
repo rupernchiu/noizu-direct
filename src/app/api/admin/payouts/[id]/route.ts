@@ -73,30 +73,28 @@ export async function PATCH(
 
     let transferId: string | null = null
 
-    try {
-      if (creatorProfile?.payoutMethod === 'paypal' && creatorProfile.payoutDetails) {
-        const details = JSON.parse(decrypt(creatorProfile.payoutDetails)) as { paypalEmail?: string }
-        if (details.paypalEmail) {
-          const result = await executePayPalPayout({
-            payoutId: existing.id,
-            paypalEmail: details.paypalEmail,
-            amount: existing.amountUsd,
-            currency: creatorProfile.payoutCurrency ?? 'USD',
-          })
-          transferId = result.batch_id
-        }
-      } else if (creatorProfile?.airwallexBeneficiaryId) {
-        const result = await executeTransfer({
-          beneficiaryId: creatorProfile.airwallexBeneficiaryId,
-          amount: existing.amountUsd,
-          currency: creatorProfile.payoutCurrency ?? 'MYR',
-          payoutId: existing.id,
-        })
-        transferId = result.transfer_id ?? result.id ?? null
+    if (creatorProfile?.payoutMethod === 'paypal' && creatorProfile.payoutDetails) {
+      const details = JSON.parse(decrypt(creatorProfile.payoutDetails)) as { paypalEmail?: string }
+      if (!details.paypalEmail) {
+        return NextResponse.json({ error: 'Creator PayPal email is not configured' }, { status: 400 })
       }
-    } catch (e) {
-      console.error('Transfer execution error:', e)
-      // Continue — mark as PROCESSING even if transfer API call fails
+      const result = await executePayPalPayout({
+        payoutId: existing.id,
+        paypalEmail: details.paypalEmail,
+        amount: existing.amountUsd,
+        currency: creatorProfile.payoutCurrency ?? 'USD',
+      })
+      transferId = result.batch_id
+    } else if (creatorProfile?.airwallexBeneficiaryId) {
+      const result = await executeTransfer({
+        beneficiaryId: creatorProfile.airwallexBeneficiaryId,
+        amount: existing.amountUsd,
+        currency: creatorProfile.payoutCurrency ?? 'MYR',
+        payoutId: existing.id,
+      })
+      transferId = result.transfer_id ?? result.id ?? null
+    } else {
+      return NextResponse.json({ error: 'Creator has no payout method configured' }, { status: 400 })
     }
 
     payout = await prisma.payout.update({

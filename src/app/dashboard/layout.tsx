@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userId = (session.user as any).id as string
 
   const [user, unsignedAgreements, application] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { accountStatus: true, closureRequestedAt: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { accountStatus: true, closureRequestedAt: true, creatorVerificationStatus: true } }),
     prisma.agreementTemplate.findMany({
       where: {
         isActive: true,
@@ -44,8 +44,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
       },
       select: { id: true, type: true, version: true, title: true, content: true, summary: true, changeLog: true, effectiveDate: true, publishedAt: true }
     }),
-    prisma.creatorApplication.findUnique({ where: { userId }, select: { legalFullName: true } }),
+    prisma.creatorApplication.findUnique({ where: { userId }, select: { legalFullName: true, kycCompleted: true } }),
   ])
+  const kycIncomplete = application && !application.kycCompleted
 
   if (user?.accountStatus === 'SUSPENDED') redirect('/suspended')
   if (user?.accountStatus === 'CLOSED') redirect('/account-closed')
@@ -109,6 +110,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* Separator */}
               <div className="hidden md:block my-2 h-px bg-border" />
               <NavLink href="/dashboard/profile"><User className="size-4" />Profile</NavLink>
+              <NavLink href="/dashboard/verification">
+                <ShieldCheck className="size-4" />
+                Verification
+                {kycIncomplete && (
+                  <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+                )}
+              </NavLink>
               <NavLink href="/dashboard/storage">
                 <HardDrive className="size-4" />
                 Storage
@@ -134,6 +142,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {user?.accountStatus === 'RESTRICTED' && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-red-400">
                 ⚠️ Your account is restricted due to unsigned agreements. You cannot create new listings or request payouts. <Link href="/dashboard" className="underline">Sign agreements to restore access.</Link>
+              </div>
+            )}
+            {kycIncomplete && (
+              <div className="mb-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-400 flex items-start gap-3">
+                <ShieldCheck className="size-5 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-amber-300">Your store is unverified</p>
+                  <p className="mt-0.5">Complete your identity verification to receive a Verified badge. Buyers can see your store is unverified until you do.</p>
+                  <Link href="/dashboard/verification" className="inline-block mt-2 text-xs font-semibold underline hover:text-amber-300 transition-colors">
+                    Complete verification →
+                  </Link>
+                </div>
               </div>
             )}
             {children}
