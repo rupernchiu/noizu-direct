@@ -304,10 +304,10 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
   }
 
   function setCreatorDiscount(creatorId: string, patch: Partial<CreatorDiscountState>) {
-    setCreatorDiscounts(prev => ({
-      ...prev,
-      [creatorId]: { code: '', applying: false, applied: null, error: null, ...prev[creatorId], ...patch },
-    }))
+    setCreatorDiscounts(prev => {
+      const existing: CreatorDiscountState = prev[creatorId] ?? { code: '', applying: false, applied: null, error: null }
+      return { ...prev, [creatorId]: { ...existing, ...patch } }
+    })
   }
 
   async function applyDiscountForCreator(creatorId: string) {

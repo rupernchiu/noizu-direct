@@ -55,6 +55,8 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
+const themeInitScript = `(function(){try{var t=localStorage.getItem('noizu-theme');var d=document.documentElement;if(t==='dark'){d.classList.add('dark');}else{d.classList.add('light');}}catch(e){document.documentElement.classList.add('light');}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
@@ -62,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className="min-h-full flex flex-col bg-background text-foreground font-sans antialiased"
       >
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
