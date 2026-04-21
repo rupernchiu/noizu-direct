@@ -13,6 +13,7 @@ interface CreatorActionsProps {
   username: string
   badges: string[]
   legalFullName?: string | null
+  boostMultiplier: number
 }
 
 export function CreatorActions({
@@ -23,12 +24,39 @@ export function CreatorActions({
   username,
   badges,
   legalFullName,
+  boostMultiplier,
 }: CreatorActionsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [badgesOpen, setBadgesOpen] = useState(false)
   const [legalNameOpen, setLegalNameOpen] = useState(false)
   const [legalNameInput, setLegalNameInput] = useState(legalFullName ?? '')
+  const [boostOpen, setBoostOpen] = useState(false)
+  const [boostInput, setBoostInput] = useState(String(boostMultiplier))
+  const [boostSaving, setBoostSaving] = useState(false)
+  const boostRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (boostRef.current && !boostRef.current.contains(e.target as Node)) setBoostOpen(false)
+    }
+    if (boostOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [boostOpen])
+
+  async function saveBoost() {
+    const val = parseFloat(boostInput)
+    if (isNaN(val) || val < 0 || val > 10) return
+    setBoostSaving(true)
+    await fetch(`/api/admin/creators/${creatorId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ boostMultiplier: val }),
+    })
+    setBoostSaving(false)
+    setBoostOpen(false)
+    router.refresh()
+  }
   const [legalNameSaving, setLegalNameSaving] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const legalNameRef = useRef<HTMLDivElement>(null)
@@ -167,6 +195,42 @@ export function CreatorActions({
               className="w-full py-1 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 disabled:opacity-40 transition-colors"
             >
               {legalNameSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Discovery Boost */}
+      <div className="relative" ref={boostRef}>
+        <button
+          onClick={() => setBoostOpen(o => !o)}
+          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+            boostMultiplier !== 1
+              ? 'bg-primary/20 text-primary hover:bg-primary/30'
+              : 'bg-border text-muted-foreground hover:bg-card hover:text-foreground'
+          }`}
+        >
+          Boost ×{boostMultiplier}
+        </button>
+        {boostOpen && (
+          <div className="absolute left-0 top-full mt-1 z-50 min-w-[200px] bg-card border border-border rounded-lg shadow-xl p-3 space-y-2">
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Discovery Boost Multiplier</p>
+            <p className="text-[10px] text-muted-foreground">1.0 = normal · 2.0 = double · 0.0 = hide</p>
+            <input
+              type="number"
+              min="0" max="10" step="0.1"
+              value={boostInput}
+              onChange={e => setBoostInput(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs bg-background border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              onKeyDown={e => { if (e.key === 'Enter') saveBoost() }}
+              autoFocus
+            />
+            <button
+              onClick={saveBoost}
+              disabled={boostSaving}
+              className="w-full py-1 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 disabled:opacity-40 transition-colors"
+            >
+              {boostSaving ? 'Saving…' : 'Save'}
             </button>
           </div>
         )}

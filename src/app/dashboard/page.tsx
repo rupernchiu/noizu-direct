@@ -28,8 +28,41 @@ export default async function DashboardPage() {
   if ((session.user as any).role !== 'CREATOR') redirect('/')
   const userId = (session.user as any).id
 
-  const profile = await prisma.creatorProfile.findUnique({ where: { userId } })
-  if (!profile) redirect('/')
+  let profile = await prisma.creatorProfile.findUnique({ where: { userId } })
+  if (!profile) {
+    // Try to recover: create a minimal profile from application or user data
+    const [user, application] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, avatar: true } }),
+      prisma.creatorApplication.findUnique({ where: { userId }, select: { username: true, displayName: true, bio: true, categoryTags: true } }),
+    ])
+    const baseUsername = (application?.username || user?.email?.split('@')[0] || 'creator').toLowerCase().replace(/[^a-z0-9_]/g, '')
+    // Ensure username uniqueness
+    let username = baseUsername
+    let suffix = 1
+    while (await prisma.creatorProfile.findUnique({ where: { username } })) {
+      username = `${baseUsername}${suffix++}`
+    }
+    try {
+      profile = await prisma.creatorProfile.create({
+        data: {
+          userId,
+          username,
+          displayName: application?.displayName || user?.name || username,
+          bio: application?.bio ?? null,
+          avatar: user?.avatar ?? null,
+          categoryTags: application?.categoryTags ?? '[]',
+        },
+      })
+    } catch {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
+          <p className="text-foreground font-semibold">Store setup incomplete</p>
+          <p className="text-muted-foreground text-sm max-w-sm">Your creator store hasn&apos;t been fully set up. Please contact support so we can resolve this.</p>
+          <a href="mailto:hello@noizu.direct" className="text-sm text-primary hover:underline">hello@noizu.direct</a>
+        </div>
+      )
+    }
+  }
 
   const [totalRevenue, pendingOrders, activeListings, unreadMessages] = await Promise.all([
     prisma.transaction.aggregate({

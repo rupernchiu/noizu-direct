@@ -410,28 +410,31 @@ export function CreatorPageTabs({
   podProviders,
   guestbookEntries,
 }: CreatorPageTabsProps) {
-  const showPortfolio  = true
-  const showCommission = true
-  const showVideos     = videos.length > 0
+  const podProducts    = products.filter(p => p.type === 'POD')
+  const shopProducts   = products.filter(p => p.type !== 'POD')
   const activeGoals    = supportGoals.filter(g => g.status === 'ACTIVE' || g.status === 'COMPLETED')
-  const showSupport    = supportTiers.length > 0 || activeGoals.length > 0 || (supportGift?.isActive ?? false)
 
-  const podProducts = products.filter(p => p.type === 'POD')
-  const showPod     = podProviders.length > 0 || podProducts.length > 0
+  const showAbout      = !!(bio?.trim()) || Object.values(socialLinks).some(v => v?.trim())
+  const showShop       = shopProducts.length > 0
+  const showPod        = podProviders.length > 0 || podProducts.length > 0
+  const showCommission = !!(commissionDescription?.trim()) || commissionPricing.length > 0 || commissionSlots != null
+  const showPortfolio  = portfolioItems.length > 0
+  const showVideos     = videos.length > 0
+  const showSupport    = supportTiers.length > 0 || activeGoals.length > 0 || (supportGift?.isActive ?? false)
 
   type Tab = 'shop' | 'about' | 'portfolio' | 'videos' | 'commission' | 'pod' | 'support'
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'shop', label: 'Shop' },
-    { id: 'about', label: 'About' },
+    ...(showAbout      ? [{ id: 'about'          as Tab, label: 'About'           }] : []),
+    ...(showShop       ? [{ id: 'shop'           as Tab, label: 'Shop'            }] : []),
+    ...(showPod        ? [{ id: 'pod'            as Tab, label: 'Print On Demand' }] : []),
+    ...(showCommission ? [{ id: 'commission'     as Tab, label: 'Commission'      }] : []),
+    ...(showSupport    ? [{ id: 'support'        as Tab, label: 'Support'         }] : []),
     ...(showPortfolio  ? [{ id: 'portfolio'      as Tab, label: 'Portfolio'       }] : []),
     ...(showVideos     ? [{ id: 'videos'         as Tab, label: 'Videos'          }] : []),
-    ...(showCommission ? [{ id: 'commission'     as Tab, label: 'Commission'      }] : []),
-    ...(showPod        ? [{ id: 'pod'            as Tab, label: 'Print On Demand' }] : []),
-    ...(showSupport    ? [{ id: 'support'        as Tab, label: 'Support'         }] : []),
   ]
 
-  const [activeTab, setActiveTab]       = useState<Tab>('shop')
+  const [activeTab, setActiveTab]       = useState<Tab>(tabs[0]?.id ?? 'about')
   const [shopSort, setShopSort]         = useState<'default' | 'popular'>('default')
   const [lightboxIdx, setLightboxIdx]   = useState<number | null>(null)
   const [loadedVideos, setLoadedVideos] = useState<Set<string>>(new Set())

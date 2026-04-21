@@ -37,10 +37,9 @@ export async function POST(req: Request) {
     orderId: string
     currency?: string
     shippingAddress?: ShippingAddress
-    discountCodeId?: string
-    discountAmount?: number
+    discounts?: { discountCodeId: string }[]
   }
-  const { orderId: cartSessionId, shippingAddress, discountCodeId, discountAmount: requestedDiscount } = body
+  const { orderId: cartSessionId, shippingAddress, discounts = [] } = body
   const currency = SUPPORTED_CURRENCIES.includes((body.currency ?? '').toUpperCase())
     ? body.currency!.toUpperCase()
     : 'USD'
@@ -94,49 +93,44 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Shipping address is required' }, { status: 400 })
   }
 
-  // Validate and apply discount if provided.
-  // Re-validate discount server-side — never trust the client-supplied amount.
-  // Use an atomic conditional-increment to prevent race-condition double-use.
-  let verifiedDiscountAmount = 0
-  let verifiedDiscountCodeId: string | null = null
-  if (discountCodeId && requestedDiscount && requestedDiscount > 0) {
+  // Validate and apply each discount code independently, one per creator.
+  // Re-validate server-side — never trust client amounts.
+  // Atomic increment prevents race-condition double-use.
+  // creatorId → { amount, codeId }
+  const verifiedDiscountsByCreator = new Map<string, { amount: number; codeId: string }>()
+
+  for (const { discountCodeId } of discounts) {
     const dc = await prisma.discountCode.findUnique({ where: { id: discountCodeId } })
     if (
-      dc && dc.isActive &&
-      (!dc.expiresAt || dc.expiresAt > new Date()) &&
-      (dc.maxUses === null || dc.usedCount < dc.maxUses)
-    ) {
-      // Atomically increment only if the usage limit is still satisfied.
-      // updateMany returns a count of rows actually updated; if 0, the code
-      // was used up by a concurrent request between our check and now.
-      const updated = await prisma.discountCode.updateMany({
-        where: {
-          id: discountCodeId,
-          isActive: true,
-          OR: [
-            { maxUses: null },
-            { maxUses: { gt: dc.usedCount } },
-          ],
-        },
-        data: { usedCount: { increment: 1 } },
-      })
+      !dc || !dc.isActive ||
+      (dc.expiresAt && dc.expiresAt <= new Date()) ||
+      (dc.maxUses !== null && dc.usedCount >= dc.maxUses)
+    ) continue
 
-      if (updated.count === 0) {
-        return NextResponse.json({ error: 'Discount code is no longer available' }, { status: 400 })
-      }
+    const updated = await prisma.discountCode.updateMany({
+      where: {
+        id: discountCodeId,
+        isActive: true,
+        OR: [{ maxUses: null }, { maxUses: { gt: dc.usedCount } }],
+      },
+      data: { usedCount: { increment: 1 } },
+    })
+    if (updated.count === 0) continue  // race condition — code just ran out
 
-      // Server-side recalculate discount amount rather than trusting the client value
-      const subtotalForDiscount = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
-      verifiedDiscountAmount = dc.type === 'PERCENTAGE'
-        ? Math.round(subtotalForDiscount * (dc.value / 100))
-        : Math.min(dc.value, subtotalForDiscount)
-      verifiedDiscountCodeId = discountCodeId
-    }
+    const creatorItems = cartItems.filter(i => i.product.creatorId === dc.creatorId)
+    const subtotalForDiscount = creatorItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
+    const discountAmount = dc.type === 'PERCENTAGE'
+      ? Math.round(subtotalForDiscount * (dc.value / 100))
+      : Math.min(dc.value, subtotalForDiscount)
+
+    verifiedDiscountsByCreator.set(dc.creatorId, { amount: discountAmount, codeId: discountCodeId })
   }
+
+  const totalVerifiedDiscount = Array.from(verifiedDiscountsByCreator.values()).reduce((s, d) => s + d.amount, 0)
 
   // Totals
   const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
-  const discountedSubtotal = Math.max(0, subtotal - verifiedDiscountAmount)
+  const discountedSubtotal = Math.max(0, subtotal - totalVerifiedDiscount)
   const processingFee = Math.round(discountedSubtotal * 0.025)
   const grandTotal = discountedSubtotal + processingFee
 
@@ -160,9 +154,10 @@ export async function POST(req: Request) {
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
     const isDigitalGroup = !isPhysicalGroup
 
-    const groupDiscountShare = verifiedDiscountAmount > 0
-      ? Math.round((groupSubtotal / subtotal) * verifiedDiscountAmount)
-      : 0
+    // Each group only gets the discount belonging to its creator
+    const groupDiscount = verifiedDiscountsByCreator.get(items[0].product.creatorId)
+    const groupDiscountShare = groupDiscount?.amount ?? 0
+    const groupDiscountCodeId = groupDiscount?.codeId ?? null
     const isCommissionGroup = items.some(i => i.product.type === 'COMMISSION')
     const commissionItem = isCommissionGroup ? items.find(i => i.product.type === 'COMMISSION') : null
 
@@ -186,7 +181,7 @@ export async function POST(req: Request) {
           ? JSON.stringify(shippingAddress)
           : null,
         // Download token is generated in webhook after payment confirmed — not here
-        discountCodeId: verifiedDiscountCodeId,
+        discountCodeId: groupDiscountCodeId,
         discountAmount: groupDiscountShare,
         // Commission fields
         commissionStatus: isCommissionGroup ? 'PENDING_ACCEPTANCE' : null,
@@ -203,8 +198,6 @@ export async function POST(req: Request) {
     })
     createdOrderIds.push(order.id)
   }
-
-  // Discount code usedCount was already incremented atomically above during validation.
 
   // Convert grand total to the buyer's selected display currency
   const grandTotalDisplay = await convertToDisplayCurrency(grandTotal, currency)

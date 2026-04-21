@@ -42,7 +42,7 @@ export default async function ListingsPage({
   const userId = (session.user as any).id
 
   const profile = await prisma.creatorProfile.findUnique({ where: { userId } })
-  if (!profile) redirect('/')
+  if (!profile) redirect('/dashboard')
 
   const params = await searchParams
   const q = params.q?.trim() ?? ''

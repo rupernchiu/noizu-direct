@@ -104,6 +104,8 @@ model CreatorProfile {
   onboardingDismissed  Boolean  @default(false)
   airwallexBeneficiaryId String?
   payoutMethod           String  @default("bank_transfer")
+  boostMultiplier        Float   @default(1.0)
+  lastFeaturedAt         DateTime?
   payoutDetails          String? // AES-256 encrypted JSON
   payoutCountry          String?
   payoutCurrency         String?

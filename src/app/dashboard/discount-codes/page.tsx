@@ -29,8 +29,14 @@ function formatExpiry(expiresAt: string | null): string {
 const inputClass =
   'w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors'
 
+interface Product {
+  id: string
+  title: string
+}
+
 export default function DiscountCodesPage() {
   const [codes, setCodes] = useState<DiscountCode[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
@@ -40,12 +46,16 @@ export default function DiscountCodesPage() {
     minimumOrderAmount: '',
     maxUses: '',
     expiresAt: '',
+    productId: '',
   })
 
   useEffect(() => {
     fetch('/api/dashboard/discount-codes')
       .then(r => r.json())
-      .then((data: { codes?: DiscountCode[] }) => setCodes(data.codes ?? []))
+      .then((data: { codes?: DiscountCode[]; products?: Product[] }) => {
+        setCodes(data.codes ?? [])
+        setProducts(data.products ?? [])
+      })
       .catch(() => toast.error('Failed to load discount codes'))
       .finally(() => setLoading(false))
   }, [])
@@ -67,6 +77,7 @@ export default function DiscountCodesPage() {
       if (form.minimumOrderAmount) body.minimumOrderAmount = Math.round(Number(form.minimumOrderAmount) * 100)
       if (form.maxUses) body.maxUses = Number(form.maxUses)
       if (form.expiresAt) body.expiresAt = form.expiresAt
+      if (form.productId) body.productId = form.productId
 
       const res = await fetch('/api/dashboard/discount-codes', {
         method: 'POST',
@@ -75,8 +86,9 @@ export default function DiscountCodesPage() {
       })
       const data = await res.json() as { discountCode?: DiscountCode; error?: string }
       if (!res.ok) { toast.error(data.error ?? 'Failed to create code'); return }
-      setCodes(prev => [{ ...data.discountCode!, product: null }, ...prev])
-      setForm({ code: '', type: 'PERCENTAGE', value: '', minimumOrderAmount: '', maxUses: '', expiresAt: '' })
+      const linkedProduct = form.productId ? (products.find(p => p.id === form.productId) ?? null) : null
+      setCodes(prev => [{ ...data.discountCode!, product: linkedProduct }, ...prev])
+      setForm({ code: '', type: 'PERCENTAGE', value: '', minimumOrderAmount: '', maxUses: '', expiresAt: '', productId: '' })
       toast.success('Discount code created')
     } finally {
       setSubmitting(false)
@@ -119,6 +131,18 @@ export default function DiscountCodesPage() {
                 <option value="PERCENTAGE">Percentage (%)</option>
                 <option value="FIXED_AMOUNT">Fixed Amount ($)</option>
               </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Applies To</label>
+              <select value={form.productId} onChange={e => setField('productId', e.target.value)} className={inputClass}>
+                <option value="">All my products (Storewide)</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose a specific product to restrict this code, or leave as storewide.
+              </p>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -198,6 +222,7 @@ export default function DiscountCodesPage() {
               <thead>
                 <tr className="border-b border-border bg-surface">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Applies To</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Value</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Min Order</th>
@@ -215,6 +240,12 @@ export default function DiscountCodesPage() {
                   return (
                     <tr key={code.id} className="hover:bg-surface/50 transition-colors">
                       <td className="px-4 py-3 font-mono font-semibold text-foreground">{code.code}</td>
+                      <td className="px-4 py-3">
+                        {code.product
+                          ? <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5 truncate max-w-[140px] inline-block" title={code.product.title}>{code.product.title}</span>
+                          : <span className="text-xs bg-secondary/10 text-secondary border border-secondary/20 rounded-full px-2 py-0.5">Storewide</span>
+                        }
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground capitalize">{code.type === 'PERCENTAGE' ? 'Percentage' : 'Fixed'}</td>
                       <td className="px-4 py-3 text-foreground">{formatValue(code)}</td>
                       <td className="px-4 py-3 text-muted-foreground">

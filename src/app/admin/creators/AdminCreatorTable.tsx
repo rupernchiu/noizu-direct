@@ -16,6 +16,7 @@ export interface CreatorRow {
   storeStatus: string
   storeStatusReason: string | null
   badges: string[]
+  boostMultiplier: number
   totalSales: number   // stale stored count — not displayed; use orderCount instead
   orderCount: number   // live: fulfilled orders (PAID/COMPLETED/SHIPPED/PROCESSING)
   revenue: number      // live: sum of creatorAmount from COMPLETED transactions (cents)
@@ -249,6 +250,7 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                           username={creator.username}
                           badges={parsedBadges}
                           legalFullName={creator.user.legalFullName}
+                          boostMultiplier={creator.boostMultiplier ?? 1}
                         />
                         <HealthActions
                           creatorId={creator.id}

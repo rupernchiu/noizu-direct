@@ -11,7 +11,7 @@ export default async function StorefrontMessagesPage() {
   const userId = (session.user as any).id as string
 
   const profile = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true, displayName: true } })
-  if (!profile) redirect('/')
+  if (!profile) redirect('/dashboard')
 
   const entries = await prisma.creatorGuestbook.findMany({
     where: { creatorProfileId: profile.id },

@@ -53,11 +53,12 @@ const CATEGORIES = [
   { value: 'STICKERS', label: 'Stickers' },
 ] as const
 const SORT_OPTIONS = [
+  { value: 'DISCOVERY', label: 'For You' },
   { value: 'NEWEST', label: 'Newest' },
+  { value: 'TRENDING', label: 'Trending' },
+  { value: 'POPULAR', label: 'Most Popular' },
   { value: 'PRICE_ASC', label: 'Price: Low to High' },
   { value: 'PRICE_DESC', label: 'Price: High to Low' },
-  { value: 'POPULAR', label: 'Most Popular' },
-  { value: 'TRENDING', label: 'Trending' },
 ] as const
 
 const TYPE_FILTERS = [
@@ -92,7 +93,7 @@ interface MarketplaceClientProps {
 
 export function MarketplaceClient({ initialCategory }: MarketplaceClientProps = {}) {
   const [category, setCategory] = useState<string>(initialCategory || 'ALL')
-  const [sort, setSort] = useState<SortOption>('NEWEST')
+  const [sort, setSort] = useState<SortOption>('DISCOVERY')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -272,7 +273,7 @@ export function MarketplaceClient({ initialCategory }: MarketplaceClientProps = 
 
         {/* Product grid */}
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -301,7 +302,7 @@ export function MarketplaceClient({ initialCategory }: MarketplaceClientProps = 
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

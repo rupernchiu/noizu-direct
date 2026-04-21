@@ -10,13 +10,20 @@ export async function GET() {
   const creator = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true } })
   if (!creator) return NextResponse.json({ error: 'Not a creator' }, { status: 403 })
 
-  const codes = await prisma.discountCode.findMany({
-    where: { creatorId: creator.id },
-    orderBy: { createdAt: 'desc' },
-    include: { product: { select: { id: true, title: true } } },
-  })
+  const [codes, products] = await Promise.all([
+    prisma.discountCode.findMany({
+      where: { creatorId: creator.id },
+      orderBy: { createdAt: 'desc' },
+      include: { product: { select: { id: true, title: true } } },
+    }),
+    prisma.product.findMany({
+      where: { creatorId: creator.id },
+      select: { id: true, title: true },
+      orderBy: { title: 'asc' },
+    }),
+  ])
 
-  return NextResponse.json({ codes })
+  return NextResponse.json({ codes, products })
 }
 
 export async function POST(req: Request) {

@@ -18,7 +18,7 @@ export default async function DashboardPopupPage() {
       popupImageUrl: true,
     },
   })
-  if (!profile) redirect('/')
+  if (!profile) redirect('/dashboard')
 
   const media = await prisma.media.findMany({
     where: { uploadedBy: userId, mimeType: { in: ['image/webp', 'image/jpeg', 'image/png', 'image/gif'] } },

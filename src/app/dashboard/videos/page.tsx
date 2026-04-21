@@ -10,7 +10,7 @@ export default async function VideosPage() {
 
   const userId = (session.user as any).id as string
   const profile = await prisma.creatorProfile.findUnique({ where: { userId } })
-  if (!profile) redirect('/')
+  if (!profile) redirect('/dashboard')
 
   const videos = await prisma.video.findMany({
     where: { creatorId: profile.id },

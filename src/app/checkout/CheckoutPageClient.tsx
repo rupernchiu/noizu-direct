@@ -182,15 +182,22 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
   const [displayRate, setDisplayRate] = useState<number | null>(null)
   const [displayTotal, setDisplayTotal] = useState<number | null>(null)
   const [rateLoading, setRateLoading] = useState(false)
-  const [discountCode, setDiscountCode] = useState('')
-  const [discountApplying, setDiscountApplying] = useState(false)
-  const [appliedDiscount, setAppliedDiscount] = useState<{ discountCodeId: string; discountAmount: number; message: string } | null>(null)
-  const [discountError, setDiscountError] = useState<string | null>(null)
+  interface CreatorDiscountState {
+    code: string
+    applying: boolean
+    applied: { discountCodeId: string; discountAmount: number; message: string } | null
+    error: string | null
+  }
+  const [creatorDiscounts, setCreatorDiscounts] = useState<Record<string, CreatorDiscountState>>({})
   const pendingDeletes = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Derived totals — recalculated from live state
   const liveSubtotal      = liveGroups.reduce((s, g) => s + g.subtotal, 0)
-  const liveDiscount      = appliedDiscount?.discountAmount ?? 0
+  // Sum discounts only for creators still in cart
+  const liveDiscount      = liveGroups.reduce((total, g) => {
+    const d = creatorDiscounts[g.creator.id]
+    return total + (d?.applied ? d.applied.discountAmount : 0)
+  }, 0)
   const liveDiscounted    = Math.max(0, liveSubtotal - liveDiscount)
   const liveProcessingFee = Math.round(liveDiscounted * 0.025)
   const liveTotal         = liveDiscounted + liveProcessingFee
@@ -296,25 +303,41 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     }).catch(() => {})
   }
 
-  async function applyDiscount() {
-    if (!discountCode.trim()) return
-    const firstProduct = liveGroups[0]?.items[0]?.product
-    if (!firstProduct) return
-    setDiscountApplying(true)
-    setDiscountError(null)
+  function setCreatorDiscount(creatorId: string, patch: Partial<CreatorDiscountState>) {
+    setCreatorDiscounts(prev => ({
+      ...prev,
+      [creatorId]: { code: '', applying: false, applied: null, error: null, ...prev[creatorId], ...patch },
+    }))
+  }
+
+  async function applyDiscountForCreator(creatorId: string) {
+    const codeInput = creatorDiscounts[creatorId]?.code?.trim()
+    if (!codeInput) return
+    setCreatorDiscount(creatorId, { applying: true, error: null })
     try {
+      const cartGroups = liveGroups.map(g => ({
+        creatorId: g.creator.id,
+        productIds: g.items.map(i => i.product.id),
+        subtotal: g.subtotal,
+      }))
       const res = await fetch('/api/checkout/apply-discount', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: discountCode, productId: firstProduct.id, amountUsd: liveSubtotal }),
+        body: JSON.stringify({ code: codeInput, cartGroups }),
       })
       const data = await res.json() as { discountCodeId?: string; discountAmount?: number; message?: string; error?: string }
-      if (!res.ok) { setDiscountError(data.error ?? 'Invalid code'); return }
-      setAppliedDiscount({ discountCodeId: data.discountCodeId!, discountAmount: data.discountAmount!, message: data.message! })
+      if (!res.ok) {
+        setCreatorDiscount(creatorId, { error: data.error ?? 'Invalid code' })
+        return
+      }
+      setCreatorDiscount(creatorId, {
+        applied: { discountCodeId: data.discountCodeId!, discountAmount: data.discountAmount!, message: data.message! },
+        error: null,
+      })
     } catch {
-      setDiscountError('Failed to apply code')
+      setCreatorDiscount(creatorId, { error: 'Failed to apply code' })
     } finally {
-      setDiscountApplying(false)
+      setCreatorDiscount(creatorId, { applying: false })
     }
   }
 
@@ -386,8 +409,9 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
           orderId: cartSessionId,
           currency: selectedCurrency,
           shippingAddress: liveHasPhysical ? shipping : undefined,
-          discountCodeId: appliedDiscount?.discountCodeId,
-          discountAmount: appliedDiscount?.discountAmount,
+          discounts: liveGroups
+            .filter(g => creatorDiscounts[g.creator.id]?.applied)
+            .map(g => ({ discountCodeId: creatorDiscounts[g.creator.id].applied!.discountCodeId })),
         }),
       })
       const data = await res.json() as { intentId?: string; clientSecret?: string; currency?: string; error?: string }
@@ -606,11 +630,59 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                     })}
                   </div>
 
-                  {/* Group subtotal */}
-                  <div className="px-5 py-2.5 border-t border-border bg-surface flex justify-end">
-                    <span className="text-xs text-muted-foreground">
-                      Subtotal: <span className="font-semibold text-foreground">{formatPrice(group.subtotal)}</span>
-                    </span>
+                  {/* Group subtotal + discount input */}
+                  <div className="px-5 py-3 border-t border-border bg-surface space-y-2">
+                    <div className="flex justify-end">
+                      <span className="text-xs text-muted-foreground">
+                        Subtotal: <span className="font-semibold text-foreground">{formatPrice(group.subtotal)}</span>
+                      </span>
+                    </div>
+                    {/* Per-creator discount input */}
+                    {(() => {
+                      const ds = creatorDiscounts[group.creator.id]
+                      if (ds?.applied) {
+                        return (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs text-success">{ds.applied.message}</span>
+                              <span className="text-xs text-muted-foreground ml-1">
+                                (−{formatPrice(ds.applied.discountAmount)})
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCreatorDiscount(group.creator.id, { applied: null, code: '', error: null })}
+                              className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Discount code"
+                              value={ds?.code ?? ''}
+                              onChange={e => setCreatorDiscount(group.creator.id, { code: e.target.value, error: null })}
+                              onKeyDown={e => e.key === 'Enter' && applyDiscountForCreator(group.creator.id)}
+                              className="flex-1 rounded-lg bg-background border border-border px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => applyDiscountForCreator(group.creator.id)}
+                              disabled={ds?.applying || !ds?.code?.trim()}
+                              className="px-3 py-1.5 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-xs font-medium hover:bg-secondary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {ds?.applying ? '...' : 'Apply'}
+                            </button>
+                          </div>
+                          {ds?.error && <p className="text-xs text-destructive">{ds.error}</p>}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
               )
@@ -688,52 +760,27 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
             <div className="rounded-xl bg-card border border-border p-5 space-y-3">
               <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Order Summary</h2>
 
-              {/* Per-creator lines */}
-              {liveGroups.map(group => (
-                <div key={group.creator.id} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground truncate mr-2">
-                    {group.creator.displayName}
-                    <span className="text-muted-foreground/60"> ({group.items.length})</span>
-                  </span>
-                  <span className="text-foreground flex-shrink-0">{formatPrice(group.subtotal)}</span>
-                </div>
-              ))}
-
-              {/* Discount code input */}
-              <div className="border-t border-border pt-3">
-                {appliedDiscount ? (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-success text-xs">{appliedDiscount.message}</span>
-                    <button
-                      onClick={() => { setAppliedDiscount(null); setDiscountCode('') }}
-                      className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Discount code"
-                        value={discountCode}
-                        onChange={e => { setDiscountCode(e.target.value); setDiscountError(null) }}
-                        onKeyDown={e => e.key === 'Enter' && applyDiscount()}
-                        className="flex-1 rounded-lg bg-background border border-border px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors"
-                      />
-                      <button
-                        onClick={applyDiscount}
-                        disabled={discountApplying || !discountCode.trim()}
-                        className="px-3 py-2 rounded-lg bg-secondary/10 border border-secondary/30 text-secondary text-xs font-medium hover:bg-secondary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {discountApplying ? '...' : 'Apply'}
-                      </button>
+              {/* Per-creator lines with applied discount */}
+              {liveGroups.map(group => {
+                const ds = creatorDiscounts[group.creator.id]
+                return (
+                  <div key={group.creator.id}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground truncate mr-2">
+                        {group.creator.displayName}
+                        <span className="text-muted-foreground/60"> ({group.items.length})</span>
+                      </span>
+                      <span className="text-foreground flex-shrink-0">{formatPrice(group.subtotal)}</span>
                     </div>
-                    {discountError && <p className="text-xs text-destructive">{discountError}</p>}
+                    {ds?.applied && (
+                      <div className="flex items-center justify-between text-xs mt-0.5">
+                        <span className="text-success">{ds.applied.message}</span>
+                        <span className="text-success">−{formatPrice(ds.applied.discountAmount)}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })}
 
               <div className="border-t border-border pt-3 space-y-2">
                 <div className="flex items-center justify-between text-sm">
@@ -742,8 +789,8 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                 </div>
                 {liveDiscount > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-success">Discount</span>
-                    <span className="text-success">-{formatPrice(liveDiscount)}</span>
+                    <span className="text-success">Total discount</span>
+                    <span className="text-success">−{formatPrice(liveDiscount)}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between text-sm">

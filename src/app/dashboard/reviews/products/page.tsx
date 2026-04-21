@@ -10,7 +10,7 @@ export default async function ProductReviewsPage() {
 
   const userId = (session.user as any).id as string
   const profile = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true, displayName: true } })
-  if (!profile) redirect('/')
+  if (!profile) redirect('/dashboard')
 
   const reviews = await prisma.productReview.findMany({
     where: { product: { creatorId: profile.id } },

@@ -3,13 +3,17 @@ import { prisma } from '@/lib/prisma'
 import { requireCreator } from '@/lib/guards'
 import { Prisma } from '@/generated/prisma/client'
 import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
+import { auth } from '@/lib/auth'
+import { rankProducts, deriveCategoryAffinity, type ScoredProduct } from '@/lib/discovery'
+
+const DISCOVERY_POOL = 500
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
 
   const category = searchParams.get('category') ?? 'ALL'
   const type = searchParams.get('type') ?? ''
-  const sort = searchParams.get('sort') ?? 'NEWEST'
+  const sort = searchParams.get('sort') ?? 'DISCOVERY'
   const search = searchParams.get('search') ?? ''
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') ?? '20', 10)))
@@ -20,14 +24,8 @@ export async function GET(req: NextRequest) {
     creator: { storeStatus: 'ACTIVE' },
   }
 
-  if (category && category !== 'ALL') {
-    where.category = category
-  }
-
-  if (type && type !== 'ALL') {
-    where.type = type
-  }
-
+  if (category && category !== 'ALL') where.category = category
+  if (type && type !== 'ALL') where.type = type
   if (search) {
     where.OR = [
       { title: { contains: search } },
@@ -35,25 +33,65 @@ export async function GET(req: NextRequest) {
     ]
   }
 
-  // Build orderBy
+  // DISCOVERY sort: fetch a large pool, score in-memory with user relevance
+  if (sort === 'DISCOVERY') {
+    const session = await auth()
+    const userId = (session?.user as any)?.id as string | undefined
+
+    let userCategories: string[] = []
+    if (userId) {
+      const recentViews = await prisma.productView.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        select: { product: { select: { category: true } } },
+      })
+      userCategories = deriveCategoryAffinity(recentViews)
+    }
+
+    const pool = await prisma.product.findMany({
+      where,
+      take: DISCOVERY_POOL,
+      orderBy: [{ isTrendingSuppressed: 'asc' }, { trendingScore: 'desc' }, { createdAt: 'desc' }],
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        category: true,
+        type: true,
+        images: true,
+        stock: true,
+        isPinned: true,
+        isTrendingSuppressed: true,
+        trendingScore: true,
+        manualBoost: true,
+        createdAt: true,
+        creator: {
+          select: {
+            username: true,
+            displayName: true,
+            avatar: true,
+            isVerified: true,
+            isTopCreator: true,
+          },
+        },
+      },
+    })
+
+    const { items, total } = rankProducts(pool as ScoredProduct[], userCategories, page, limit)
+    return NextResponse.json({ products: items, total, page, totalPages: Math.ceil(total / limit) })
+  }
+
+  // Standard sorts — DB-level ordering
   let orderBy: Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[]
   switch (sort) {
-    case 'PRICE_ASC':
-      orderBy = { price: 'asc' }
-      break
-    case 'PRICE_DESC':
-      orderBy = { price: 'desc' }
-      break
-    case 'POPULAR':
-      orderBy = [{ isPinned: 'desc' }, { order: 'asc' }, { createdAt: 'desc' }]
-      break
-    case 'TRENDING':
-      orderBy = [{ isTrendingSuppressed: 'asc' }, { trendingScore: 'desc' }, { createdAt: 'desc' }]
-      break
+    case 'PRICE_ASC':   orderBy = { price: 'asc' }; break
+    case 'PRICE_DESC':  orderBy = { price: 'desc' }; break
+    case 'POPULAR':     orderBy = [{ isPinned: 'desc' }, { order: 'asc' }, { createdAt: 'desc' }]; break
+    case 'TRENDING':    orderBy = [{ isTrendingSuppressed: 'asc' }, { trendingScore: 'desc' }, { createdAt: 'desc' }]; break
     case 'NEWEST':
-    default:
-      orderBy = { createdAt: 'desc' }
-      break
+    default:            orderBy = { createdAt: 'desc' }; break
   }
 
   const [total, products] = await Promise.all([
@@ -87,14 +125,7 @@ export async function GET(req: NextRequest) {
     }),
   ])
 
-  const totalPages = Math.ceil(total / limit)
-
-  return NextResponse.json({
-    products,
-    total,
-    page,
-    totalPages,
-  })
+  return NextResponse.json({ products, total, page, totalPages: Math.ceil(total / limit) })
 }
 
 export async function POST(req: Request) {

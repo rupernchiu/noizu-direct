@@ -17,6 +17,9 @@ export async function PATCH(
   if (typeof body.isVerified === 'boolean') allowed.isVerified = body.isVerified
   if (typeof body.isTopCreator === 'boolean') allowed.isTopCreator = body.isTopCreator
   if (typeof body.isSuspended === 'boolean') allowed.isSuspended = body.isSuspended
+  if (typeof body.boostMultiplier === 'number' && body.boostMultiplier >= 0 && body.boostMultiplier <= 10) {
+    allowed.boostMultiplier = body.boostMultiplier
+  }
   if (Array.isArray(body.badges) && body.badges.every((b: unknown) => typeof b === 'string')) {
     allowed.badges = JSON.stringify(body.badges)
   }
