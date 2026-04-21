@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Sliders, Settings, Palette } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -88,6 +88,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* Store management */}
               <NavLink href="/dashboard"><LayoutDashboard className="size-4" />Overview</NavLink>
               <NavLink href="/dashboard/listings"><Package className="size-4" />Listings</NavLink>
+              <NavLink href="/dashboard/commissions"><Palette className="size-4" />Commissions</NavLink>
               <NavLink href="/dashboard/orders"><ShoppingBag className="size-4" />Orders</NavLink>
               <NavLink href="/dashboard/messages"><MessageCircle className="size-4" />Messages</NavLink>
               <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
@@ -96,7 +97,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* Separator */}
               <div className="hidden md:block my-2 h-px bg-border" />
               {/* Content */}
-              <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
               <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
               <NavLink href="/dashboard/subscribers"><Users className="size-4" />Subscribers</NavLink>
               {/* Separator */}
@@ -106,12 +106,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </p>
               <NavLink href="/dashboard/reviews/products"><Star className="size-4" />Product Reviews</NavLink>
               <NavLink href="/dashboard/reviews/messages"><MessageCircle className="size-4" />Storefront Messages</NavLink>
-              <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
-              <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
-              <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
               {/* Separator */}
               <div className="hidden md:block my-2 h-px bg-border" />
+              <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
+                Settings
+              </p>
+              <NavLink href="/dashboard/settings"><Settings className="size-4" />Overview</NavLink>
               <NavLink href="/dashboard/profile"><User className="size-4" />Profile</NavLink>
+              <NavLink href="/dashboard/settings/commissions"><Sliders className="size-4" />Commissions</NavLink>
+              <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
+              <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
+              <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
+              <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
               <NavLink href="/dashboard/verification">
                 <ShieldCheck className="size-4" />
                 Verification

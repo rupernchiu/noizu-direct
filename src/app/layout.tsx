@@ -61,10 +61,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
       <head>
-        {/* Pre-hydration theme resolver — must run before first paint to avoid FOUC.
-            Lives in <head> so React 19 treats it as document markup, not a
-            component child (which it refuses to execute on client re-renders). */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
       </head>
       <body
         suppressHydrationWarning

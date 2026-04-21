@@ -97,6 +97,7 @@ model CreatorProfile {
   commissionTerms        String?
   commissionPricing      String    @default("[]")
   commissionDescription  String?
+  commissionDefaults     String    @default("{}") // JSON: { depositPercent, revisionsIncluded, turnaroundDays, milestoneTemplates: [{name, stages: [{label, percent}]}], preferMilestones }
   logoImage              String?
   popupEnabled           Boolean   @default(false)
   popupTitle             String?

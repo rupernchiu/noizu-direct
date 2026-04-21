@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json() as {
     requestId?: string
-    buyerId?: string // required if no requestId
+    buyerId?: string
+    buyerEmail?: string // alternative to buyerId for standalone quotes
     title: string
     description: string
     amountUsd: number
@@ -43,8 +44,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Request is no longer open' }, { status: 400 })
     }
     buyerId = request.buyerId
+  } else if (!buyerId && body.buyerEmail?.trim()) {
+    const email = body.buyerEmail.trim().toLowerCase()
+    const found = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+    if (!found) return NextResponse.json({ error: 'Buyer not found — check the email address' }, { status: 404 })
+    buyerId = found.id
   }
-  if (!buyerId) return NextResponse.json({ error: 'buyerId or requestId required' }, { status: 400 })
+  if (!buyerId) return NextResponse.json({ error: 'Buyer email or request required' }, { status: 400 })
 
   const buyer = await prisma.user.findUnique({ where: { id: buyerId }, select: { id: true } })
   if (!buyer) return NextResponse.json({ error: 'Buyer not found' }, { status: 404 })

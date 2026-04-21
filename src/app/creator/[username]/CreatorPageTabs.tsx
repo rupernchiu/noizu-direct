@@ -911,12 +911,24 @@ export function CreatorPageTabs({
               )}
 
               {/* CTA */}
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                {commissionStatus === 'CLOSED' ? (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-muted-foreground">
+                    Commissions closed
+                  </span>
+                ) : (
+                  <Link
+                    href={`/creator/${creatorUsername}/commission/new`}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/30 active:scale-95"
+                  >
+                    Request Commission
+                  </Link>
+                )}
                 <Link
                   href={`/account/messages?to=${creatorUsername}`}
-                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-primary/30 active:scale-95"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
-                  Message Creator
+                  or message {displayName} first
                 </Link>
               </div>
             </div>

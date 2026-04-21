@@ -8,7 +8,6 @@ type Milestone = { title: string; description: string; amountDollars: string }
 export interface QuoteBuilderProps {
   requestId?: string | null
   presetTitle?: string
-  buyerIdRequired?: boolean
   // For edit mode:
   quoteId?: string
   initial?: {
@@ -21,7 +20,6 @@ export interface QuoteBuilderProps {
     termsText: string
     isMilestoneBased: boolean
     milestones: Milestone[]
-    buyerId?: string
   }
 }
 
@@ -42,7 +40,7 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
     { title: '', description: '', amountDollars: '' },
     { title: '', description: '', amountDollars: '' },
   ])
-  const [buyerId, setBuyerId] = useState(props.initial?.buyerId ?? '')
+  const [buyerEmail, setBuyerEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -69,7 +67,7 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
     setBusy(true); setError(null)
     const payload = {
       requestId: props.requestId ?? undefined,
-      ...(props.requestId ? {} : buyerId ? { buyerId } : {}),
+      ...(props.requestId ? {} : buyerEmail ? { buyerEmail } : {}),
       title: title.trim(),
       description: description.trim(),
       amountUsd: amountCents,
@@ -117,10 +115,10 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
     <div className="space-y-6">
       {!props.requestId && !editing && (
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Buyer ID (standalone quote)</label>
-          <input value={buyerId} onChange={e => setBuyerId(e.target.value)} placeholder="User ID of the buyer"
+          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Buyer email</label>
+          <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder="buyer@example.com"
             className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
-          <p className="text-xs text-muted-foreground mt-1">Find it in the user&apos;s profile URL or messages.</p>
+          <p className="text-xs text-muted-foreground mt-1">The email address the buyer uses on noizu.direct. They&apos;ll be notified when you send the quote.</p>
         </div>
       )}
 
