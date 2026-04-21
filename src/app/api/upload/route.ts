@@ -10,6 +10,16 @@ import { extname } from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import sharp from 'sharp'
 import { uploadToR2 } from '@/lib/r2'
+import { prisma } from '@/lib/prisma'
+import { checkUploadAllowed } from '@/lib/storage-quota'
+
+// Categories that count against the user's storage quota. Transactional uploads
+// (identity docs, dispute evidence, message attachments) are admin-reviewed
+// small files; we don't want them crashing a creator's upload flow.
+const QUOTA_COUNTED_CATEGORIES = new Set([
+  'product_image', 'portfolio', 'profile_avatar', 'profile_banner',
+  'profile_logo', 'blog_cover', 'media', 'other',
+])
 
 const SVG_MIME = 'image/svg+xml'
 
@@ -73,6 +83,18 @@ export async function POST(req: Request) {
     )
   }
 
+  // Storage quota enforcement (for categories that count toward user's plan)
+  const userId = (session.user as { id: string }).id
+  if (QUOTA_COUNTED_CATEGORIES.has(category)) {
+    const check = await checkUploadAllowed(userId, file.size)
+    if (!check.allow) {
+      return NextResponse.json(
+        { error: check.reason ?? 'Storage quota exceeded', code: 'QUOTA_EXCEEDED' },
+        { status: 413 },
+      )
+    }
+  }
+
   const isPrivate = PRIVATE_CATEGORIES.has(category)
   const isPdf     = file.type === 'application/pdf'
   const isSvg     = file.type === SVG_MIME
@@ -116,19 +138,26 @@ export async function POST(req: Request) {
   if (isPrivate) {
     r2Key     = `private/${folder}/${filename}`
     publicUrl = `/api/files/${folder}/${filename}`
+    await uploadToR2(finalBuffer, r2Key, mimeType)
   } else {
     r2Key     = `uploads/${folder}/${filename}`
     publicUrl = await uploadToR2(finalBuffer, r2Key, mimeType)
-    return NextResponse.json({
-      url:       publicUrl,
-      filename,
-      mimeType,
-      fileSize:  finalBuffer.length,
-      isPrivate,
-    })
   }
 
-  await uploadToR2(finalBuffer, r2Key, mimeType)
+  // Track uploads that count against user storage so the dashboard usage +
+  // quota enforcement stay accurate. Private categories are excluded — they
+  // aren't billed against the creator quota.
+  if (QUOTA_COUNTED_CATEGORIES.has(category)) {
+    await prisma.media.create({
+      data: {
+        url: publicUrl,
+        filename,
+        mimeType,
+        fileSize: finalBuffer.length,
+        uploadedBy: userId,
+      },
+    }).catch(() => {})
+  }
 
   return NextResponse.json({
     url:       publicUrl,

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
+import { releaseMilestone } from '@/lib/milestone-release'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -93,9 +94,11 @@ export async function runEscrowProcessor() {
   }
 
   // ── 3. Auto-release commission orders past their 30-day window ───────────────
+  // Milestone-based orders are released per-milestone (section 5b), not here.
   const commissionReleasable = await prisma.order.findMany({
     where: {
       commissionStatus: 'DELIVERED',
+      commissionIsMilestoneBased: false,
       escrowAutoReleaseAt: { lte: now },
     },
     include: { transactions: { where: { status: 'ESCROW' } } },
@@ -263,6 +266,29 @@ export async function runEscrowProcessor() {
       results.released++
     } catch (e) {
       console.error('[escrow] deposit release error', order.id, e)
+      results.errors++
+    }
+  }
+
+  // ── 5b. Auto-release overdue DELIVERED milestones (14-day buyer window) ──────
+  const overdueMilestones = await prisma.commissionMilestone.findMany({
+    where: {
+      status: 'DELIVERED',
+      autoReleaseAt: { lte: now },
+      releasedAt: null,
+    },
+    include: { orderRef: { select: { id: true } } },
+  })
+
+  for (const m of overdueMilestones) {
+    if (!m.orderRef) continue
+    const dispute = await prisma.dispute.findUnique({ where: { orderId: m.orderRef.id } })
+    if (dispute && ['OPEN', 'UNDER_REVIEW'].includes(dispute.status)) continue
+    try {
+      await releaseMilestone(m.id, undefined, 'Auto-released after buyer review window')
+      results.released++
+    } catch (e) {
+      console.error('[escrow] milestone release error', m.id, e)
       results.errors++
     }
   }

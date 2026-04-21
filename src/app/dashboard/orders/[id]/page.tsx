@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ArrowLeft } from 'lucide-react'
 import { STATUS_LABELS, TYPE_LABELS } from '@/lib/labels'
 import { CommissionActions } from './CommissionActions'
+import { MilestoneCreatorActions } from './MilestoneCreatorActions'
 
 const statusStyles: Record<string, string> = {
   PENDING:    'bg-yellow-500/20 text-yellow-400',
@@ -23,6 +24,26 @@ const commissionStatusLabels: Record<string, string> = {
   REVISION_REQUESTED: 'Revision requested',
   DELIVERED:          'Delivered — awaiting buyer',
   COMPLETED:          'Completed',
+}
+
+const milestoneStatusLabels: Record<string, string> = {
+  PENDING:            'Not started',
+  IN_PROGRESS:        'In progress',
+  DELIVERED:          'Delivered — awaiting buyer',
+  APPROVED:           'Approved',
+  REVISION_REQUESTED: 'Revision requested',
+  COMPLETED:          'Paid out',
+  REFUNDED:           'Refunded',
+}
+
+const milestoneStatusStyles: Record<string, string> = {
+  PENDING:            'bg-muted text-muted-foreground',
+  IN_PROGRESS:        'bg-yellow-500/20 text-yellow-400',
+  DELIVERED:          'bg-blue-500/20 text-blue-400',
+  APPROVED:           'bg-primary/20 text-primary',
+  REVISION_REQUESTED: 'bg-orange-500/20 text-orange-400',
+  COMPLETED:          'bg-secondary/20 text-secondary',
+  REFUNDED:           'bg-red-500/20 text-red-400',
 }
 
 function formatDateTime(date: Date | null): string {
@@ -51,6 +72,7 @@ export default async function OrderDetailPage({
     include: {
       buyer:   { select: { name: true, email: true } },
       product: { select: { title: true, type: true, commissionRevisionsIncluded: true, commissionTurnaroundDays: true } },
+      milestones: { orderBy: { order: 'asc' } },
     },
   })
 
@@ -58,10 +80,12 @@ export default async function OrderDetailPage({
   if (order.creatorId !== userId) redirect('/dashboard/orders')
 
   const isCommission = order.product.type === 'COMMISSION'
+  const isMilestone = order.commissionIsMilestoneBased === true
   const referenceImages = parseJsonArray<string>(order.commissionReferenceImages)
   const deliveryFiles = parseJsonArray<string>(order.commissionDeliveryFiles)
   const revisionsAllowed = order.commissionRevisionsAllowed ?? order.product.commissionRevisionsIncluded ?? 0
   const revisionsUsed = order.commissionRevisionsUsed ?? 0
+  const escrowFunded = order.status === 'PAID' || order.status === 'PROCESSING' || order.status === 'SHIPPED' || order.status === 'DELIVERED' || order.status === 'COMPLETED'
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -145,29 +169,39 @@ export default async function OrderDetailPage({
           )}
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-            <div>
-              <p className="text-xs text-muted-foreground">Deposit</p>
-              <p className="text-foreground">
-                {order.commissionDepositAmount != null
-                  ? `$${(order.commissionDepositAmount / 100).toFixed(2)} (${order.commissionDepositPercent ?? 0}%)`
-                  : '—'}
-              </p>
-            </div>
+            {!isMilestone && (
+              <div>
+                <p className="text-xs text-muted-foreground">Deposit</p>
+                <p className="text-foreground">
+                  {order.commissionDepositAmount != null
+                    ? `$${(order.commissionDepositAmount / 100).toFixed(2)} (${order.commissionDepositPercent ?? 0}%)`
+                    : '—'}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-muted-foreground">Revisions</p>
               <p className="text-foreground">{revisionsUsed} / {revisionsAllowed}</p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Accept by</p>
-              <p className="text-foreground text-xs">{formatDateTime(order.commissionAcceptDeadlineAt)}</p>
-            </div>
+            {!isMilestone && (
+              <div>
+                <p className="text-xs text-muted-foreground">Accept by</p>
+                <p className="text-foreground text-xs">{formatDateTime(order.commissionAcceptDeadlineAt)}</p>
+              </div>
+            )}
             <div>
               <p className="text-xs text-muted-foreground">Turnaround</p>
               <p className="text-foreground">{order.product.commissionTurnaroundDays ?? '—'} days</p>
             </div>
+            {isMilestone && (
+              <div>
+                <p className="text-xs text-muted-foreground">Structure</p>
+                <p className="text-foreground">{order.milestones.length} milestones</p>
+              </div>
+            )}
           </div>
 
-          {deliveryFiles.length > 0 && (
+          {!isMilestone && deliveryFiles.length > 0 && (
             <div>
               <p className="text-xs text-muted-foreground mb-2">Delivered files ({deliveryFiles.length})</p>
               <ul className="space-y-1">
@@ -185,11 +219,81 @@ export default async function OrderDetailPage({
             </div>
           )}
 
-          <CommissionActions
-            orderId={order.id}
-            commissionStatus={order.commissionStatus ?? ''}
-            acceptDeadlineAt={order.commissionAcceptDeadlineAt?.toISOString() ?? null}
-          />
+          {!isMilestone && (
+            <CommissionActions
+              orderId={order.id}
+              commissionStatus={order.commissionStatus ?? ''}
+              acceptDeadlineAt={order.commissionAcceptDeadlineAt?.toISOString() ?? null}
+            />
+          )}
+        </div>
+      )}
+
+      {isCommission && isMilestone && (
+        <div className="bg-surface rounded-xl border border-border p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Milestones</h2>
+            <p className="text-xs text-muted-foreground">
+              {escrowFunded ? 'Escrow funded — deliver each milestone to release payment.' : 'Awaiting payment from buyer.'}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {order.milestones.map((m, i) => {
+              const mFiles = parseJsonArray<{ key?: string; filename?: string } | string>(m.deliveryFiles)
+              return (
+                <div key={m.id} className="bg-card border border-border rounded-xl p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        {i + 1}. {m.title}
+                      </p>
+                      {m.description && (
+                        <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{m.description}</p>
+                      )}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold text-foreground">${(m.amountUsd / 100).toFixed(2)}</p>
+                      <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${milestoneStatusStyles[m.status] ?? 'bg-muted text-muted-foreground'}`}>
+                        {milestoneStatusLabels[m.status] ?? m.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+                    <span>Revisions: {m.revisionsUsed}/{m.revisionsAllowed}</span>
+                    {m.deliveredAt && <span>Delivered {formatDateTime(m.deliveredAt)}</span>}
+                    {m.autoReleaseAt && m.status === 'DELIVERED' && (
+                      <span>Auto-releases {formatDateTime(m.autoReleaseAt)}</span>
+                    )}
+                    {m.releasedAt && <span>Paid out {formatDateTime(m.releasedAt)}</span>}
+                  </div>
+
+                  {m.revisionNote && m.status === 'REVISION_REQUESTED' && (
+                    <div className="text-xs text-foreground bg-orange-500/5 border border-orange-500/30 rounded-lg p-2 whitespace-pre-wrap">
+                      <span className="font-medium text-orange-400">Revision request:</span> {m.revisionNote}
+                    </div>
+                  )}
+
+                  {mFiles.length > 0 && (
+                    <ul className="space-y-1">
+                      {mFiles.map((f, fi) => {
+                        const label = typeof f === 'string' ? f : (f.filename ?? f.key ?? '')
+                        return (
+                          <li key={fi} className="text-xs text-foreground bg-background border border-border rounded-lg px-2.5 py-1.5 truncate">
+                            {label}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+
+                  {escrowFunded && (
+                    <MilestoneCreatorActions milestoneId={m.id} status={m.status} />
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

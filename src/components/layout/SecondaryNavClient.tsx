@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,8 +61,7 @@ const KF = `
 
 // ── Root component ─────────────────────────────────────────────────────────────
 
-export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
-  const { data: session } = useSession()
+export function SecondaryNavClient({ items, userRole }: { items: NavItemData[]; userRole: string | null }) {
   const [openId, setOpenId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -111,7 +109,7 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
               onOpen={() => { cancelClose(); setOpenId(item.id) }}
               onCancelClose={cancelClose}
               onScheduleClose={scheduleClose}
-              session={session}
+              userRole={userRole}
             />
           ))}
         </div>
@@ -125,7 +123,7 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
               onOpen={() => { cancelClose(); setOpenId(item.id) }}
               onCancelClose={cancelClose}
               onScheduleClose={scheduleClose}
-              session={session}
+              userRole={userRole}
             />
           ))}
         </div>
@@ -154,14 +152,14 @@ export function SecondaryNavClient({ items }: { items: NavItemData[] }) {
 // ── Nav trigger (button or pill) ───────────────────────────────────────────────
 
 function NavTrigger({
-  item, isOpen, onOpen, onCancelClose, onScheduleClose, session,
+  item, isOpen, onOpen, onCancelClose, onScheduleClose, userRole,
 }: {
   item: NavItemData
   isOpen: boolean
   onOpen: () => void
   onCancelClose: () => void
   onScheduleClose: () => void
-  session: ReturnType<typeof useSession>['data']
+  userRole: string | null
 }) {
   const [hovered, setHovered] = useState(false)
   const isMega = item.dropdownType === 'MEGA_MENU'
@@ -169,19 +167,14 @@ function NavTrigger({
   const isWCS = item.label === 'WCS Malaysia'
   const isSell = item.label === 'Start Selling'
 
-  const user = session?.user as { role?: string } | undefined
-
   const content = parseSafe<unknown>(item.dropdownContent, {})
 
   // Start Selling → pill button
   if (isSell) {
-    let startSellingHref = item.url // default from DB
-    if (session) {
-      const role = (session.user as any)?.role
-      if (role === 'CREATOR') startSellingHref = '/dashboard'
-      else if (role === 'ADMIN') startSellingHref = '/admin'
-      else startSellingHref = '/start-selling'
-    }
+    let startSellingHref = item.url // default from DB (for signed-out visitors)
+    if (userRole === 'CREATOR') startSellingHref = '/dashboard'
+    else if (userRole === 'ADMIN') startSellingHref = '/admin'
+    else if (userRole) startSellingHref = '/start-selling'
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>

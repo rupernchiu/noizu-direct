@@ -40,9 +40,10 @@ function barColor(pct: number): string {
 type Tab = 'all' | 'product_image' | 'portfolio' | 'message' | 'pdf' | 'profile' | 'orphaned'
 
 interface Config {
-  freePlanMb: number; proPlanGb: number; proPlanPriceCents: number
-  studioPlanGb: number; studioPlanPriceCents: number
-  topup1gbCents: number; topup5gbCents: number; topup10gbCents: number
+  freePlanMb: number
+  creatorPlanGb: number; creatorPlanPriceCents: number
+  proPlanGb: number; proPlanPriceCents: number
+  overageCentsPerGb: number; overageGracePercent: number
   gracePeriodDays: number; warningThreshold1: number; warningThreshold2: number
 }
 
@@ -52,9 +53,10 @@ interface Props {
   totalBytes: number
   quotaBytes: number
   usagePercent: number
-  plan: 'FREE' | 'PRO' | 'STUDIO'
+  plan: 'FREE' | 'CREATOR' | 'PRO'
+  bonusBytes: number
   config: Config
-  userEmail: string
+  userEmail?: string
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -84,7 +86,9 @@ function Modal({ title, children, onClose }: { title: string; children: React.Re
 
 // ── main component ────────────────────────────────────────────────────────────
 
-export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes, usagePercent, plan, config, userEmail }: Props) {
+export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes, usagePercent, plan, bonusBytes, config }: Props) {
+  void totalBytes; void usagePercent
+
   const [files, setFiles]           = useState<StorageFile[]>(initialFiles)
   const [activeTab, setActiveTab]   = useState<Tab>('all')
   const [selected, setSelected]     = useState<Set<string>>(new Set())
@@ -94,9 +98,7 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
   const [deleteTarget, setDeleteTarget]   = useState<StorageFile | null>(null)
   const [bulkConfirm, setBulkConfirm]     = useState(false)
   const [orphanConfirm, setOrphanConfirm] = useState(false)
-  const [purchaseModal, setPurchaseModal] = useState<{ planType: string; label: string; cents: number } | null>(null)
   const [deleting, setDeleting]           = useState(false)
-  const [purchasing, setPurchasing]       = useState(false)
 
   // Live totals (update optimistically after deletes)
   const liveTotal   = useMemo(() => files.reduce((s, f) => s + f.fileSize, 0), [files])
@@ -152,24 +154,6 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
     }
   }
 
-  async function logPurchaseInterest(planType: string, amountCents: number) {
-    setPurchasing(true)
-    try {
-      await fetch('/api/creator/storage/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planType, amountCents }),
-      })
-    } finally {
-      setPurchasing(false)
-    }
-  }
-
-  function openPurchaseModal(planType: string, label: string, cents: number) {
-    logPurchaseInterest(planType, cents)
-    setPurchaseModal({ planType, label, cents })
-  }
-
   function toggleSelectAll() {
     if (selected.size === tabFiles.length && tabFiles.length > 0) {
       setSelected(new Set())
@@ -206,7 +190,7 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
           </div>
           <div className="flex gap-2 shrink-0">
             <button onClick={() => setActiveTab('orphaned')} className="text-xs px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-card">Manage Files</button>
-            <button onClick={() => openPurchaseModal('PRO', 'Pro Plan', config.proPlanPriceCents)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</button>
+            <Link href="/dashboard/storage/subscribe" className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</Link>
           </div>
         </div>
       )}
@@ -218,7 +202,7 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
           </div>
           <div className="flex gap-2 shrink-0">
             <button onClick={() => setActiveTab('orphaned')} className="text-xs px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-card">Manage Files</button>
-            <button onClick={() => openPurchaseModal('PRO', 'Pro Plan', config.proPlanPriceCents)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</button>
+            <Link href="/dashboard/storage/subscribe" className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</Link>
           </div>
         </div>
       )}
@@ -231,7 +215,7 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
           </div>
           <div className="flex gap-2 shrink-0">
             <button onClick={() => setActiveTab('orphaned')} className="text-xs px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-card">Manage Files</button>
-            <button onClick={() => openPurchaseModal('PRO', 'Pro Plan', config.proPlanPriceCents)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</button>
+            <Link href="/dashboard/storage/subscribe" className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90">Upgrade Plan</Link>
           </div>
         </div>
       )}
@@ -285,66 +269,55 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
 
       {/* Upgrade plans */}
       <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
-        <h3 className="text-base font-semibold text-foreground">Plans & Upgrades</h3>
+        <h3 className="text-base font-semibold text-foreground">Plans</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {/* Current plan */}
-          <div className="rounded-xl border-2 border-primary bg-primary/5 p-4 space-y-1">
+          <div className={`rounded-xl p-4 space-y-1 ${plan === 'FREE' ? 'border-2 border-primary bg-primary/5' : 'border border-border bg-card'}`}>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-primary">FREE PLAN</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">Current</span>
+              <span className={`text-sm font-bold ${plan === 'FREE' ? 'text-primary' : 'text-foreground'}`}>FREE</span>
+              {plan === 'FREE' && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">Current</span>}
             </div>
             <p className="text-2xl font-bold text-foreground">{config.freePlanMb} MB</p>
             <p className="text-xs text-muted-foreground">No monthly fee</p>
           </div>
 
-          {/* Pro */}
-          <div className="rounded-xl border border-border bg-card p-4 space-y-1 hover:border-primary/50 transition-colors">
-            <span className="text-sm font-bold text-foreground">PRO</span>
+          <div className={`rounded-xl p-4 space-y-1 ${plan === 'CREATOR' ? 'border-2 border-primary bg-primary/5' : 'border border-border bg-card hover:border-primary/50 transition-colors'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${plan === 'CREATOR' ? 'text-primary' : 'text-foreground'}`}>CREATOR</span>
+              {plan === 'CREATOR' && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">Current</span>}
+            </div>
+            <p className="text-2xl font-bold text-foreground">{config.creatorPlanGb} GB</p>
+            <p className="text-xs text-muted-foreground">{fmtCents(config.creatorPlanPriceCents)}/month</p>
+            {plan !== 'CREATOR' && (
+              <Link href="/dashboard/storage/subscribe" className="mt-2 block w-full text-center text-xs bg-primary text-white py-1.5 rounded-lg hover:bg-primary/90 font-medium">
+                {plan === 'FREE' ? 'Upgrade →' : 'Switch plan →'}
+              </Link>
+            )}
+          </div>
+
+          <div className={`rounded-xl p-4 space-y-1 ${plan === 'PRO' ? 'border-2 border-primary bg-primary/5' : 'border border-border bg-card hover:border-primary/50 transition-colors'}`}>
+            <div className="flex items-center justify-between">
+              <span className={`text-sm font-bold ${plan === 'PRO' ? 'text-primary' : 'text-foreground'}`}>PRO</span>
+              {plan === 'PRO' && <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">Current</span>}
+            </div>
             <p className="text-2xl font-bold text-foreground">{config.proPlanGb} GB</p>
             <p className="text-xs text-muted-foreground">{fmtCents(config.proPlanPriceCents)}/month</p>
-            <button
-              onClick={() => openPurchaseModal('PRO', `Pro Plan (${config.proPlanGb}GB)`, config.proPlanPriceCents)}
-              className="mt-2 w-full text-xs bg-primary text-white py-1.5 rounded-lg hover:bg-primary/90 transition-colors font-medium"
-            >
-              Upgrade →
-            </button>
-          </div>
-
-          {/* Studio */}
-          <div className="rounded-xl border border-border bg-card p-4 space-y-1 hover:border-secondary/50 transition-colors">
-            <span className="text-sm font-bold text-foreground">STUDIO</span>
-            <p className="text-2xl font-bold text-foreground">{config.studioPlanGb} GB</p>
-            <p className="text-xs text-muted-foreground">{fmtCents(config.studioPlanPriceCents)}/month</p>
-            <button
-              onClick={() => openPurchaseModal('STUDIO', `Studio Plan (${config.studioPlanGb}GB)`, config.studioPlanPriceCents)}
-              className="mt-2 w-full text-xs bg-secondary text-white py-1.5 rounded-lg hover:bg-secondary/90 transition-colors font-medium"
-            >
-              Upgrade →
-            </button>
+            {plan !== 'PRO' && (
+              <Link href="/dashboard/storage/subscribe" className="mt-2 block w-full text-center text-xs bg-primary text-white py-1.5 rounded-lg hover:bg-primary/90 font-medium">
+                {plan === 'FREE' ? 'Upgrade →' : 'Switch plan →'}
+              </Link>
+            )}
           </div>
         </div>
 
-        {/* One-time top-ups */}
-        <div>
-          <p className="text-xs text-muted-foreground font-medium mb-3 uppercase tracking-wider">One-time Top-ups</p>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { label: '+1 GB', planType: 'TOPUP_1GB', cents: config.topup1gbCents },
-              { label: '+5 GB', planType: 'TOPUP_5GB', cents: config.topup5gbCents },
-              { label: '+10 GB', planType: 'TOPUP_10GB', cents: config.topup10gbCents },
-            ].map(({ label, planType, cents }) => (
-              <button
-                key={planType}
-                onClick={() => openPurchaseModal(planType, `${label} Top-up`, cents)}
-                className="flex flex-col items-center px-5 py-3 rounded-xl border border-border hover:border-primary/50 bg-card text-center transition-colors"
-              >
-                <span className="text-sm font-bold text-foreground">{label}</span>
-                <span className="text-xs text-muted-foreground">{fmtCents(cents)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {bonusBytes > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Bonus quota applied: {fmtBytes(bonusBytes)} (admin-granted — stays active regardless of plan).
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Soft overage up to {config.overageGracePercent}% above your plan ({fmtCents(config.overageCentsPerGb)}/GB over) — new uploads beyond the hard limit are blocked.
+        </p>
       </div>
 
       {/* File manager */}
@@ -502,9 +475,9 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
         {policyOpen && (
           <div className="px-6 pb-6 space-y-2 text-sm text-muted-foreground border-t border-border pt-4">
             <p>• Free plan: {config.freePlanMb} MB</p>
+            <p>• Creator plan: {config.creatorPlanGb} GB at {fmtCents(config.creatorPlanPriceCents)}/month</p>
             <p>• Pro plan: {config.proPlanGb} GB at {fmtCents(config.proPlanPriceCents)}/month</p>
-            <p>• Studio plan: {config.studioPlanGb} GB at {fmtCents(config.studioPlanPriceCents)}/month</p>
-            <p>• One-time top-ups available (+1GB, +5GB, +10GB)</p>
+            <p>• Soft overage band: {config.overageGracePercent}% above quota before new uploads are blocked</p>
             <p>• Files are never deleted without a {config.gracePeriodDays}-day warning</p>
             <p>• Orphaned files auto-deleted after {config.gracePeriodDays}-day grace period</p>
             <Link href="/storage-policy" className="text-primary hover:text-primary/80 transition-colors text-xs">
@@ -565,23 +538,6 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
         </Modal>
       )}
 
-      {/* Purchase coming soon modal */}
-      {purchaseModal && (
-        <Modal title="Coming Soon!" onClose={() => setPurchaseModal(null)}>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Payment integration for <strong className="text-foreground">{purchaseModal.label}</strong> ({fmtCents(purchaseModal.cents)}) is coming soon!
-            </p>
-            <p className="text-sm text-muted-foreground">
-              We have noted your interest. We will notify you at <strong className="text-foreground">{userEmail}</strong> when storage upgrades are available.
-            </p>
-            {purchasing && <p className="text-xs text-muted-foreground">Logging interest…</p>}
-          </div>
-          <div className="flex justify-end">
-            <button onClick={() => setPurchaseModal(null)} className="text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90">Got it</button>
-          </div>
-        </Modal>
-      )}
     </div>
   )
 }

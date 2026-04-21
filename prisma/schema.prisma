@@ -26,7 +26,7 @@ model User {
   // Creator onboarding & verification
   creatorVerificationStatus String    @default("UNVERIFIED") // UNVERIFIED|PENDING|VERIFIED|REJECTED
   creatorVerificationNote   String?
-  accountStatus             String    @default("ACTIVE")     // ACTIVE|RESTRICTED|SUSPENDED|CLOSED
+  accountStatus             String    @default("ACTIVE") // ACTIVE|RESTRICTED|SUSPENDED|CLOSED
   restrictedAt              DateTime?
   restrictionReason         String?
   closureRequestedAt        DateTime?
@@ -35,97 +35,110 @@ model User {
   legalFullName             String?
   airwallexCustomerId       String?
 
-  creatorProfile      CreatorProfile?
+  creatorProfile       CreatorProfile?
   supportSubscriptions SupportSubscription[] @relation("SupportSubscriber")
   supportTransactions  SupportTransaction[]  @relation("SupporterUser")
-  buyerOrders         Order[]              @relation("BuyerOrders")
-  creatorOrders       Order[]              @relation("CreatorOrders")
-  sentMessages        Message[]            @relation("SentMessages")
-  receivedMessages    Message[]            @relation("ReceivedMessages")
-  buyerConvos         Conversation[]       @relation("BuyerConvos")
-  creatorConvos       Conversation[]       @relation("CreatorConvos")
-  payouts             Payout[]
-  invoices            Invoice[]
-  media               Media[]
-  posts               Post[]               @relation("PostAuthor")
-  notifications       Notification[]
-  raisedDisputes      Dispute[]            @relation("DisputeRaisedBy")
-  resolvedDisputes    Dispute[]            @relation("DisputeResolvedBy")
-  escrowTransactions  EscrowTransaction[]
-  wishlistItems       WishlistItem[]
-  following           CreatorFollow[]
-  cartItems           CartItem[]
-  creatorApplication  CreatorApplication?
-  creatorAgreements   CreatorAgreement[]
-  reviews             ProductReview[]
-  guestbookEntries    CreatorGuestbook[]
+  buyerOrders          Order[]               @relation("BuyerOrders")
+  creatorOrders        Order[]               @relation("CreatorOrders")
+  sentMessages         Message[]             @relation("SentMessages")
+  receivedMessages     Message[]             @relation("ReceivedMessages")
+  buyerConvos          Conversation[]        @relation("BuyerConvos")
+  creatorConvos        Conversation[]        @relation("CreatorConvos")
+  payouts              Payout[]
+  invoices             Invoice[]
+  media                Media[]
+  posts                Post[]                @relation("PostAuthor")
+  notifications        Notification[]
+  raisedDisputes       Dispute[]             @relation("DisputeRaisedBy")
+  resolvedDisputes     Dispute[]             @relation("DisputeResolvedBy")
+  escrowTransactions   EscrowTransaction[]
+  wishlistItems        WishlistItem[]
+  following            CreatorFollow[]
+  cartItems            CartItem[]
+  creatorApplication   CreatorApplication?
+  creatorAgreements    CreatorAgreement[]
+  reviews              ProductReview[]
+  guestbookEntries     CreatorGuestbook[]
+
+  // Commission request/quote (as buyer)
+  buyerCommissionRequests CommissionRequest[] @relation("BuyerCommissionRequests")
+  buyerCommissionQuotes   CommissionQuote[]   @relation("BuyerCommissionQuotes")
+
+  // Storage plan
+  storagePlan         String               @default("FREE") // FREE | CREATOR | PRO
+  storagePlanRenewsAt DateTime?
+  storageBonusMb      Int                  @default(0) // admin-granted extra quota
+  storageOverageBytes BigInt               @default(0) // accumulated overage
+  storageSubscription StorageSubscription?
 }
 
 model CreatorProfile {
-  id                   String  @id @default(cuid())
-  userId               String  @unique
-  username             String  @unique
-  displayName          String
-  bio                  String?
-  bannerImage          String?
-  avatar               String?
-  socialLinks          String  @default("{}")
-  categoryTags         String  @default("[]")
-  commissionStatus     String  @default("OPEN")
-  announcementText     String?
-  announcementActive   Boolean @default(false)
-  featuredProductIds   String  @default("[]")
-  isVerified           Boolean @default(false)
-  isTopCreator         Boolean @default(false)
-  totalSales           Int     @default(0)
-  absorbProcessingFee  Boolean @default(false)
-  portfolioItems       String  @default("[]")
-  isSuspended          Boolean @default(false)
-  badges               String  @default("[]")
-  commissionSlots      Int?
-  commissionTerms      String?
-  commissionPricing    String  @default("[]")
-  commissionDescription String?
-  logoImage            String?
-  popupEnabled         Boolean  @default(false)
-  popupTitle           String?
-  popupDescription     String?
-  popupCtaText         String?
-  popupCtaLink         String?
-  popupBadgeText       String?
-  popupImageUrl        String?
-  notifPrefs           String  @default("{}")
-  themeColor           String?
-  sectionOrder         String  @default("[]")
-  storeStatus          String   @default("ACTIVE")  // ACTIVE | IDLE | HIATUS | FLAGGED
-  storeStatusReason    String?
-  storeStatusUpdatedAt DateTime?
-  lastLoginAt          DateTime?
-  fulfillmentWarnings  Int      @default(0)
-  healthEmailSentAt    String?  // JSON: { nudge30, reengagement, fulfillmentWarn, preSuspension }
-  onboardingCompleted  Boolean  @default(false)
-  onboardingDismissed  Boolean  @default(false)
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  username               String    @unique
+  displayName            String
+  bio                    String?
+  bannerImage            String?
+  avatar                 String?
+  socialLinks            String    @default("{}")
+  categoryTags           String    @default("[]")
+  commissionStatus       String    @default("OPEN")
+  announcementText       String?
+  announcementActive     Boolean   @default(false)
+  featuredProductIds     String    @default("[]")
+  isVerified             Boolean   @default(false)
+  isTopCreator           Boolean   @default(false)
+  totalSales             Int       @default(0)
+  absorbProcessingFee    Boolean   @default(false)
+  portfolioItems         String    @default("[]")
+  isSuspended            Boolean   @default(false)
+  badges                 String    @default("[]")
+  commissionSlots        Int?
+  commissionTerms        String?
+  commissionPricing      String    @default("[]")
+  commissionDescription  String?
+  logoImage              String?
+  popupEnabled           Boolean   @default(false)
+  popupTitle             String?
+  popupDescription       String?
+  popupCtaText           String?
+  popupCtaLink           String?
+  popupBadgeText         String?
+  popupImageUrl          String?
+  notifPrefs             String    @default("{}")
+  themeColor             String?
+  sectionOrder           String    @default("[]")
+  storeStatus            String    @default("ACTIVE") // ACTIVE | IDLE | HIATUS | FLAGGED
+  storeStatusReason      String?
+  storeStatusUpdatedAt   DateTime?
+  lastLoginAt            DateTime?
+  fulfillmentWarnings    Int       @default(0)
+  healthEmailSentAt      String? // JSON: { nudge30, reengagement, fulfillmentWarn, preSuspension }
+  onboardingCompleted    Boolean   @default(false)
+  onboardingDismissed    Boolean   @default(false)
   airwallexBeneficiaryId String?
-  payoutMethod           String  @default("bank_transfer")
-  boostMultiplier        Float   @default(1.0)
+  payoutMethod           String    @default("bank_transfer")
+  boostMultiplier        Float     @default(1.0)
   lastFeaturedAt         DateTime?
   payoutDetails          String? // AES-256 encrypted JSON
   payoutCountry          String?
   payoutCurrency         String?
-  createdAt            DateTime @default(now())
+  createdAt              DateTime  @default(now())
 
-  user                User               @relation(fields: [userId], references: [id])
-  products            Product[]
-  videos              Video[]
-  supportTiers        SupportTier[]
-  supportGoals        SupportGoal[]
-  supportGift         SupportGift?
-  supportTransactions SupportTransaction[]
+  user                 User                  @relation(fields: [userId], references: [id])
+  products             Product[]
+  videos               Video[]
+  supportTiers         SupportTier[]
+  supportGoals         SupportGoal[]
+  supportGift          SupportGift?
+  supportTransactions  SupportTransaction[]
   supportSubscriptions SupportSubscription[]
-  podProviders        CreatorPodProvider[]
-  followers           CreatorFollow[]
-  guestbookEntries    CreatorGuestbook[]
-  discountCodes       DiscountCode[]
+  podProviders         CreatorPodProvider[]
+  followers            CreatorFollow[]
+  guestbookEntries     CreatorGuestbook[]
+  discountCodes        DiscountCode[]
+  commissionRequests   CommissionRequest[]
+  commissionQuotes     CommissionQuote[]
 }
 
 // ── POD Provider ──────────────────────────────────────────────────────────────
@@ -133,7 +146,7 @@ model CreatorProfile {
 model CreatorPodProvider {
   id                    String   @id @default(cuid())
   creatorId             String
-  name                  String   // PRINTIFY|PRINTFUL|MERCHIZE|CJ_DROPSHIPPING|GOOTEN|LOCAL_PRINT_SHOP|SELF_FULFILLED|OTHER
+  name                  String // PRINTIFY|PRINTFUL|MERCHIZE|CJ_DROPSHIPPING|GOOTEN|LOCAL_PRINT_SHOP|SELF_FULFILLED|OTHER
   customName            String?
   storeUrl              String?
   notes                 String?
@@ -153,71 +166,71 @@ model CreatorPodProvider {
 // ── Product ───────────────────────────────────────────────────────────────────
 
 model Product {
-  id               String   @id @default(cuid())
-  creatorId        String
-  title            String
-  description      String
-  price            Int
-  category         String
-  type             String   // DIGITAL | PHYSICAL | POD | COMMISSION
+  id                          String    @id @default(cuid())
+  creatorId                   String
+  title                       String
+  description                 String
+  price                       Int
+  category                    String
+  type                        String // DIGITAL | PHYSICAL | POD | COMMISSION
   // Commission-specific
-  commissionDepositPercent   Int?
+  commissionDepositPercent    Int?
   commissionRevisionsIncluded Int?
-  commissionTurnaroundDays   Int?
-  images           String   @default("[]")
-  digitalFile      String?
-  digitalFiles     String?  // JSON array of { key, filename, size, mime }
-  stock            Int?
-  isActive         Boolean  @default(true)
-  isPinned         Boolean  @default(false)
-  order            Int      @default(0)
+  commissionTurnaroundDays    Int?
+  images                      String    @default("[]")
+  digitalFile                 String?
+  digitalFiles                String? // JSON array of { key, filename, size, mime }
+  stock                       Int?
+  isActive                    Boolean   @default(true)
+  isPinned                    Boolean   @default(false)
+  order                       Int       @default(0)
   // POD fields
-  podProviderId    String?
-  baseCost         Int?
-  productionDays   Int?
-  shippingMY       Int?
-  shippingSG       Int?
-  shippingPH       Int?
-  shippingIntl     Int?
-  showProviderPublic Boolean @default(false)
-  podExternalUrl   String?
-  sizeVariants     String?  // JSON array of size strings
-  colorVariants    String?  // JSON array of {name, mockupImage}
-  trendingScore        Float    @default(0)
-  trendingVersion      Int      @default(1)
-  trendingUpdatedAt    DateTime?
-  manualBoost          Int      @default(0)
-  isTrendingSuppressed Boolean  @default(false)
-  reviewCount          Int      @default(0)
-  averageRating        Float    @default(0)
-  isPreOrder           Boolean  @default(false)
-  preOrderMessage      String?
-  preOrderReleaseAt    DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  podProviderId               String?
+  baseCost                    Int?
+  productionDays              Int?
+  shippingMY                  Int?
+  shippingSG                  Int?
+  shippingPH                  Int?
+  shippingIntl                Int?
+  showProviderPublic          Boolean   @default(false)
+  podExternalUrl              String?
+  sizeVariants                String? // JSON array of size strings
+  colorVariants               String? // JSON array of {name, mockupImage}
+  trendingScore               Float     @default(0)
+  trendingVersion             Int       @default(1)
+  trendingUpdatedAt           DateTime?
+  manualBoost                 Int       @default(0)
+  isTrendingSuppressed        Boolean   @default(false)
+  reviewCount                 Int       @default(0)
+  averageRating               Float     @default(0)
+  isPreOrder                  Boolean   @default(false)
+  preOrderMessage             String?
+  preOrderReleaseAt           DateTime?
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
 
-  creator             CreatorProfile       @relation(fields: [creatorId], references: [id])
-  podProvider         CreatorPodProvider?  @relation(fields: [podProviderId], references: [id])
-  orders              Order[]
-  wishlistItems       WishlistItem[]
-  cartItems           CartItem[]
-  views               ProductView[]
-  trendingScoreRecord ProductTrendingScore?
+  creator               CreatorProfile          @relation(fields: [creatorId], references: [id])
+  podProvider           CreatorPodProvider?     @relation(fields: [podProviderId], references: [id])
+  orders                Order[]
+  wishlistItems         WishlistItem[]
+  cartItems             CartItem[]
+  views                 ProductView[]
+  trendingScoreRecord   ProductTrendingScore?
   sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
   targetRecommendations ProductRecommendation[] @relation("TargetProduct")
-  reviews             ProductReview[]
-  discountCodes       DiscountCode[]
+  reviews               ProductReview[]
+  discountCodes         DiscountCode[]
 }
 
 // ── Product View Tracking ──────────────────────────────────────────────────────
 
 model ProductView {
-  id         String   @id @default(cuid())
-  productId  String
-  sessionId  String
-  userId     String?
-  ipAddress  String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  productId String
+  sessionId String
+  userId    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -233,7 +246,7 @@ model ProductTrendingScore {
   productId    String   @unique
   version      Int
   score        Float
-  breakdown    String   // JSON: { orders_7d, wishlist_7d, cart_7d, views_7d, raw, decay_applied, manualBoost, final, version }
+  breakdown    String // JSON: { orders_7d, wishlist_7d, cart_7d, views_7d, raw, decay_applied, manualBoost, final, version }
   calculatedAt DateTime @default(now())
 
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -273,9 +286,9 @@ model ProductReview {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now())
 
-  product Product  @relation(fields: [productId], references: [id])
-  order   Order?   @relation(fields: [orderId], references: [id])
-  buyer   User     @relation(fields: [buyerId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+  order   Order?  @relation(fields: [orderId], references: [id])
+  buyer   User    @relation(fields: [buyerId], references: [id])
 
   @@unique([productId, buyerId])
   @@index([productId, createdAt])
@@ -292,8 +305,8 @@ model CreatorGuestbook {
   isVisible        Boolean  @default(false)
   createdAt        DateTime @default(now())
 
-  creatorProfile   CreatorProfile @relation(fields: [creatorProfileId], references: [id])
-  author           User           @relation(fields: [authorId], references: [id])
+  creatorProfile CreatorProfile @relation(fields: [creatorProfileId], references: [id])
+  author         User           @relation(fields: [authorId], references: [id])
 
   @@index([creatorProfileId, createdAt])
   @@index([authorId])
@@ -302,91 +315,96 @@ model CreatorGuestbook {
 // ── Order ─────────────────────────────────────────────────────────────────────
 
 model Order {
-  id                       String    @id @default(cuid())
-  buyerId                  String
-  creatorId                String
-  productId                String
-  status                   String    @default("PENDING")
-  amountUsd                Int
-  displayCurrency          String    @default("USD")
-  displayAmount            Int       @default(0)
-  exchangeRate             Float     @default(1.0)
-  exchangeRateAt           DateTime?
-  cartSessionId            String?
-  airwallexIntentId        String?
-  trackingNumber           String?
-  courierName              String?
-  courierCode              String?
-  trackingAddedAt          DateTime?
-  estimatedDelivery        DateTime?
-  shippingAddress          String?
-  downloadToken            String?
-  downloadExpiry           DateTime?
+  id                             String    @id @default(cuid())
+  buyerId                        String
+  creatorId                      String
+  productId                      String
+  status                         String    @default("PENDING")
+  amountUsd                      Int
+  displayCurrency                String    @default("USD")
+  displayAmount                  Int       @default(0)
+  exchangeRate                   Float     @default(1.0)
+  exchangeRateAt                 DateTime?
+  cartSessionId                  String?
+  airwallexIntentId              String?
+  trackingNumber                 String?
+  courierName                    String?
+  courierCode                    String?
+  trackingAddedAt                DateTime?
+  estimatedDelivery              DateTime?
+  shippingAddress                String?
+  downloadToken                  String?
+  downloadExpiry                 DateTime?
   // Escrow
-  escrowStatus             String    @default("HELD")  // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
-  escrowHeldAt             DateTime?
-  escrowReleasedAt         DateTime?
-  escrowAutoReleaseAt      DateTime?
-  fulfillmentDeadline      DateTime?
-  fulfillmentWarningsSent  Int       @default(0)
-  buyerConfirmedAt         DateTime?
-  discountCodeId           String?
-  discountAmount           Int       @default(0)
+  escrowStatus                   String    @default("HELD") // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
+  escrowHeldAt                   DateTime?
+  escrowReleasedAt               DateTime?
+  escrowAutoReleaseAt            DateTime?
+  fulfillmentDeadline            DateTime?
+  fulfillmentWarningsSent        Int       @default(0)
+  buyerConfirmedAt               DateTime?
+  discountCodeId                 String?
+  discountAmount                 Int       @default(0)
   // Commission fields
-  commissionStatus           String?   // PENDING_ACCEPTANCE|ACCEPTED|DELIVERED|REVISION_REQUESTED|COMPLETED
-  commissionBriefText        String?
-  commissionReferenceImages  String?   // JSON array of URLs
-  commissionDepositPercent   Int?      // snapshot at order time
-  commissionDepositAmount    Int?      // cents
-  commissionRevisionsAllowed Int?      // snapshot
-  commissionRevisionsUsed    Int       @default(0)
-  commissionAcceptedAt       DateTime?
-  commissionDeliveredAt      DateTime?
-  commissionDeliveryFiles    String?   // JSON array of URLs
-  commissionAcceptDeadlineAt    DateTime? // 48h from order creation
-  commissionBuyerAcceptedAt     DateTime?
-  commissionDepositConsentAt    DateTime? // when buyer consented to deposit release at checkout
+  commissionStatus               String? // PENDING_ACCEPTANCE|ACCEPTED|DELIVERED|REVISION_REQUESTED|COMPLETED
+  commissionBriefText            String?
+  commissionReferenceImages      String? // JSON array of URLs
+  commissionDepositPercent       Int? // snapshot at order time
+  commissionDepositAmount        Int? // cents
+  commissionRevisionsAllowed     Int? // snapshot
+  commissionRevisionsUsed        Int       @default(0)
+  commissionAcceptedAt           DateTime?
+  commissionDeliveredAt          DateTime?
+  commissionDeliveryFiles        String? // JSON array of URLs
+  commissionAcceptDeadlineAt     DateTime? // 48h from order creation
+  commissionBuyerAcceptedAt      DateTime?
+  commissionDepositConsentAt     DateTime? // when buyer consented to deposit release at checkout
   commissionDepositAutoReleaseAt DateTime? // 48h after creator acceptance + new creator modifier
-  commissionDepositReleasedAt   DateTime? // when deposit portion was actually released to creator
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  commissionDepositReleasedAt    DateTime? // when deposit portion was actually released to creator
+  // Quote-based commissions (Lane B + C)
+  commissionQuoteId              String?   @unique // if this Order came from an accepted CommissionQuote
+  commissionIsMilestoneBased     Boolean   @default(false)
+  createdAt                      DateTime  @default(now())
+  updatedAt                      DateTime  @updatedAt
 
-  buyer             User               @relation("BuyerOrders", fields: [buyerId], references: [id])
-  creator           User               @relation("CreatorOrders", fields: [creatorId], references: [id])
-  product           Product            @relation(fields: [productId], references: [id])
-  transactions      Transaction[]
-  messages          Message[]
-  invoices          Invoice[]
-  dispute           Dispute?
+  buyer              User                  @relation("BuyerOrders", fields: [buyerId], references: [id])
+  creator            User                  @relation("CreatorOrders", fields: [creatorId], references: [id])
+  product            Product               @relation(fields: [productId], references: [id])
+  transactions       Transaction[]
+  messages           Message[]
+  invoices           Invoice[]
+  dispute            Dispute?
   escrowTransactions EscrowTransaction[]
-  review            ProductReview?
-  discountCode      DiscountCode?      @relation(fields: [discountCodeId], references: [id])
-  chargebacks       ChargebackDispute[]
+  review             ProductReview?
+  discountCode       DiscountCode?         @relation(fields: [discountCodeId], references: [id])
+  chargebacks        ChargebackDispute[]
+  commissionQuote    CommissionQuote?      @relation(fields: [commissionQuoteId], references: [id])
+  milestones         CommissionMilestone[]
 }
 
 // ── Dispute ───────────────────────────────────────────────────────────────────
 
 model Dispute {
-  id                  String    @id @default(cuid())
-  orderId             String    @unique
-  raisedBy            String
-  reason              String    // NEVER_ARRIVED|WRONG_ITEM|PRINT_QUALITY|WRONG_SIZE|DAMAGED|OTHER
-  description         String
-  evidence            String    @default("[]")  // JSON array of image URLs
-  creatorResponse     String?
-  creatorEvidence     String?   // JSON array
-  creatorRespondedAt  DateTime?
-  status              String    @default("OPEN")  // OPEN|UNDER_REVIEW|RESOLVED_REFUND|RESOLVED_RELEASE|CLOSED
-  adminNote           String?
-  resolvedBy          String?
-  resolvedAt          DateTime?
-  refundAmount        Int?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  orderId            String    @unique
+  raisedBy           String
+  reason             String // NEVER_ARRIVED|WRONG_ITEM|PRINT_QUALITY|WRONG_SIZE|DAMAGED|OTHER
+  description        String
+  evidence           String    @default("[]") // JSON array of image URLs
+  creatorResponse    String?
+  creatorEvidence    String? // JSON array
+  creatorRespondedAt DateTime?
+  status             String    @default("OPEN") // OPEN|UNDER_REVIEW|RESOLVED_REFUND|RESOLVED_RELEASE|CLOSED
+  adminNote          String?
+  resolvedBy         String?
+  resolvedAt         DateTime?
+  refundAmount       Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  order        Order  @relation(fields: [orderId], references: [id])
-  raiser       User   @relation("DisputeRaisedBy", fields: [raisedBy], references: [id])
-  resolver     User?  @relation("DisputeResolvedBy", fields: [resolvedBy], references: [id])
+  order    Order @relation(fields: [orderId], references: [id])
+  raiser   User  @relation("DisputeRaisedBy", fields: [raisedBy], references: [id])
+  resolver User? @relation("DisputeResolvedBy", fields: [resolvedBy], references: [id])
 }
 
 // ── Escrow Transaction ────────────────────────────────────────────────────────
@@ -394,14 +412,16 @@ model Dispute {
 model EscrowTransaction {
   id          String   @id @default(cuid())
   orderId     String
-  type        String   // HOLD|RELEASE|REFUND|PARTIAL_REFUND|ADMIN_RELEASE
+  milestoneId String?
+  type        String // HOLD|RELEASE|REFUND|PARTIAL_REFUND|ADMIN_RELEASE|MILESTONE_RELEASE
   amount      Int
   note        String?
   performedBy String?
   createdAt   DateTime @default(now())
 
-  order     Order  @relation(fields: [orderId], references: [id])
-  performer User?  @relation(fields: [performedBy], references: [id])
+  order     Order                @relation(fields: [orderId], references: [id])
+  performer User?                @relation(fields: [performedBy], references: [id])
+  milestone CommissionMilestone? @relation(fields: [milestoneId], references: [id])
 }
 
 // ── Notification ──────────────────────────────────────────────────────────────
@@ -409,7 +429,7 @@ model EscrowTransaction {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // NEW_ORDER|FULFILLMENT_REMINDER|FULFILLMENT_WARNING|FULFILLMENT_FINAL_WARNING|ORDER_CANCELLED|ESCROW_RELEASED|NEW_MESSAGE|DISPUTE_RAISED|DISPUTE_RESOLVED|PAYOUT_PROCESSED|ORDER_CONFIRMED|ORDER_SHIPPED|DOWNLOAD_READY|REFUND_ISSUED
+  type      String // NEW_ORDER|FULFILLMENT_REMINDER|FULFILLMENT_WARNING|FULFILLMENT_FINAL_WARNING|ORDER_CANCELLED|ESCROW_RELEASED|NEW_MESSAGE|DISPUTE_RAISED|DISPUTE_RESOLVED|PAYOUT_PROCESSED|ORDER_CONFIRMED|ORDER_SHIPPED|DOWNLOAD_READY|REFUND_ISSUED
   title     String
   message   String
   orderId   String?
@@ -441,20 +461,20 @@ model Transaction {
 }
 
 model Payout {
-  id                String    @id @default(cuid())
-  creatorId         String
-  amountUsd         Int
-  currency          String    @default("USD")
-  status            String    @default("PENDING")
-  airwallexPayoutId String?
-  requestedAt       DateTime  @default(now())
-  completedAt       DateTime?
-  processedAt       DateTime?
-  rejectedAt        DateTime?
-  rejectionReason   String?
-  adminNote         String?
-  payoutMethod      String  @default("bank_transfer")
-  accountDetails    String?
+  id                  String    @id @default(cuid())
+  creatorId           String
+  amountUsd           Int
+  currency            String    @default("USD")
+  status              String    @default("PENDING")
+  airwallexPayoutId   String?
+  requestedAt         DateTime  @default(now())
+  completedAt         DateTime?
+  processedAt         DateTime?
+  rejectedAt          DateTime?
+  rejectionReason     String?
+  adminNote           String?
+  payoutMethod        String    @default("bank_transfer")
+  accountDetails      String?
   airwallexTransferId String?
   failureReason       String?
 
@@ -478,13 +498,13 @@ model Invoice {
 }
 
 model Message {
-  id          String   @id @default(cuid())
-  senderId    String
-  receiverId  String
-  orderId     String?
-  content     String
-  imageUrl    String?
-  attachments String   @default("[]") // JSON: [{url, type, name, size}]
+  id           String   @id @default(cuid())
+  senderId     String
+  receiverId   String
+  orderId      String?
+  content      String
+  imageUrl     String?
+  attachments  String   @default("[]") // JSON: [{url, type, name, size}]
   isRead       Boolean  @default(false)
   displayOrder Int      @default(0)
   createdAt    DateTime @default(now())
@@ -652,7 +672,7 @@ model SupportTransaction {
   id                String   @id @default(cuid())
   creatorId         String
   supporterId       String?
-  type              String   // GIFT | GOAL | TIER | MONTHLY_GIFT
+  type              String // GIFT | GOAL | TIER | MONTHLY_GIFT
   amountUsd         Int
   currency          String   @default("USD")
   tierId            String?
@@ -667,9 +687,9 @@ model SupportTransaction {
   creatorAmount     Int      @default(0)
   createdAt         DateTime @default(now())
 
-  creator      CreatorProfile        @relation(fields: [creatorId], references: [id])
-  supporter    User?                 @relation("SupporterUser", fields: [supporterId], references: [id])
-  subscription SupportSubscription?  @relation(fields: [subscriptionId], references: [id])
+  creator      CreatorProfile       @relation(fields: [creatorId], references: [id])
+  supporter    User?                @relation("SupporterUser", fields: [supporterId], references: [id])
+  subscription SupportSubscription? @relation(fields: [subscriptionId], references: [id])
 
   @@index([creatorId, createdAt])
   @@index([airwallexIntentId])
@@ -680,7 +700,7 @@ model SupportSubscription {
   supporterId               String
   creatorId                 String
   tierId                    String?
-  type                      String    // TIER | MONTHLY_GIFT
+  type                      String // TIER | MONTHLY_GIFT
   amountUsd                 Int
   currency                  String    @default("USD")
   status                    String    @default("PENDING") // PENDING | ACTIVE | PAST_DUE | CANCELED
@@ -722,18 +742,18 @@ model PopupAd {
 }
 
 model PlatformSettings {
-  id                             String @id @default(cuid())
-  processingFeePercent           Float  @default(2.5)
-  platformFeePercent             Float  @default(0.0)
-  withdrawalFeePercent           Float  @default(4.0)
-  topCreatorThreshold            Int    @default(100)
+  id                             String  @id @default(cuid())
+  processingFeePercent           Float   @default(2.5)
+  platformFeePercent             Float   @default(0.0)
+  withdrawalFeePercent           Float   @default(4.0)
+  topCreatorThreshold            Int     @default(100)
   // Escrow policy
-  digitalEscrowHours             Int    @default(48)
-  physicalEscrowDays             Int    @default(14)
-  podEscrowDays                  Int    @default(30)
-  commissionEscrowDays           Int    @default(30)
-  newCreatorEscrowExtraDays      Int    @default(7)
-  newCreatorTransactionThreshold Int    @default(10)
+  digitalEscrowHours             Int     @default(48)
+  physicalEscrowDays             Int     @default(14)
+  podEscrowDays                  Int     @default(30)
+  commissionEscrowDays           Int     @default(30)
+  newCreatorEscrowExtraDays      Int     @default(7)
+  newCreatorTransactionThreshold Int     @default(10)
   maintenanceMode                Boolean @default(false)
   maintenanceMessage             String?
 }
@@ -773,10 +793,10 @@ model CartItem {
 model DiscountCode {
   id                 String    @id @default(cuid())
   code               String    @unique
-  type               String    // PERCENTAGE | FIXED_AMOUNT
-  value              Int       // percentage (0-100) or cents
-  minimumOrderAmount Int?      // cents, optional
-  maxUses            Int?      // null = unlimited
+  type               String // PERCENTAGE | FIXED_AMOUNT
+  value              Int // percentage (0-100) or cents
+  minimumOrderAmount Int? // cents, optional
+  maxUses            Int? // null = unlimited
   usedCount          Int       @default(0)
   expiresAt          DateTime?
   isActive           Boolean   @default(true)
@@ -784,9 +804,9 @@ model DiscountCode {
   productId          String?
   createdAt          DateTime  @default(now())
 
-  creator  CreatorProfile @relation(fields: [creatorId], references: [id])
-  product  Product?       @relation(fields: [productId], references: [id])
-  orders   Order[]
+  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+  product Product?       @relation(fields: [productId], references: [id])
+  orders  Order[]
 }
 
 // ── Wishlist ──────────────────────────────────────────────────────────────────
@@ -823,7 +843,6 @@ model CreatorFollow {
   @@unique([buyerId, creatorId])
 }
 
-
 // ── Email Log ─────────────────────────────────────────────────────────────────
 
 model EmailLog {
@@ -851,24 +870,31 @@ model PasswordResetToken {
 // ── Storage ───────────────────────────────────────────────────────────────────
 
 model StoragePricingConfig {
-  id                   String   @id @default("config")
-  freePlanMb           Int      @default(500)
-  proPlanGb            Int      @default(5)
-  proPlanPriceCents    Int      @default(999)
-  studioPlanGb         Int      @default(20)
-  studioPlanPriceCents Int      @default(1999)
-  topup1gbCents        Int      @default(299)
-  topup5gbCents        Int      @default(999)
-  topup10gbCents       Int      @default(1799)
-  warningThreshold1    Int      @default(80)
-  warningThreshold2    Int      @default(95)
-  gracePeriodDays      Int      @default(7)
-  orphanAgeDays        Int      @default(30)
-  deleteWarningHours   Int      @default(48)
-  feeGraceDays         Int      @default(7)
-  feePayoutBlockDays   Int      @default(14)
-  feeSuspendDays       Int      @default(30)
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @default("config")
+  freePlanMb            Int      @default(2048) // 2GB
+  // New tier names (current policy)
+  creatorPlanGb         Int      @default(25)
+  creatorPlanPriceCents Int      @default(690) // $6.90/mo
+  // proPlanGb/proPlanPriceCents repurposed: now the top tier (was 5GB @ $9.99 in v1)
+  proPlanGb             Int      @default(100)
+  proPlanPriceCents     Int      @default(1490) // $14.90/mo
+  overageCentsPerGb     Int      @default(8) // $0.08/GB soft overage
+  overageGracePercent   Int      @default(10) // grace before overage kicks in
+  // Legacy columns (v1 tiers + top-ups) kept for data preservation; no longer read by app
+  studioPlanGb          Int      @default(20)
+  studioPlanPriceCents  Int      @default(1999)
+  topup1gbCents         Int      @default(299)
+  topup5gbCents         Int      @default(999)
+  topup10gbCents        Int      @default(1799)
+  warningThreshold1     Int      @default(80)
+  warningThreshold2     Int      @default(95)
+  gracePeriodDays       Int      @default(7)
+  orphanAgeDays         Int      @default(30)
+  deleteWarningHours    Int      @default(48)
+  feeGraceDays          Int      @default(7)
+  feePayoutBlockDays    Int      @default(14)
+  feeSuspendDays        Int      @default(30)
+  updatedAt             DateTime @updatedAt
 }
 
 model StoragePurchase {
@@ -880,11 +906,126 @@ model StoragePurchase {
   createdAt   DateTime @default(now())
 }
 
+model StorageSubscription {
+  id                        String    @id @default(cuid())
+  userId                    String    @unique
+  plan                      String // CREATOR | PRO
+  priceCents                Int
+  status                    String    @default("PENDING") // PENDING | ACTIVE | PAST_DUE | CANCELED
+  airwallexCustomerId       String
+  airwallexPaymentConsentId String?
+  airwallexInitialIntentId  String?
+  currentPeriodStart        DateTime?
+  currentPeriodEnd          DateTime?
+  cancelAtPeriodEnd         Boolean   @default(false)
+  canceledAt                DateTime?
+  failedChargeCount         Int       @default(0)
+  lastChargedAt             DateTime?
+  nextRetryAt               DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([status, currentPeriodEnd])
+}
+
+// ── Commission Requests & Quotes ──────────────────────────────────────────────
+
+model CommissionRequest {
+  id                String    @id @default(cuid())
+  buyerId           String
+  creatorId         String // CreatorProfile.id
+  title             String
+  briefText         String
+  referenceImages   String    @default("[]") // JSON array of URLs
+  budgetMinUsd      Int?
+  budgetMaxUsd      Int?
+  deadlineAt        DateTime?
+  status            String    @default("PENDING") // PENDING | QUOTED | ACCEPTED | DECLINED | WITHDRAWN | EXPIRED
+  declineReason     String?
+  creatorResponseAt DateTime?
+  expiresAt         DateTime // 7 days default
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  buyer   User              @relation("BuyerCommissionRequests", fields: [buyerId], references: [id])
+  creator CreatorProfile    @relation(fields: [creatorId], references: [id])
+  quotes  CommissionQuote[]
+
+  @@index([buyerId, status])
+  @@index([creatorId, status])
+  @@index([status, expiresAt])
+}
+
+model CommissionQuote {
+  id                String    @id @default(cuid())
+  requestId         String? // nullable — creator may send standalone quote
+  creatorId         String // CreatorProfile.id
+  buyerId           String
+  title             String
+  description       String
+  amountUsd         Int
+  depositPercent    Int       @default(0)
+  revisionsIncluded Int       @default(1)
+  turnaroundDays    Int
+  termsText         String?
+  isMilestoneBased  Boolean   @default(false)
+  status            String    @default("DRAFT") // DRAFT | SENT | ACCEPTED | REJECTED | EXPIRED | WITHDRAWN
+  expiresAt         DateTime // 7d from SENT
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  request    CommissionRequest?    @relation(fields: [requestId], references: [id])
+  creator    CreatorProfile        @relation(fields: [creatorId], references: [id])
+  buyer      User                  @relation("BuyerCommissionQuotes", fields: [buyerId], references: [id])
+  milestones CommissionMilestone[]
+  order      Order? // set when buyer accepts + pays
+
+  @@index([creatorId, status])
+  @@index([buyerId, status])
+  @@index([status, expiresAt])
+}
+
+model CommissionMilestone {
+  id               String    @id @default(cuid())
+  quoteId          String
+  orderId          String? // populated when quote accepted → Order created
+  order            Int       @default(0) // sequence
+  title            String
+  description      String?
+  amountUsd        Int
+  status           String    @default("PENDING") // PENDING | IN_PROGRESS | DELIVERED | APPROVED | REVISION_REQUESTED | COMPLETED | REFUNDED
+  deliveredAt      DateTime?
+  deliveryFiles    String? // JSON array of { key, filename, size, mime }
+  deliveryNote     String?
+  approvedAt       DateTime?
+  revisionNote     String?
+  autoReleaseAt    DateTime? // 14 days after delivery
+  releasedAt       DateTime?
+  revisionsUsed    Int       @default(0)
+  revisionsAllowed Int       @default(1)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  quote         CommissionQuote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  orderRef      Order?              @relation(fields: [orderId], references: [id])
+  escrowEntries EscrowTransaction[]
+
+  @@index([quoteId, order])
+  @@index([orderId, status])
+  @@index([status, autoReleaseAt])
+}
+
 // ── Creator Onboarding ────────────────────────────────────────────────────────
 
 model AgreementTemplate {
   id            String    @id @default(cuid())
-  type          String    // CREATOR_TOS|IP_DECLARATION|PAYMENT_TERMS|PRIVACY_POLICY|COMMUNITY_GUIDELINES
+  type          String // CREATOR_TOS|IP_DECLARATION|PAYMENT_TERMS|PRIVACY_POLICY|COMMUNITY_GUIDELINES
   version       String
   title         String
   content       String
@@ -896,7 +1037,7 @@ model AgreementTemplate {
   createdAt     DateTime  @default(now())
   publishedAt   DateTime?
 
-  agreements    CreatorAgreement[]
+  agreements CreatorAgreement[]
 }
 
 model CreatorAgreement {
@@ -918,40 +1059,40 @@ model CreatorAgreement {
 }
 
 model CreatorApplication {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  status            String    @default("DRAFT") // DRAFT|SUBMITTED|UNDER_REVIEW|APPROVED|REJECTED
-  displayName       String    @default("")
-  username          String    @default("")
-  bio               String    @default("")
-  categoryTags      String    @default("[]")
-  legalFullName     String    @default("")
-  dateOfBirth       DateTime?
-  nationality       String    @default("")
-  country           String    @default("")
-  phone             String    @default("")
-  idType            String    @default("IC")    // IC|PASSPORT
-  idNumber              String    @default("")
-  idOtherDescription    String    @default("")
-  idFrontImage      String?
-  idBackImage       String?
-  selfieImage       String?
-  kycCompleted      Boolean   @default(false)
-  bankCountryCode   String    @default("")
-  bankCurrency      String    @default("")
-  bankAccountName   String    @default("")
-  bankName          String    @default("")
-  bankCode          String    @default("")
-  bankAccountNumber String    @default("")
-  bankRoutingCode   String    @default("")
-  paypalEmail       String?
-  adminNote         String?
-  rejectionReason   String?
-  submittedAt       DateTime?
-  reviewedAt        DateTime?
-  reviewedBy        String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  status             String    @default("DRAFT") // DRAFT|SUBMITTED|UNDER_REVIEW|APPROVED|REJECTED
+  displayName        String    @default("")
+  username           String    @default("")
+  bio                String    @default("")
+  categoryTags       String    @default("[]")
+  legalFullName      String    @default("")
+  dateOfBirth        DateTime?
+  nationality        String    @default("")
+  country            String    @default("")
+  phone              String    @default("")
+  idType             String    @default("IC") // IC|PASSPORT
+  idNumber           String    @default("")
+  idOtherDescription String    @default("")
+  idFrontImage       String?
+  idBackImage        String?
+  selfieImage        String?
+  kycCompleted       Boolean   @default(false)
+  bankCountryCode    String    @default("")
+  bankCurrency       String    @default("")
+  bankAccountName    String    @default("")
+  bankName           String    @default("")
+  bankCode           String    @default("")
+  bankAccountNumber  String    @default("")
+  bankRoutingCode    String    @default("")
+  paypalEmail        String?
+  adminNote          String?
+  rejectionReason    String?
+  submittedAt        DateTime?
+  reviewedAt         DateTime?
+  reviewedBy         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 }
@@ -978,7 +1119,7 @@ model StaffUser {
 
 model StaffPermission {
   id          String   @id @default(cuid())
-  shortcode   String   @unique  // format: component.action e.g. "creators.suspend"
+  shortcode   String   @unique // format: component.action e.g. "creators.suspend"
   displayName String
   description String?
   component   String
@@ -990,10 +1131,10 @@ model StaffPermission {
 }
 
 model StaffUserPermission {
-  id                String          @id @default(cuid())
+  id                String    @id @default(cuid())
   staffUserId       String
   staffPermissionId String
-  assignedAt        DateTime        @default(now())
+  assignedAt        DateTime  @default(now())
   assignedById      String?
   expiresAt         DateTime?
 
@@ -1055,7 +1196,7 @@ model ChargebackDispute {
   paymentIntentId    String
   amountUsd          Int
   currency           String    @default("USD")
-  reason             String    // FRAUD|DUPLICATE|PRODUCT_NOT_RECEIVED|CREDIT_NOT_PROCESSED|GENERAL
+  reason             String // FRAUD|DUPLICATE|PRODUCT_NOT_RECEIVED|CREDIT_NOT_PROCESSED|GENERAL
   status             String    @default("OPEN") // OPEN|UNDER_REVIEW|WON|LOST|CANCELLED
   evidenceDeadline   DateTime?
   adminNotes         String?
@@ -1070,9 +1211,9 @@ model ChargebackDispute {
 
 model FraudFlag {
   id          String    @id @default(cuid())
-  type        String    // VELOCITY|AMOUNT_THRESHOLD|CHARGEBACK_PATTERN|MANUAL
+  type        String // VELOCITY|AMOUNT_THRESHOLD|CHARGEBACK_PATTERN|MANUAL
   severity    String    @default("MEDIUM") // LOW|MEDIUM|HIGH|CRITICAL
-  status      String    @default("OPEN")   // OPEN|REVIEWED|DISMISSED|ACTIONED
+  status      String    @default("OPEN") // OPEN|REVIEWED|DISMISSED|ACTIONED
   description String
   orderId     String?
   userId      String?

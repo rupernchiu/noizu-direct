@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getUserQuota } from '@/lib/storage-quota'
 
 export interface StorageFile {
   id: string
@@ -119,14 +120,18 @@ export async function GET() {
   })
 
   const totalBytes = files.reduce((s, f) => s + f.fileSize, 0)
-  const quotaBytes = (config?.freePlanMb ?? 500) * 1024 * 1024
-  const usagePercent = quotaBytes > 0 ? Math.min(100, Math.round((totalBytes / quotaBytes) * 100)) : 0
+  const quota = await getUserQuota(userId)
+  const usagePercent = quota.quotaBytes > 0 ? Math.min(100, Math.round((totalBytes / quota.quotaBytes) * 100)) : 0
 
   return NextResponse.json({
     totalBytes,
-    quotaBytes,
+    quotaBytes: quota.quotaBytes,
+    baseBytes: quota.baseBytes,
+    bonusBytes: quota.bonusBytes,
+    hardLimitBytes: quota.hardLimitBytes,
+    overagePercent: quota.overagePercent,
     usagePercent,
-    plan: 'FREE' as const,
+    plan: quota.plan,
     files,
     breakdown: buildBreakdown(files),
     config: config ?? null,

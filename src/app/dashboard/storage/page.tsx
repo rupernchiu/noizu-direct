@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { StorageClient } from './StorageClient'
+import { getUserQuota } from '@/lib/storage-quota'
 import type { StorageFile, StorageBreakdown } from '@/app/api/creator/storage/route'
 
 export const metadata = { title: 'Storage Manager | noizu.direct' }
@@ -9,17 +10,18 @@ export const metadata = { title: 'Storage Manager | noizu.direct' }
 export default async function StoragePage() {
   const session = await auth()
   if (!session) redirect('/login')
-  const userId = (session.user as any).id as string
-  const email  = (session.user as any).email as string
+  const userId = (session.user as { id: string }).id
+  const email  = (session.user as { email: string }).email
 
-  // Fetch data directly on server
-  const [mediaFiles, creatorProfile, products] = await Promise.all([
+  const [mediaFiles, creatorProfile, products, config, quota] = await Promise.all([
     prisma.media.findMany({ where: { uploadedBy: userId }, orderBy: { createdAt: 'desc' } }),
     prisma.creatorProfile.findFirst({ where: { userId } }),
     prisma.product.findMany({
       where: { creator: { userId } },
       select: { id: true, title: true, images: true },
     }),
+    prisma.storagePricingConfig.findUnique({ where: { id: 'config' } }),
+    getUserQuota(userId),
   ])
 
   const messages = await prisma.message.findMany({
@@ -27,7 +29,6 @@ export default async function StoragePage() {
     select: { attachments: true, imageUrl: true },
   })
 
-  // Build reference maps
   const productImageMap = new Map<string, string>()
   for (const p of products) {
     try { (JSON.parse(p.images) as string[]).forEach(url => productImageMap.set(url, p.title)) } catch {}
@@ -69,29 +70,28 @@ export default async function StoragePage() {
   }, {} as StorageBreakdown)
 
   const totalBytes   = files.reduce((s, f) => s + f.fileSize, 0)
-  const quotaBytes   = 500 * 1024 * 1024
-  const usagePercent = quotaBytes > 0 ? Math.min(100, Math.round((totalBytes / quotaBytes) * 100)) : 0
+  const usagePercent = quota.quotaBytes > 0 ? Math.min(100, Math.round((totalBytes / quota.quotaBytes) * 100)) : 0
 
   return (
     <StorageClient
       initialFiles={files}
       breakdown={breakdown}
       totalBytes={totalBytes}
-      quotaBytes={quotaBytes}
+      quotaBytes={quota.quotaBytes}
       usagePercent={usagePercent}
-      plan="FREE"
+      plan={quota.plan as 'FREE' | 'CREATOR' | 'PRO'}
+      bonusBytes={quota.bonusBytes}
       config={{
-        freePlanMb:           500,
-        proPlanGb:            5,
-        proPlanPriceCents:    999,
-        studioPlanGb:         20,
-        studioPlanPriceCents: 1999,
-        topup1gbCents:        299,
-        topup5gbCents:        999,
-        topup10gbCents:       1799,
-        gracePeriodDays:      7,
-        warningThreshold1:    80,
-        warningThreshold2:    95,
+        freePlanMb:            config?.freePlanMb ?? 2048,
+        creatorPlanGb:         config?.creatorPlanGb ?? 25,
+        creatorPlanPriceCents: config?.creatorPlanPriceCents ?? 690,
+        proPlanGb:             config?.proPlanGb ?? 100,
+        proPlanPriceCents:     config?.proPlanPriceCents ?? 1490,
+        overageCentsPerGb:     config?.overageCentsPerGb ?? 8,
+        overageGracePercent:   quota.overagePercent,
+        gracePeriodDays:       config?.gracePeriodDays ?? 7,
+        warningThreshold1:     config?.warningThreshold1 ?? 80,
+        warningThreshold2:     config?.warningThreshold2 ?? 95,
       }}
       userEmail={email}
     />
