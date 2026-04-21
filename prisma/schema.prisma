@@ -33,8 +33,11 @@ model User {
   agreementsLastCheckedAt   DateTime?
   agreementSkipCount        Int       @default(0)
   legalFullName             String?
+  airwallexCustomerId       String?
 
   creatorProfile      CreatorProfile?
+  supportSubscriptions SupportSubscription[] @relation("SupportSubscriber")
+  supportTransactions  SupportTransaction[]  @relation("SupporterUser")
   buyerOrders         Order[]              @relation("BuyerOrders")
   creatorOrders       Order[]              @relation("CreatorOrders")
   sentMessages        Message[]            @relation("SentMessages")
@@ -118,6 +121,7 @@ model CreatorProfile {
   supportGoals        SupportGoal[]
   supportGift         SupportGift?
   supportTransactions SupportTransaction[]
+  supportSubscriptions SupportSubscription[]
   podProviders        CreatorPodProvider[]
   followers           CreatorFollow[]
   guestbookEntries    CreatorGuestbook[]
@@ -610,7 +614,8 @@ model SupportTier {
   order           Int      @default(0)
   createdAt       DateTime @default(now())
 
-  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+  creator       CreatorProfile        @relation(fields: [creatorId], references: [id])
+  subscriptions SupportSubscription[]
 }
 
 model SupportGoal {
@@ -644,19 +649,62 @@ model SupportGift {
 }
 
 model SupportTransaction {
-  id          String   @id @default(cuid())
-  creatorId   String
-  supporterId String?
-  type        String
-  amountUsd   Int
-  tierId      String?
-  goalId      String?
-  message     String?
-  isAnonymous Boolean  @default(false)
-  isMonthly   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id                String   @id @default(cuid())
+  creatorId         String
+  supporterId       String?
+  type              String   // GIFT | GOAL | TIER | MONTHLY_GIFT
+  amountUsd         Int
+  currency          String   @default("USD")
+  tierId            String?
+  goalId            String?
+  subscriptionId    String?
+  message           String?
+  isAnonymous       Boolean  @default(false)
+  isMonthly         Boolean  @default(false)
+  status            String   @default("PAID") // PENDING | PAID | FAILED | REFUNDED
+  airwallexIntentId String?
+  processingFee     Int      @default(0)
+  creatorAmount     Int      @default(0)
+  createdAt         DateTime @default(now())
 
-  creator CreatorProfile @relation(fields: [creatorId], references: [id])
+  creator      CreatorProfile        @relation(fields: [creatorId], references: [id])
+  supporter    User?                 @relation("SupporterUser", fields: [supporterId], references: [id])
+  subscription SupportSubscription?  @relation(fields: [subscriptionId], references: [id])
+
+  @@index([creatorId, createdAt])
+  @@index([airwallexIntentId])
+}
+
+model SupportSubscription {
+  id                        String    @id @default(cuid())
+  supporterId               String
+  creatorId                 String
+  tierId                    String?
+  type                      String    // TIER | MONTHLY_GIFT
+  amountUsd                 Int
+  currency                  String    @default("USD")
+  status                    String    @default("PENDING") // PENDING | ACTIVE | PAST_DUE | CANCELED
+  airwallexCustomerId       String
+  airwallexPaymentConsentId String?
+  airwallexInitialIntentId  String?
+  currentPeriodStart        DateTime?
+  currentPeriodEnd          DateTime?
+  cancelAtPeriodEnd         Boolean   @default(false)
+  canceledAt                DateTime?
+  failedChargeCount         Int       @default(0)
+  lastChargedAt             DateTime?
+  nextRetryAt               DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  supporter    User                 @relation("SupportSubscriber", fields: [supporterId], references: [id])
+  creator      CreatorProfile       @relation(fields: [creatorId], references: [id])
+  tier         SupportTier?         @relation(fields: [tierId], references: [id])
+  transactions SupportTransaction[]
+
+  @@index([supporterId, status])
+  @@index([creatorId, status])
+  @@index([status, currentPeriodEnd])
 }
 
 model PopupAd {

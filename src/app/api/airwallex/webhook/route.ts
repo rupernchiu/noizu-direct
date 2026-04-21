@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
+import { listPaymentConsents } from '@/lib/airwallex'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 
@@ -190,6 +191,250 @@ async function handlePaymentFailed(intentId: string) {
     where: { airwallexIntentId: intentId, status: 'PENDING' },
     data: { status: 'CANCELLED' },
   })
+  // Support one-time: mark failed (no counter bumps)
+  await prisma.supportTransaction.updateMany({
+    where: { airwallexIntentId: intentId, status: 'PENDING' },
+    data: { status: 'FAILED' },
+  })
+  // Subscription first charge failure → leave in PENDING (never activated);
+  // for recurring renewals handled by handleSupportRenewalFailed.
+  await handleSupportRenewalFailed(intentId)
+}
+
+/**
+ * Support (gift / goal / tier / monthly gift) payment succeeded.
+ * Routes three distinct cases by the record the intentId matches:
+ *   1. SupportTransaction (one-time gift or goal)
+ *   2. SupportSubscription.airwallexInitialIntentId (first charge)
+ *   3. SupportTransaction tied to a subscription (recurring renewal)
+ * Returns true if this intent belonged to a support flow (so the caller skips
+ * the order/product handler).
+ */
+async function handleSupportPaymentSucceeded(intentId: string): Promise<boolean> {
+  // Case 2: subscription first-charge intent
+  const pendingSub = await prisma.supportSubscription.findFirst({
+    where: { airwallexInitialIntentId: intentId, status: 'PENDING' },
+  })
+  if (pendingSub) {
+    await activateSubscription(pendingSub.id, intentId, true)
+    return true
+  }
+
+  // Cases 1 + 3: claim the transaction atomically for idempotency
+  const claim = await prisma.supportTransaction.updateMany({
+    where: { airwallexIntentId: intentId, status: 'PENDING' },
+    data: { status: 'PAID' },
+  })
+  if (claim.count === 0) return false
+
+  const tx = await prisma.supportTransaction.findFirst({
+    where: { airwallexIntentId: intentId },
+    include: {
+      creator: { include: { user: { select: { email: true, name: true } } } },
+      supporter: { select: { email: true, name: true } },
+      subscription: true,
+    },
+  })
+  if (!tx) return false
+
+  const feeRate = await getProcessingFeeRate()
+  const processingFee = feeFromGross(tx.amountUsd + tx.processingFee, feeRate)
+  const creatorAmount = tx.amountUsd
+
+  await prisma.supportTransaction.update({
+    where: { id: tx.id },
+    data: { processingFee, creatorAmount },
+  })
+
+  // Update rollup counters
+  if (tx.type === 'GIFT') {
+    await prisma.supportGift.updateMany({
+      where: { creatorId: tx.creatorId },
+      data: {
+        totalReceived: { increment: creatorAmount },
+        giftCount: { increment: 1 },
+      },
+    })
+  }
+  if (tx.type === 'GOAL' && tx.goalId) {
+    const updated = await prisma.supportGoal.update({
+      where: { id: tx.goalId },
+      data: { currentAmountUsd: { increment: creatorAmount } },
+    })
+    if (updated.currentAmountUsd >= updated.targetAmountUsd && updated.status === 'ACTIVE') {
+      await prisma.supportGoal.update({ where: { id: tx.goalId }, data: { status: 'COMPLETED' } })
+    }
+  }
+  if ((tx.type === 'TIER' || tx.type === 'MONTHLY_GIFT') && tx.subscriptionId) {
+    // Recurring renewal — roll the period forward
+    await rollSubscriptionPeriod(tx.subscriptionId)
+  }
+
+  // Notify creator
+  await prisma.notification.create({
+    data: {
+      userId: tx.creator.userId,
+      type: 'NEW_ORDER',
+      title: tx.type === 'GIFT' ? 'You received a gift!' : tx.type === 'GOAL' ? 'New goal contribution' : 'Recurring support charged',
+      message: `$${(creatorAmount / 100).toFixed(2)} from ${tx.isAnonymous ? 'an anonymous supporter' : tx.supporter?.name ?? 'a supporter'}${tx.message ? `: "${tx.message}"` : ''}`,
+      actionUrl: '/dashboard/support',
+    },
+  }).catch(() => {})
+
+  return true
+}
+
+/**
+ * Activate a subscription after first charge succeeds.
+ * Looks up the PaymentConsent Airwallex created during the first-charge DropIn
+ * (we didn't know the consent ID at create-time) and stores it for future off-session charges.
+ */
+async function activateSubscription(subId: string, initialIntentId: string, createInitialTx: boolean) {
+  const sub = await prisma.supportSubscription.findUnique({
+    where: { id: subId },
+    include: { tier: true },
+  })
+  if (!sub || sub.status === 'ACTIVE') return
+
+  // Look up the saved PaymentConsent for this customer (best-effort)
+  let consentId: string | null = null
+  try {
+    const consents = await listPaymentConsents(sub.airwallexCustomerId)
+    // Pick the most recently-authorized one set up for merchant triggers
+    const merchant = consents.find(c => c.status === 'VERIFIED' && c.next_triggered_by === 'merchant')
+    consentId = merchant?.id ?? consents[0]?.id ?? null
+  } catch {
+    // Non-fatal — we'll retry on first renewal attempt
+  }
+
+  const now = new Date()
+  const currentPeriodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+  await prisma.supportSubscription.update({
+    where: { id: subId },
+    data: {
+      status: 'ACTIVE',
+      airwallexPaymentConsentId: consentId,
+      currentPeriodStart: now,
+      currentPeriodEnd,
+      lastChargedAt: now,
+      failedChargeCount: 0,
+      nextRetryAt: null,
+    },
+  })
+
+  // Bump tier subscriber count
+  if (sub.tierId) {
+    await prisma.supportTier.update({
+      where: { id: sub.tierId },
+      data: { subscriberCount: { increment: 1 } },
+    }).catch(() => {})
+  }
+  // For monthly gift, bump the gift monthly counters
+  if (sub.type === 'MONTHLY_GIFT') {
+    await prisma.supportGift.updateMany({
+      where: { creatorId: sub.creatorId },
+      data: { monthlyGifterCount: { increment: 1 } },
+    })
+  }
+
+  // Record the first transaction
+  if (createInitialTx) {
+    const feeRate = await getProcessingFeeRate()
+    const processingFee = feeFromGross(sub.amountUsd, feeRate)
+    await prisma.supportTransaction.create({
+      data: {
+        creatorId: sub.creatorId,
+        supporterId: sub.supporterId,
+        type: sub.type,
+        amountUsd: sub.amountUsd,
+        currency: sub.currency,
+        tierId: sub.tierId,
+        subscriptionId: sub.id,
+        status: 'PAID',
+        isMonthly: true,
+        airwallexIntentId: initialIntentId,
+        processingFee,
+        creatorAmount: sub.amountUsd - processingFee,
+      },
+    })
+  }
+}
+
+/**
+ * Advance a subscription's billing period after a successful renewal charge.
+ * Cron creates the transaction (already PAID), then we roll the window here.
+ */
+async function rollSubscriptionPeriod(subId: string) {
+  const sub = await prisma.supportSubscription.findUnique({ where: { id: subId } })
+  if (!sub) return
+  const now = new Date()
+  // If cancelAtPeriodEnd was set, this shouldn't have charged — but defensive: if it did, flip to CANCELED
+  if (sub.cancelAtPeriodEnd) {
+    await prisma.supportSubscription.update({
+      where: { id: subId },
+      data: { status: 'CANCELED', canceledAt: now },
+    })
+    return
+  }
+  const newEnd = new Date((sub.currentPeriodEnd ?? now).getTime() + 30 * 24 * 60 * 60 * 1000)
+  await prisma.supportSubscription.update({
+    where: { id: subId },
+    data: {
+      status: 'ACTIVE',
+      currentPeriodStart: sub.currentPeriodEnd ?? now,
+      currentPeriodEnd: newEnd,
+      lastChargedAt: now,
+      failedChargeCount: 0,
+      nextRetryAt: null,
+    },
+  })
+}
+
+/**
+ * Renewal charge failed — bump failure counter, schedule retry, or cancel.
+ * Dunning schedule: day 3 → day 7 → cancel.
+ */
+async function handleSupportRenewalFailed(intentId: string) {
+  const tx = await prisma.supportTransaction.findFirst({
+    where: { airwallexIntentId: intentId },
+  })
+  if (!tx || !tx.subscriptionId) return
+
+  await prisma.supportTransaction.update({
+    where: { id: tx.id },
+    data: { status: 'FAILED' },
+  })
+
+  const sub = await prisma.supportSubscription.findUnique({ where: { id: tx.subscriptionId } })
+  if (!sub) return
+
+  const nextFailureCount = sub.failedChargeCount + 1
+  const now = new Date()
+
+  if (nextFailureCount >= 3) {
+    await prisma.supportSubscription.update({
+      where: { id: sub.id },
+      data: { status: 'CANCELED', canceledAt: now, failedChargeCount: nextFailureCount, nextRetryAt: null },
+    })
+    if (sub.tierId) {
+      await prisma.supportTier.update({
+        where: { id: sub.tierId },
+        data: { subscriberCount: { decrement: 1 } },
+      }).catch(() => {})
+    }
+    return
+  }
+
+  const retryInDays = nextFailureCount === 1 ? 3 : 4
+  await prisma.supportSubscription.update({
+    where: { id: sub.id },
+    data: {
+      status: 'PAST_DUE',
+      failedChargeCount: nextFailureCount,
+      nextRetryAt: new Date(now.getTime() + retryInDays * 24 * 60 * 60 * 1000),
+    },
+  })
 }
 
 async function handleTransferSucceeded(transferId: string) {
@@ -367,7 +612,10 @@ export async function POST(req: NextRequest) {
 
   // Return 200 immediately; process async
   if (event.name === 'payment_intent.succeeded' && intentId) {
-    void handlePaymentSucceeded(intentId)
+    void (async () => {
+      const handled = await handleSupportPaymentSucceeded(intentId)
+      if (!handled) await handlePaymentSucceeded(intentId)
+    })()
   } else if (event.name === 'payment_intent.failed' && intentId) {
     void handlePaymentFailed(intentId)
   } else if (event.name === 'transfer.succeeded' && intentId) {

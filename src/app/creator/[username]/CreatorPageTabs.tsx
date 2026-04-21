@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SupportModal } from '@/components/support/SupportModal'
 import {
   ShopDiscovery, AboutDiscovery, CommissionDiscovery,
   PortfolioDiscovery, VideosDiscovery, SupportDiscovery,
@@ -438,12 +439,42 @@ export function CreatorPageTabs({
   const [shopSort, setShopSort]         = useState<'default' | 'popular'>('default')
   const [lightboxIdx, setLightboxIdx]   = useState<number | null>(null)
   const [loadedVideos, setLoadedVideos] = useState<Set<string>>(new Set())
-  const [comingSoon, setComingSoon]     = useState(false)
   const [giftMode, setGiftMode]         = useState<'onetime' | 'monthly'>('onetime')
   const [giftAmount, setGiftAmount]     = useState<number | null>(null)
   const [giftCustom, setGiftCustom]     = useState('')
   const [giftMsg, setGiftMsg]           = useState('')
   const [giftAnon, setGiftAnon]         = useState(false)
+
+  // Support modal state — one modal, driven by `supportModal`
+  type SupportModalState =
+    | { kind: 'tier'; tier: SupportTierItem }
+    | { kind: 'goal'; goal: SupportGoalItem }
+    | { kind: 'gift'; amountCents: number | null; message: string; anonymous: boolean }
+    | { kind: 'monthly_gift'; amountCents: number | null }
+    | null
+  const [supportModal, setSupportModal] = useState<SupportModalState>(null)
+
+  function openGiftModal() {
+    if (!sessionUserId) { window.location.href = `/auth/signin?callbackUrl=/creator/${creatorUsername}`; return }
+    const amtCents = giftCustom
+      ? Math.round(Number(giftCustom) * 100)
+      : giftAmount !== null ? giftAmount * 100 : null
+    if (giftMode === 'monthly') {
+      setSupportModal({ kind: 'monthly_gift', amountCents: amtCents })
+    } else {
+      setSupportModal({ kind: 'gift', amountCents: amtCents, message: giftMsg, anonymous: giftAnon })
+    }
+  }
+
+  function openTierModal(tier: SupportTierItem) {
+    if (!sessionUserId) { window.location.href = `/auth/signin?callbackUrl=/creator/${creatorUsername}`; return }
+    setSupportModal({ kind: 'tier', tier })
+  }
+
+  function openGoalModal(goal: SupportGoalItem) {
+    if (!sessionUserId) { window.location.href = `/auth/signin?callbackUrl=/creator/${creatorUsername}`; return }
+    setSupportModal({ kind: 'goal', goal })
+  }
 
   // Fan Messages state
   const [fanMsgText, setFanMsgText]           = useState('')
@@ -1047,31 +1078,32 @@ export function CreatorPageTabs({
         {showSupport && activeTab === 'support' && (
           <section className="pt-10 animate-in fade-in duration-200 space-y-10">
 
-            {/* Coming Soon overlay modal */}
-            {comingSoon && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                onClick={() => setComingSoon(false)}
-              >
-                <div
-                  className="w-full max-w-sm rounded-2xl border border-border bg-card p-8 text-center shadow-2xl"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary mx-auto">
-                    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                      <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" /><path d="M12 8v4M12 16h.01" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <h3 className="mb-2 text-lg font-bold text-foreground">Coming Soon</h3>
-                  <p className="text-sm text-muted-foreground">Payment integration is on the way — thank you for your support! 💜</p>
-                  <button
-                    onClick={() => setComingSoon(false)}
-                    className="mt-5 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
-                  >
-                    Got it
-                  </button>
-                </div>
-              </div>
+            {/* Support payment modal */}
+            {supportModal && (
+              <SupportModal
+                open
+                onClose={() => setSupportModal(null)}
+                mode={supportModal.kind}
+                creatorUsername={creatorUsername}
+                creatorDisplayName={displayName}
+                tier={supportModal.kind === 'tier' ? supportModal.tier : undefined}
+                goal={supportModal.kind === 'goal' ? {
+                  id: supportModal.goal.id,
+                  title: supportModal.goal.title,
+                  targetAmountUsd: supportModal.goal.targetAmountUsd,
+                  currentAmountUsd: supportModal.goal.currentAmountUsd,
+                } : undefined}
+                presetAmounts={supportModal.kind === 'gift' || supportModal.kind === 'monthly_gift'
+                  ? supportGift?.presetAmounts
+                  : undefined}
+                initialAmountUsd={
+                  supportModal.kind === 'gift' || supportModal.kind === 'monthly_gift'
+                    ? supportModal.amountCents
+                    : null
+                }
+                initialMessage={supportModal.kind === 'gift' ? supportModal.message : ''}
+                initialAnonymous={supportModal.kind === 'gift' ? supportModal.anonymous : false}
+              />
             )}
 
             {/* SECTION A — Monthly Membership */}
@@ -1115,7 +1147,7 @@ export function CreatorPageTabs({
                         </ul>
                         <p className="mb-3 text-xs text-muted-foreground">{tier.subscriberCount} supporter{tier.subscriberCount !== 1 ? 's' : ''}</p>
                         <button
-                          onClick={() => setComingSoon(true)}
+                          onClick={() => openTierModal(tier)}
                           className="w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
                         >
                           Subscribe
@@ -1179,7 +1211,7 @@ export function CreatorPageTabs({
                           </div>
                           {!isComplete && (
                             <button
-                              onClick={() => setComingSoon(true)}
+                              onClick={() => openGoalModal(goal)}
                               className="mt-4 w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
                             >
                               Contribute
@@ -1288,7 +1320,7 @@ export function CreatorPageTabs({
                   </label>
 
                   <button
-                    onClick={() => setComingSoon(true)}
+                    onClick={openGiftModal}
                     className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
                   >
                     {giftMode === 'onetime' ? 'Send Gift 💜' : 'Support Monthly 💜'}

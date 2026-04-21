@@ -98,6 +98,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               {/* Content */}
               <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
               <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
+              <NavLink href="/dashboard/subscribers"><Users className="size-4" />Subscribers</NavLink>
               {/* Separator */}
               <div className="hidden md:block my-2 h-px bg-border" />
               <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>

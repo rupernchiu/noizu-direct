@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
-import { User, ShoppingBag, Download, MessageCircle, Bell, FileText, Heart, Users, Scale } from 'lucide-react'
+import { User, ShoppingBag, Download, MessageCircle, Bell, FileText, Heart, Users, Scale, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +38,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
               <NavLink href="/account/statements"><FileText className="size-4" />Statements</NavLink>
               <NavLink href="/account/wishlist"><Heart className="size-4" />Wishlist</NavLink>
               <NavLink href="/account/following"><Users className="size-4" />Following</NavLink>
+              <NavLink href="/account/subscriptions"><Sparkles className="size-4" />Subscriptions</NavLink>
               <NavLink href="/account/disputes"><Scale className="size-4" />Disputes</NavLink>
             </nav>
           </aside>
