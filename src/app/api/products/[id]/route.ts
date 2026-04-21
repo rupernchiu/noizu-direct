@@ -28,6 +28,7 @@ export async function PATCH(
       ...(body.category !== undefined && { category: body.category as string }),
       ...(body.type !== undefined && { type: body.type as string }),
       ...(body.images !== undefined && { images: JSON.stringify(body.images) }),
+      ...(body.digitalFiles !== undefined && { digitalFiles: JSON.stringify(body.digitalFiles) }),
       ...(body.stock !== undefined && { stock: body.stock as number }),
       ...(body.isActive !== undefined && { isActive: body.isActive as boolean }),
       ...(body.isPinned !== undefined && { isPinned: body.isPinned as boolean }),

@@ -134,15 +134,34 @@ async function handlePaymentSucceeded(intentId: string) {
     },
   }).catch(() => {})
 
-  // Email buyer
+  // Email buyer (include download links for digital orders)
   const buyer = orders[0].buyer
   const shortId = orders[0].id.slice(-8).toUpperCase()
+
+  const digitalOrders = await prisma.order.findMany({
+    where: { airwallexIntentId: intentId, product: { type: 'DIGITAL' } },
+    select: { id: true, downloadToken: true, product: { select: { title: true } } },
+  })
+  const digitalSection = digitalOrders.length > 0
+    ? `<div style="margin:24px 0;padding:20px;background:#0a0a0f;border:1px solid #27272f;border-radius:12px;">
+        <p style="margin:0 0 14px;font-size:14px;font-weight:600;color:#fff;">Your digital downloads</p>
+        ${digitalOrders.map(o => `
+          <p style="margin:0 0 10px;font-size:13px;color:#8b8b9a;line-height:1.5;">
+            <strong style="color:#e5e5f0;">${o.product.title}</strong><br/>
+            <a href="${baseUrl}/download/${o.downloadToken}" style="color:#7c3aed;text-decoration:none;">Download files</a>
+          </p>
+        `).join('')}
+        <p style="margin:12px 0 0;font-size:11px;color:#6b6b7a;">Links expire in 30 days.</p>
+      </div>`
+    : ''
+
   await sendAndLog(
     buyer.email,
     'Payment successful — noizu.direct',
     emailShell(`
       <p style="margin:0 0 16px;font-size:22px;font-weight:700;color:#fff;">Payment received!</p>
       <p style="margin:0 0 20px;font-size:14px;color:#8b8b9a;line-height:1.6;">Hi ${buyer.name ?? 'there'}, your payment was successful and your order${orders.length !== 1 ? 's are' : ' is'} now being processed.</p>
+      ${digitalSection}
       <p style="margin:0;font-size:13px;color:#6b6b7a;">Reference: #${shortId}</p>
     `),
     'order_payment_confirmed',

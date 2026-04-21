@@ -143,7 +143,12 @@ export async function POST(req: Request) {
     category: string
     type: string
     images?: string[]
+    digitalFiles?: { key: string; filename: string; size: number; mime: string }[]
     stock?: number
+  }
+
+  if (body.type === 'DIGITAL' && (!body.digitalFiles || body.digitalFiles.length === 0)) {
+    return NextResponse.json({ error: 'At least one digital file is required' }, { status: 400 })
   }
 
   await Promise.all([
@@ -160,6 +165,7 @@ export async function POST(req: Request) {
       category: body.category,
       type: body.type,
       images: JSON.stringify(body.images ?? []),
+      digitalFiles: body.type === 'DIGITAL' ? JSON.stringify(body.digitalFiles ?? []) : null,
       stock: body.stock ?? null,
       isActive: true,
     },

@@ -42,7 +42,7 @@ export default async function DownloadsPage({
 
   const baseWhere: any = {
     buyerId: userId,
-    status: 'PAID',
+    status: { in: ['PAID', 'PROCESSING', 'DELIVERED', 'COMPLETED'] },
     product: { type: 'DIGITAL' },
     NOT: { downloadToken: null },
   }
@@ -55,13 +55,18 @@ export default async function DownloadsPage({
     prisma.order.findMany({
       where: baseWhere,
       include: {
-        product: { select: { id: true, title: true, category: true } },
+        product: { select: { id: true, title: true, category: true, digitalFiles: true } },
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
     }),
   ])
+
+  function fileCount(digitalFiles: string | null): number {
+    if (!digitalFiles) return 0
+    try { return (JSON.parse(digitalFiles) as unknown[]).length } catch { return 0 }
+  }
 
   return (
     <div className="space-y-6">
@@ -105,7 +110,12 @@ export default async function DownloadsPage({
 
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">{order.product.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[order.product.category] ?? order.product.category}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {CATEGORY_LABELS[order.product.category] ?? order.product.category}
+                    {fileCount(order.product.digitalFiles) > 0 && (
+                      <> &middot; {fileCount(order.product.digitalFiles)} file{fileCount(order.product.digitalFiles) !== 1 ? 's' : ''}</>
+                    )}
+                  </p>
                 </div>
 
                 <div className="shrink-0 flex flex-col items-end gap-2">

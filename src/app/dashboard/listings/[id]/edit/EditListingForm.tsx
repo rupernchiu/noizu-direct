@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
+import { DigitalFilesUpload, type DigitalFile } from '@/components/ui/DigitalFilesUpload'
 
 const schema = z.object({
   title: z.string().min(3).max(100),
@@ -33,6 +34,7 @@ interface Product {
   category: string
   type: string
   images: string
+  digitalFiles: string | null
   stock: number | null
   isPreOrder: boolean
   preOrderMessage: string | null
@@ -43,6 +45,10 @@ export function EditListingForm({ product }: { product: Product }) {
   const router = useRouter()
   const [images, setImages] = useState<string[]>(() => {
     try { return JSON.parse(product.images) as string[] } catch { return [] }
+  })
+  const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>(() => {
+    if (!product.digitalFiles) return []
+    try { return JSON.parse(product.digitalFiles) as DigitalFile[] } catch { return [] }
   })
   const [error, setError] = useState<string | null>(null)
   const [isPreOrder, setIsPreOrder] = useState(product.isPreOrder)
@@ -74,6 +80,10 @@ export function EditListingForm({ product }: { product: Product }) {
 
   async function onSubmit(data: FormData) {
     setError(null)
+    if (data.type === 'DIGITAL' && digitalFiles.length === 0) {
+      setError('Upload at least one digital file')
+      return
+    }
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PATCH',
@@ -81,6 +91,7 @@ export function EditListingForm({ product }: { product: Product }) {
         body: JSON.stringify({
           ...data,
           images,
+          digitalFiles,
           isPreOrder,
           preOrderMessage: isPreOrder ? preOrderMessage : null,
           preOrderReleaseAt: isPreOrder && preOrderReleaseAt ? new Date(preOrderReleaseAt).toISOString() : null,
@@ -184,6 +195,16 @@ export function EditListingForm({ product }: { product: Product }) {
             ))}
           </div>
         </div>
+
+        {/* Digital files */}
+        {type === 'DIGITAL' && (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Digital files <span className="text-muted-foreground font-normal">(up to 10, 200MB each)</span>
+            </label>
+            <DigitalFilesUpload files={digitalFiles} onChange={setDigitalFiles} disabled={isSubmitting} />
+          </div>
+        )}
 
         {/* Stock */}
         {type === 'PHYSICAL' && (

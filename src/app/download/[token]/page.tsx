@@ -6,6 +6,20 @@ interface PageProps {
   params: Promise<{ token: string }>
 }
 
+interface DigitalFile {
+  key: string
+  filename: string
+  size: number
+  mime: string
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+}
+
 export default async function DownloadPage({ params }: PageProps) {
   const { token } = await params
 
@@ -59,6 +73,12 @@ export default async function DownloadPage({ params }: PageProps) {
     ? Math.max(0, Math.floor((order.downloadExpiry.getTime() - Date.now()) / (1000 * 60 * 60)))
     : 0
 
+  let files: DigitalFile[] = []
+  const digitalFilesJson = (order.product as { digitalFiles?: string | null }).digitalFiles
+  if (digitalFilesJson) {
+    try { files = JSON.parse(digitalFilesJson) as DigitalFile[] } catch { files = [] }
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-16">
       <div className="mx-auto max-w-md px-4">
@@ -87,15 +107,37 @@ export default async function DownloadPage({ params }: PageProps) {
               </p>
             </div>
 
-            <a
-              href={`/api/download/${token}`}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-center font-semibold text-white hover:bg-primary/90 transition-colors"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download File
-            </a>
+            {files.length > 0 ? (
+              <ul className="space-y-2">
+                {files.map((f, i) => (
+                  <li
+                    key={f.key}
+                    className="flex items-center gap-3 rounded-lg bg-background border border-border px-3 py-2"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{f.filename}</p>
+                      <p className="text-xs text-muted-foreground">{formatBytes(f.size)}</p>
+                    </div>
+                    <a
+                      href={`/api/download/${token}?idx=${i}`}
+                      className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+                    >
+                      Download
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <a
+                href={`/api/download/${token}`}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-center font-semibold text-white hover:bg-primary/90 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download File
+              </a>
+            )}
 
             <p className="text-center text-xs text-muted-foreground">
               Having trouble?{' '}

@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
+import { DigitalFilesUpload, type DigitalFile } from '@/components/ui/DigitalFilesUpload'
 
 const schema = z.object({
   title: z.string().min(3).max(100),
@@ -28,6 +29,7 @@ const CATEGORIES = [
 export default function NewListingPage() {
   const router = useRouter()
   const [images, setImages] = useState<string[]>([])
+  const [digitalFiles, setDigitalFiles] = useState<DigitalFile[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -46,11 +48,15 @@ export default function NewListingPage() {
 
   async function onSubmit(data: FormData) {
     setError(null)
+    if (data.type === 'DIGITAL' && digitalFiles.length === 0) {
+      setError('Upload at least one digital file')
+      return
+    }
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...data, images }),
+        body: JSON.stringify({ ...data, images, digitalFiles }),
       })
       if (!res.ok) {
         const body = await res.json() as { error?: string }
@@ -159,6 +165,16 @@ export default function NewListingPage() {
             ))}
           </div>
         </div>
+
+        {/* Digital files */}
+        {type === 'DIGITAL' && (
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              Digital files <span className="text-muted-foreground font-normal">(up to 10, 200MB each)</span>
+            </label>
+            <DigitalFilesUpload files={digitalFiles} onChange={setDigitalFiles} disabled={isSubmitting} />
+          </div>
+        )}
 
         {/* Stock (only for PHYSICAL) */}
         {type === 'PHYSICAL' && (

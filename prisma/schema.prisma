@@ -162,6 +162,7 @@ model Product {
   commissionTurnaroundDays   Int?
   images           String   @default("[]")
   digitalFile      String?
+  digitalFiles     String?  // JSON array of { key, filename, size, mime }
   stock            Int?
   isActive         Boolean  @default(true)
   isPinned         Boolean  @default(false)

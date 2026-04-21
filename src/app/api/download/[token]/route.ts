@@ -7,11 +7,20 @@ import { Readable } from 'stream'
 
 const PAID_STATUSES = new Set(['PAID', 'PROCESSING', 'DELIVERED', 'COMPLETED'])
 
+interface DigitalFile {
+  key: string
+  filename: string
+  size: number
+  mime: string
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params
+  const url = new URL(req.url)
+  const idxParam = url.searchParams.get('idx')
 
   const session = await auth()
   const userId = session?.user ? (session.user as { id: string }).id : null
@@ -31,18 +40,33 @@ export async function GET(
     return new Response('Order not paid', { status: 402 })
   }
 
+  // Multi-file path: digitalFiles JSON array takes precedence
+  const digitalFilesJson = (order.product as { digitalFiles?: string | null }).digitalFiles
+  if (digitalFilesJson) {
+    let files: DigitalFile[] = []
+    try { files = JSON.parse(digitalFilesJson) as DigitalFile[] } catch { files = [] }
+    if (files.length > 0) {
+      const idx = idxParam ? parseInt(idxParam, 10) : 0
+      if (Number.isNaN(idx) || idx < 0 || idx >= files.length) {
+        return new Response('Invalid file index', { status: 400 })
+      }
+      const file = files[idx]
+      const signed = await getR2SignedUrl(file.key, 300)
+      return Response.redirect(signed, 302)
+    }
+  }
+
+  // Legacy single-file fallback
   const filePath = order.product.digitalFile
   if (!filePath) return new Response('No file attached to this product', { status: 404 })
 
   const filename = order.product.title.replace(/[^a-z0-9_\-. ]/gi, '_')
 
-  // R2 key (no leading slash → treat as bucket key): redirect to time-limited signed URL
   if (!filePath.startsWith('/') && !filePath.startsWith('http')) {
-    const url = await getR2SignedUrl(filePath, 300)
-    return Response.redirect(url, 302)
+    const signed = await getR2SignedUrl(filePath, 300)
+    return Response.redirect(signed, 302)
   }
 
-  // Legacy local-file path: stream from public/, with traversal guard
   const normalised = filePath.startsWith('/') ? filePath.slice(1) : filePath
   const publicRoot = join(process.cwd(), 'public')
   const abs = join(publicRoot, normalised)
