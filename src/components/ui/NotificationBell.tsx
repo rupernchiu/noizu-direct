@@ -165,7 +165,8 @@ export function NotificationBell({ viewAllHref = '/account/notifications' }: { v
       {open && (
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0, zIndex: 50,
-          width: '340px',
+          width: 'min(340px, calc(100vw - 24px))',
+          maxWidth: 'calc(100vw - 24px)',
           background: 'var(--card)', border: '1px solid var(--border)',
           borderRadius: '12px', boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
           overflow: 'hidden',

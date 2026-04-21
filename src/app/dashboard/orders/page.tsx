@@ -139,52 +139,81 @@ export default async function DashboardOrdersPage({
           </p>
         </div>
       ) : (
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-5 py-3 text-left font-medium">Member</th>
-                  <th className="px-5 py-3 text-left font-medium">Product</th>
-                  <th className="px-5 py-3 text-left font-medium">Amount</th>
-                  <th className="px-5 py-3 text-left font-medium">Status</th>
-                  <th className="px-5 py-3 text-left font-medium">Date</th>
-                  <th className="px-5 py-3 text-left font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                    <td className="px-5 py-3">
-                      <div>
-                        <p className="text-foreground font-medium">{order.buyer?.name ?? 'Unknown'}</p>
-                        <p className="text-xs text-muted-foreground">{order.buyer?.email ?? ''}</p>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <p className="text-muted-foreground truncate max-w-[160px]">{order.product?.title ?? '—'}</p>
-                      <p className="text-xs text-muted-foreground/60">{TYPE_LABELS[order.product?.type ?? ''] ?? order.product?.type}</p>
-                    </td>
-                    <td className="px-5 py-3 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
-                        {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{formatDate(order.createdAt)}</td>
-                    <td className="px-5 py-3">
-                      <OrdersActions
-                        orderId={order.id}
-                        status={order.status}
-                        productType={order.product?.type ?? 'DIGITAL'}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {orders.map((order) => (
+              <div key={order.id} className="bg-surface rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground font-semibold text-sm truncate">{order.product?.title ?? '—'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {order.buyer?.name ?? 'Unknown'} · {formatDate(order.createdAt)}
+                    </p>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                    {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-border">
+                  <span className="text-foreground font-semibold">${(order.amountUsd / 100).toFixed(2)}</span>
+                  <OrdersActions
+                    orderId={order.id}
+                    status={order.status}
+                    productType={order.product?.type ?? 'DIGITAL'}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-muted-foreground border-b border-border">
+                    <th className="px-5 py-3 text-left font-medium">Member</th>
+                    <th className="px-5 py-3 text-left font-medium">Product</th>
+                    <th className="px-5 py-3 text-left font-medium">Amount</th>
+                    <th className="px-5 py-3 text-left font-medium">Status</th>
+                    <th className="px-5 py-3 text-left font-medium">Date</th>
+                    <th className="px-5 py-3 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id} className="border-b border-border last:border-0 hover:bg-card/50">
+                      <td className="px-5 py-3">
+                        <div>
+                          <p className="text-foreground font-medium">{order.buyer?.name ?? 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{order.buyer?.email ?? ''}</p>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <p className="text-muted-foreground truncate max-w-[160px]">{order.product?.title ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground/60">{TYPE_LABELS[order.product?.type ?? ''] ?? order.product?.type}</p>
+                      </td>
+                      <td className="px-5 py-3 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                          {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">{formatDate(order.createdAt)}</td>
+                      <td className="px-5 py-3">
+                        <OrdersActions
+                          orderId={order.id}
+                          status={order.status}
+                          productType={order.product?.type ?? 'DIGITAL'}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       <Suspense fallback={null}>

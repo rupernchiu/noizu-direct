@@ -93,21 +93,21 @@ export default async function EarningsPage({
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Earnings</h1>
           <p className="text-sm text-muted-foreground mt-1">Track your revenue and request payouts</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Link
             href="/dashboard/statement"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            View Statement
+            Statement
           </Link>
           <Link
             href="/dashboard/earnings/payout"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
           >
             Request Payout
           </Link>
@@ -115,26 +115,26 @@ export default async function EarningsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-border bg-secondary/10 p-4">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Available Balance</p>
-          <p className="text-2xl font-bold text-secondary">${(availableCents / 100).toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Escrow cleared</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-xl border border-border bg-secondary/10 p-3 sm:p-4">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Available</p>
+          <p className="text-xl sm:text-2xl font-bold text-secondary">${(availableCents / 100).toFixed(2)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Escrow cleared</p>
         </div>
-        <div className="rounded-xl border border-border bg-yellow-500/10 p-4">
+        <div className="rounded-xl border border-border bg-yellow-500/10 p-3 sm:p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">In Escrow</p>
-          <p className="text-2xl font-bold text-yellow-400">${(totalEscrowCents / 100).toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Pending release</p>
+          <p className="text-xl sm:text-2xl font-bold text-yellow-400">${(totalEscrowCents / 100).toFixed(2)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Pending release</p>
         </div>
-        <div className="rounded-xl border border-border bg-primary/10 p-4">
+        <div className="rounded-xl border border-border bg-primary/10 p-3 sm:p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">Total Earned</p>
-          <p className="text-2xl font-bold text-primary">${(totalEarnedCents / 100).toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground mt-1">All time</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">${(totalEarnedCents / 100).toFixed(2)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">All time</p>
         </div>
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Total Paid Out</p>
-          <p className="text-2xl font-bold text-foreground">${(totalPaidOutCents / 100).toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Payout currency: {payoutCurrency}</p>
+        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Paid Out</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground">${(totalPaidOutCents / 100).toFixed(2)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Payout: {payoutCurrency}</p>
         </div>
       </div>
 
@@ -147,42 +147,72 @@ export default async function EarningsPage({
           </Suspense>
         </div>
 
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
-          {transactions.length === 0 ? (
-            <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-              {txStatus ? 'No transactions match this filter.' : 'No transactions yet.'}
+        {transactions.length === 0 ? (
+          <div className="bg-surface rounded-xl border border-border px-5 py-8 text-center text-sm text-muted-foreground">
+            {txStatus ? 'No transactions match this filter.' : 'No transactions yet.'}
+          </div>
+        ) : (
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {transactions.map((tx) => (
+                <div key={tx.id} className="bg-surface rounded-xl border border-border p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">{formatDate(tx.createdAt)}</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${txStatusStyles[tx.status] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                      {tx.status}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Gross</p>
+                      <p className="text-foreground font-medium">${(tx.grossAmountUsd / 100).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Fee</p>
+                      <p className="text-muted-foreground">${(tx.processingFee / 100).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Net</p>
+                      <p className="text-secondary font-semibold">${(tx.creatorAmount / 100).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-muted-foreground border-b border-border">
-                    <th className="px-5 py-3 text-left font-medium">Date</th>
-                    <th className="px-5 py-3 text-left font-medium">Gross</th>
-                    <th className="px-5 py-3 text-left font-medium">Fee</th>
-                    <th className="px-5 py-3 text-left font-medium">Net</th>
-                    <th className="px-5 py-3 text-left font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map((tx) => (
-                    <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                      <td className="px-5 py-3 text-muted-foreground">{formatDate(tx.createdAt)}</td>
-                      <td className="px-5 py-3 text-foreground">${(tx.grossAmountUsd / 100).toFixed(2)}</td>
-                      <td className="px-5 py-3 text-muted-foreground">${(tx.processingFee / 100).toFixed(2)}</td>
-                      <td className="px-5 py-3 text-secondary font-medium">${(tx.creatorAmount / 100).toFixed(2)}</td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${txStatusStyles[tx.status] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
-                          {tx.status}
-                        </span>
-                      </td>
+            {/* Desktop table */}
+            <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground border-b border-border">
+                      <th className="px-5 py-3 text-left font-medium">Date</th>
+                      <th className="px-5 py-3 text-left font-medium">Gross</th>
+                      <th className="px-5 py-3 text-left font-medium">Fee</th>
+                      <th className="px-5 py-3 text-left font-medium">Net</th>
+                      <th className="px-5 py-3 text-left font-medium">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {transactions.map((tx) => (
+                      <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-card/50">
+                        <td className="px-5 py-3 text-muted-foreground">{formatDate(tx.createdAt)}</td>
+                        <td className="px-5 py-3 text-foreground">${(tx.grossAmountUsd / 100).toFixed(2)}</td>
+                        <td className="px-5 py-3 text-muted-foreground">${(tx.processingFee / 100).toFixed(2)}</td>
+                        <td className="px-5 py-3 text-secondary font-medium">${(tx.creatorAmount / 100).toFixed(2)}</td>
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${txStatusStyles[tx.status] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          )}
-        </div>
+          </>
+        )}
 
         <Suspense fallback={null}>
           <Pagination total={txTotal} page={txPage} perPage={TX_PER_PAGE} paramName="txPage" />
@@ -193,7 +223,30 @@ export default async function EarningsPage({
       {(payouts.length > 0 || payoutTotal > 0) && (
         <div className="space-y-3">
           <h2 className="text-base font-semibold text-foreground">Payout History</h2>
-          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {payouts.map((p) => (
+              <div key={p.id} className="bg-surface rounded-xl border border-border p-4 space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="text-foreground font-semibold text-sm">
+                    USD {(p.amountUsd / 100).toFixed(2)}
+                    {p.currency && p.currency !== 'USD' && (
+                      <span className="text-xs text-muted-foreground ml-1">({p.currency})</span>
+                    )}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${payoutStatusStyles[p.status] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                    {p.status}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border text-xs text-muted-foreground">
+                  <span>Requested {formatDate(p.requestedAt)}</span>
+                  <span>{p.completedAt ? `Paid ${formatDate(p.completedAt)}` : '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>

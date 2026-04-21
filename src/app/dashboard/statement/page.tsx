@@ -130,7 +130,7 @@ export default function StatementPage() {
   const isZd = data?.isZeroDecimal ?? false
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -217,18 +217,18 @@ export default function StatementPage() {
               <div key={m.month} className="rounded-xl border border-border bg-card overflow-hidden">
                 {/* Month header */}
                 <button
-                  className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between gap-3 px-4 sm:px-5 py-4 hover:bg-muted/30 transition-colors text-left"
                   onClick={() => toggleMonth(m.month)}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-foreground">{m.label}</span>
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                    <span className="font-semibold text-foreground text-sm sm:text-base truncate">{m.label}</span>
                     <div className="hidden sm:flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="text-green-400">{fmt(m.available, currency, isZd)} available</span>
                       {m.escrow > 0 && <span className="text-yellow-400">{fmt(m.escrow, currency, isZd)} escrow</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-foreground">{fmt(m.gross, currency, isZd)} gross</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs sm:text-sm font-semibold text-foreground whitespace-nowrap">{fmt(m.gross, currency, isZd)}</span>
                     {open ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
                   </div>
                 </button>
@@ -236,18 +236,45 @@ export default function StatementPage() {
                 {/* Expanded detail */}
                 {open && (
                   <div className="border-t border-border">
-                    {/* Orders table */}
+                    {/* Orders — mobile cards */}
                     {m.orders.length > 0 && (
-                      <div className="overflow-x-auto">
+                      <div className="md:hidden divide-y divide-border">
+                        {m.orders.map(o => (
+                          <div key={o.orderId} className="px-4 py-3 space-y-2">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-foreground text-sm truncate">{o.productTitle}</p>
+                                <p className="text-[11px] text-muted-foreground truncate">
+                                  {o.productType} · {o.buyerName ?? 'Anonymous'} · {new Date(o.date).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusBadge(o.status)}`}>{o.status}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-2 text-xs pt-1">
+                              <span className="text-muted-foreground">Gross {fmt(o.gross, currency, isZd)}</span>
+                              <span className="text-muted-foreground">Fee −{fmt(o.platformFee, currency, isZd)}</span>
+                              <span className="font-semibold text-foreground">Net {fmt(o.net, currency, isZd)}</span>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="px-4 py-3 bg-muted/20 flex items-center justify-between text-xs font-semibold">
+                          <span className="text-muted-foreground">Month total</span>
+                          <span className="text-green-400">{fmt(m.available + m.escrow, currency, isZd)}</span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Orders — desktop table */}
+                    {m.orders.length > 0 && (
+                      <div className="hidden md:block overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
                             <tr className="text-xs text-muted-foreground border-b border-border">
                               <th className="text-left px-5 py-2.5 font-medium">Product</th>
-                              <th className="text-left px-3 py-2.5 font-medium hidden sm:table-cell">Buyer</th>
-                              <th className="text-left px-3 py-2.5 font-medium hidden md:table-cell">Date</th>
+                              <th className="text-left px-3 py-2.5 font-medium">Buyer</th>
+                              <th className="text-left px-3 py-2.5 font-medium">Date</th>
                               <th className="text-left px-3 py-2.5 font-medium">Status</th>
                               <th className="text-right px-3 py-2.5 font-medium">Gross</th>
-                              <th className="text-right px-3 py-2.5 font-medium hidden sm:table-cell">Fee</th>
+                              <th className="text-right px-3 py-2.5 font-medium">Fee</th>
                               <th className="text-right px-5 py-2.5 font-medium">Net</th>
                             </tr>
                           </thead>
@@ -258,13 +285,13 @@ export default function StatementPage() {
                                   <p className="font-medium text-foreground truncate max-w-[180px]">{o.productTitle}</p>
                                   <p className="text-xs text-muted-foreground">{o.productType}</p>
                                 </td>
-                                <td className="px-3 py-3 text-muted-foreground hidden sm:table-cell">{o.buyerName ?? 'Anonymous'}</td>
-                                <td className="px-3 py-3 text-muted-foreground hidden md:table-cell">{new Date(o.date).toLocaleDateString()}</td>
+                                <td className="px-3 py-3 text-muted-foreground">{o.buyerName ?? 'Anonymous'}</td>
+                                <td className="px-3 py-3 text-muted-foreground">{new Date(o.date).toLocaleDateString()}</td>
                                 <td className="px-3 py-3">
                                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusBadge(o.status)}`}>{o.status}</span>
                                 </td>
                                 <td className="px-3 py-3 text-right text-foreground">{fmt(o.gross, currency, isZd)}</td>
-                                <td className="px-3 py-3 text-right text-muted-foreground hidden sm:table-cell">−{fmt(o.platformFee, currency, isZd)}</td>
+                                <td className="px-3 py-3 text-right text-muted-foreground">−{fmt(o.platformFee, currency, isZd)}</td>
                                 <td className="px-5 py-3 text-right font-semibold text-foreground">{fmt(o.net, currency, isZd)}</td>
                               </tr>
                             ))}
@@ -273,7 +300,7 @@ export default function StatementPage() {
                             <tr className="border-t border-border bg-muted/20 text-sm font-semibold">
                               <td colSpan={4} className="px-5 py-3 text-muted-foreground">Month total</td>
                               <td className="px-3 py-3 text-right text-foreground">{fmt(m.gross, currency, isZd)}</td>
-                              <td className="px-3 py-3 text-right text-muted-foreground hidden sm:table-cell">−{fmt(m.platformFee, currency, isZd)}</td>
+                              <td className="px-3 py-3 text-right text-muted-foreground">−{fmt(m.platformFee, currency, isZd)}</td>
                               <td className="px-5 py-3 text-right text-green-400">{fmt(m.available + m.escrow, currency, isZd)}</td>
                             </tr>
                           </tfoot>

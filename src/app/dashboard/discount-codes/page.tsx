@@ -27,7 +27,7 @@ function formatExpiry(expiresAt: string | null): string {
 }
 
 const inputClass =
-  'w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors'
+  'w-full rounded-lg bg-background border border-border px-3 py-2 text-base sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors'
 
 interface Product {
   id: string
@@ -202,7 +202,7 @@ export default function DiscountCodesPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto px-5 py-3 sm:py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Creating...' : 'Create Code'}
             </button>
@@ -211,72 +211,129 @@ export default function DiscountCodesPage() {
       </div>
 
       {/* Code list */}
-      <div className="rounded-xl bg-card border border-border overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">Loading...</div>
-        ) : codes.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No discount codes yet.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface">
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Applies To</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Value</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Min Order</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Uses</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expires</th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {codes.map(code => {
-                  const isExpired = code.expiresAt ? new Date(code.expiresAt) < new Date() : false
-                  const isMaxed = code.maxUses !== null && code.usedCount >= code.maxUses
-                  const active = code.isActive && !isExpired && !isMaxed
-                  return (
-                    <tr key={code.id} className="hover:bg-surface/50 transition-colors">
-                      <td className="px-4 py-3 font-mono font-semibold text-foreground">{code.code}</td>
-                      <td className="px-4 py-3">
+      {loading ? (
+        <div className="rounded-xl bg-card border border-border p-8 text-center text-sm text-muted-foreground">Loading...</div>
+      ) : codes.length === 0 ? (
+        <div className="rounded-xl bg-card border border-border p-8 text-center text-sm text-muted-foreground">No discount codes yet.</div>
+      ) : (
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {codes.map(code => {
+              const isExpired = code.expiresAt ? new Date(code.expiresAt) < new Date() : false
+              const isMaxed = code.maxUses !== null && code.usedCount >= code.maxUses
+              const active = code.isActive && !isExpired && !isMaxed
+              return (
+                <div key={code.id} className="rounded-xl bg-card border border-border p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono font-semibold text-foreground text-base">{code.code}</div>
+                      <div className="mt-1.5">
                         {code.product
-                          ? <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5 truncate max-w-[140px] inline-block" title={code.product.title}>{code.product.title}</span>
+                          ? <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5 truncate max-w-full inline-block" title={code.product.title}>{code.product.title}</span>
                           : <span className="text-xs bg-secondary/10 text-secondary border border-secondary/20 rounded-full px-2 py-0.5">Storewide</span>
                         }
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground capitalize">{code.type === 'PERCENTAGE' ? 'Percentage' : 'Fixed'}</td>
-                      <td className="px-4 py-3 text-foreground">{formatValue(code)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {code.minimumOrderAmount ? `$${(code.minimumOrderAmount / 100).toFixed(2)}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {code.usedCount}{code.maxUses !== null ? `/${code.maxUses}` : ''}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatExpiry(code.expiresAt)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
-                          {active ? 'Active' : isExpired ? 'Expired' : isMaxed ? 'Maxed' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDelete(code.id, code.code)}
-                          className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                          aria-label="Delete code"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                        {active ? 'Active' : isExpired ? 'Expired' : isMaxed ? 'Maxed' : 'Inactive'}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(code.id, code.code)}
+                        className="size-10 flex items-center justify-center rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        aria-label="Delete code"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-3 border-t border-border text-xs">
+                    <div>
+                      <div className="text-muted-foreground">Value</div>
+                      <div className="text-foreground font-medium">{formatValue(code)} <span className="text-muted-foreground font-normal">({code.type === 'PERCENTAGE' ? 'pct' : 'fixed'})</span></div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Min order</div>
+                      <div className="text-foreground font-medium">{code.minimumOrderAmount ? `$${(code.minimumOrderAmount / 100).toFixed(2)}` : '—'}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Uses</div>
+                      <div className="text-foreground font-medium">{code.usedCount}{code.maxUses !== null ? `/${code.maxUses}` : ''}</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">Expires</div>
+                      <div className="text-foreground font-medium">{formatExpiry(code.expiresAt)}</div>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        )}
-      </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-xl bg-card border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-surface">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Code</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Applies To</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Value</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Min Order</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Uses</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Expires</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {codes.map(code => {
+                    const isExpired = code.expiresAt ? new Date(code.expiresAt) < new Date() : false
+                    const isMaxed = code.maxUses !== null && code.usedCount >= code.maxUses
+                    const active = code.isActive && !isExpired && !isMaxed
+                    return (
+                      <tr key={code.id} className="hover:bg-surface/50 transition-colors">
+                        <td className="px-4 py-3 font-mono font-semibold text-foreground">{code.code}</td>
+                        <td className="px-4 py-3">
+                          {code.product
+                            ? <span className="text-xs bg-primary/10 text-primary border border-primary/20 rounded-full px-2 py-0.5 truncate max-w-[140px] inline-block" title={code.product.title}>{code.product.title}</span>
+                            : <span className="text-xs bg-secondary/10 text-secondary border border-secondary/20 rounded-full px-2 py-0.5">Storewide</span>
+                          }
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground capitalize">{code.type === 'PERCENTAGE' ? 'Percentage' : 'Fixed'}</td>
+                        <td className="px-4 py-3 text-foreground">{formatValue(code)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {code.minimumOrderAmount ? `$${(code.minimumOrderAmount / 100).toFixed(2)}` : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {code.usedCount}{code.maxUses !== null ? `/${code.maxUses}` : ''}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatExpiry(code.expiresAt)}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
+                            {active ? 'Active' : isExpired ? 'Expired' : isMaxed ? 'Maxed' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleDelete(code.id, code.code)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                            aria-label="Delete code"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

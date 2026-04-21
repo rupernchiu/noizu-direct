@@ -98,10 +98,10 @@ function parsePricing(raw: string | null): PricingTier[] {
 // ─── Shared input styles ──────────────────────────────────────────────────────
 
 const inputCls =
-  'w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
+  'w-full rounded-lg bg-card border border-border px-3 py-2 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring'
 
 const btnPrimary =
-  'px-6 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+  'w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 
 // ─── Alert helpers ────────────────────────────────────────────────────────────
 
@@ -403,8 +403,8 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
       <div className="space-y-3">
         <label className="block text-sm font-medium text-foreground">Social Links</label>
         {SOCIAL_PLATFORMS.map((p) => (
-          <div key={p.key} className="flex items-center gap-2">
-            <span className="w-28 text-xs text-muted-foreground shrink-0">{p.label}</span>
+          <div key={p.key} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+            <span className="sm:w-28 text-xs text-muted-foreground sm:shrink-0">{p.label}</span>
             <input
               type="url"
               value={socialLinks[p.key] ?? ''}
@@ -526,53 +526,55 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
         {items.map((item, idx) => (
           <div
             key={item.id}
-            className="flex gap-3 rounded-xl bg-surface border border-border p-3"
+            className="flex flex-col sm:flex-row gap-3 rounded-xl bg-surface border border-border p-3"
           >
-            {/* Thumbnail */}
-            <div className="w-16 h-16 rounded-lg overflow-hidden bg-card border border-border shrink-0 flex items-center justify-center">
-              {item.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-muted-foreground text-xs">No img</span>
-              )}
-            </div>
-
-            {/* Details */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="text-sm font-medium text-foreground truncate">{item.title}</span>
-                <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-medium shrink-0">
-                  {item.category}
-                </span>
+            <div className="flex gap-3 flex-1 min-w-0">
+              {/* Thumbnail */}
+              <div className="w-16 h-16 rounded-lg overflow-hidden bg-card border border-border shrink-0 flex items-center justify-center">
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-muted-foreground text-xs">No img</span>
+                )}
               </div>
-              {item.description && (
-                <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-              )}
+
+              {/* Details */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-sm font-medium text-foreground truncate">{item.title}</span>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/20 text-primary text-[10px] font-medium shrink-0">
+                    {item.category}
+                  </span>
+                </div>
+                {item.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
+                )}
+              </div>
             </div>
 
             {/* Controls */}
-            <div className="flex flex-col gap-1 shrink-0">
+            <div className="flex sm:flex-col gap-1 sm:shrink-0 flex-wrap justify-end pt-2 sm:pt-0 border-t sm:border-0 border-border">
               <div className="flex gap-1">
                 <button
                   type="button"
                   onClick={() => moveItem(idx, 'up')}
                   disabled={idx === 0}
-                  className="w-6 h-6 rounded bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs flex items-center justify-center transition-colors"
+                  className="w-8 h-8 sm:w-6 sm:h-6 rounded bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs flex items-center justify-center transition-colors"
                   title="Move up"
                 >▲</button>
                 <button
                   type="button"
                   onClick={() => moveItem(idx, 'down')}
                   disabled={idx === items.length - 1}
-                  className="w-6 h-6 rounded bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs flex items-center justify-center transition-colors"
+                  className="w-8 h-8 sm:w-6 sm:h-6 rounded bg-card border border-border text-muted-foreground hover:text-foreground disabled:opacity-30 text-xs flex items-center justify-center transition-colors"
                   title="Move down"
                 >▼</button>
               </div>
               <button
                 type="button"
                 onClick={() => togglePublic(item.id)}
-                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                className={`px-3 py-1.5 sm:px-2 sm:py-1 rounded text-xs sm:text-[10px] font-medium transition-colors ${
                   item.isPublic
                     ? 'bg-secondary/15 border border-secondary/30 text-secondary hover:bg-secondary/25'
                     : 'bg-card border border-border text-muted-foreground hover:text-foreground'
@@ -583,7 +585,7 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
               <button
                 type="button"
                 onClick={() => removeItem(item.id)}
-                className="px-2 py-1 rounded text-[10px] font-medium bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                className="px-3 py-1.5 sm:px-2 sm:py-1 rounded text-xs sm:text-[10px] font-medium bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
               >
                 Delete
               </button>
@@ -651,7 +653,7 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
             </label>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <button
               type="button"
               onClick={addItem}
@@ -663,7 +665,7 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
             <button
               type="button"
               onClick={() => { setShowAddForm(false); setNewTitle(''); setNewDescription(''); setNewImageUrl('') }}
-              className="px-4 py-2.5 rounded-lg bg-card border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
+              className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-lg bg-card border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
             >
               Cancel
             </button>
@@ -769,7 +771,7 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
           value={commissionSlots}
           onChange={(e) => setCommissionSlots(e.target.value)}
           placeholder="Unlimited"
-          className="w-40 rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          className="w-full sm:w-40 rounded-lg bg-card border border-border px-3 py-2 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <p className="mt-1.5 text-xs text-muted-foreground">
           How many commission slots are currently open? Leave blank for unlimited.
@@ -1109,7 +1111,7 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
             <button
               type="button"
               onClick={() => setShowDeleteConfirm(true)}
-              className="px-4 py-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-sm font-medium transition-colors"
+              className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 text-sm font-medium transition-colors"
             >
               Delete My Account
             </button>
@@ -1127,19 +1129,19 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               placeholder="your@email.com"
               className={`${inputCls} border-red-500/30 focus:ring-red-500`}
             />
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
                 onClick={handleDeleteAccount}
                 disabled={deleteSaving || !deleteEmail.trim()}
-                className="px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleteSaving ? 'Deleting...' : 'Confirm Delete Account'}
               </button>
               <button
                 type="button"
                 onClick={() => { setShowDeleteConfirm(false); setDeleteEmail(''); setDeleteError(null) }}
-                className="px-4 py-2.5 rounded-lg bg-card border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
+                className="w-full sm:w-auto px-4 py-3 sm:py-2.5 rounded-lg bg-card border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -1168,13 +1170,13 @@ export function ProfileForm({ profile }: { profile: CreatorProfile }) {
   return (
     <div className="space-y-0">
       {/* Tab bar */}
-      <div className="flex border-b border-border mb-6">
+      <div className="flex border-b border-border mb-6 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 scrollbar-none">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'

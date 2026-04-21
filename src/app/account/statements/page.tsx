@@ -172,14 +172,14 @@ export default async function StatementsPage({
 
       {/* Filter bar */}
       <div className="bg-surface rounded-xl border border-border p-4">
-        <form method="GET" className="flex flex-wrap gap-3 items-end">
-          <div className="flex flex-col gap-1">
+        <form method="GET" className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:items-end">
+          <div className="flex flex-col gap-1 min-w-0">
             <label className="text-xs font-medium text-muted-foreground">Date Range</label>
             <select
               suppressHydrationWarning
               name="range"
               defaultValue={rangeKey}
-              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full"
             >
               {rangeOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -189,13 +189,13 @@ export default async function StatementsPage({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0">
             <label className="text-xs font-medium text-muted-foreground">Status</label>
             <select
               suppressHydrationWarning
               name="status"
               defaultValue={statusFilter}
-              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full"
             >
               {statusOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -205,13 +205,13 @@ export default async function StatementsPage({
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 min-w-0">
             <label className="text-xs font-medium text-muted-foreground">Product Type</label>
             <select
               suppressHydrationWarning
               name="type"
               defaultValue={typeFilter}
-              className="bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              className="bg-background border border-border rounded-lg px-3 py-2 text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary w-full"
             >
               {typeOptions.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -221,20 +221,22 @@ export default async function StatementsPage({
             </select>
           </div>
 
-          <button
-            suppressHydrationWarning
-            type="submit"
-            className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium"
-          >
-            Apply
-          </button>
+          <div className="flex gap-2">
+            <button
+              suppressHydrationWarning
+              type="submit"
+              className="flex-1 sm:flex-none bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              Apply
+            </button>
 
-          <Link
-            href="/account/statements"
-            className="bg-background hover:bg-surface border border-border text-foreground rounded-lg px-4 py-2 text-sm font-medium"
-          >
-            Reset
-          </Link>
+            <Link
+              href="/account/statements"
+              className="flex-1 sm:flex-none text-center bg-background hover:bg-surface border border-border text-foreground rounded-lg px-4 py-2 text-sm font-medium"
+            >
+              Reset
+            </Link>
+          </div>
         </form>
 
         <p className="text-xs text-muted-foreground mt-3">
@@ -245,29 +247,29 @@ export default async function StatementsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Spent</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{formatAmount(totalSpentCents)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Paid, Processing, Shipped, Completed</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-6">
+          <p className="text-[11px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Spent</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{formatAmount(totalSpentCents)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">Paid, Processing, Shipped, Completed</p>
         </div>
 
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Orders</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{totalOrders}</p>
-          <p className="text-xs text-muted-foreground mt-1">In selected period</p>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-6">
+          <p className="text-[11px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Orders</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{totalOrders}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">In selected period</p>
         </div>
 
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Total Refunds</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{formatAmount(totalRefundsCents)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{refundTransactions.length} refund transaction{refundTransactions.length !== 1 ? 's' : ''}</p>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-6">
+          <p className="text-[11px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Refunds</p>
+          <p className="text-xl sm:text-2xl font-bold text-green-400 mt-1">{formatAmount(totalRefundsCents)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">{refundTransactions.length} transaction{refundTransactions.length !== 1 ? 's' : ''}</p>
         </div>
 
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Net Spent</p>
-          <p className="text-2xl font-bold text-foreground mt-1">{formatAmount(netSpentCents)}</p>
-          <p className="text-xs text-muted-foreground mt-1">After refunds</p>
+        <div className="bg-surface rounded-xl border border-border p-4 sm:p-6">
+          <p className="text-[11px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide">Net Spent</p>
+          <p className="text-xl sm:text-2xl font-bold text-foreground mt-1">{formatAmount(netSpentCents)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 hidden sm:block">After refunds</p>
         </div>
       </div>
 
@@ -282,87 +284,136 @@ export default async function StatementsPage({
             </Link>
           </div>
         ) : (
-          <div className="bg-surface rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Order #</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Product</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Creator</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Type</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {orders.map(order => {
-                  let thumbnailUrl: string | null = null
-                  try {
-                    const imgs = JSON.parse(order.product.images)
-                    thumbnailUrl = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null
-                  } catch {
-                    thumbnailUrl = null
-                  }
-
-                  return (
-                    <tr key={order.id} className="hover:bg-background/50 transition-colors">
-                      <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                        {formatDate(order.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/account/orders/${order.id}`}
-                          className="font-mono text-xs text-primary hover:underline"
-                        >
-                          #{order.id.slice(-8).toUpperCase()}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          {thumbnailUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={thumbnailUrl}
-                              alt={order.product.title}
-                              className="w-8 h-8 rounded object-cover flex-shrink-0"
-                            />
-                          )}
-                          <span className="text-foreground font-medium truncate max-w-[160px]">
-                            {order.product.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                        {order.creator?.name ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            typeStyles[order.product.type as ProductType] ?? 'bg-muted/20 text-muted-foreground'
-                          }`}
-                        >
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {orders.map(order => {
+                let thumbnailUrl: string | null = null
+                try {
+                  const imgs = JSON.parse(order.product.images)
+                  thumbnailUrl = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null
+                } catch {
+                  thumbnailUrl = null
+                }
+                return (
+                  <Link
+                    key={order.id}
+                    href={`/account/orders/${order.id}`}
+                    className="block bg-surface rounded-xl border border-border p-4 active:bg-card/80 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      {thumbnailUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumbnailUrl} alt={order.product.title} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-card flex-shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground font-semibold text-sm truncate">{order.product.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                          by {order.creator?.name ?? '—'} · {formatDate(order.createdAt)}
+                        </p>
+                        <p className="font-mono text-[11px] text-primary mt-0.5">#{order.id.slice(-8).toUpperCase()}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-border">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${typeStyles[order.product.type as ProductType] ?? 'bg-muted/20 text-muted-foreground'}`}>
                           {order.product.type}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-foreground whitespace-nowrap">
-                        {formatAmount(order.amountUsd)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            statusStyles[order.status as OrderStatus] ?? 'bg-muted/20 text-muted-foreground'
-                          }`}
-                        >
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${statusStyles[order.status as OrderStatus] ?? 'bg-muted/20 text-muted-foreground'}`}>
                           {order.status}
                         </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      <span className="font-semibold text-foreground text-sm">{formatAmount(order.amountUsd)}</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Date</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Order #</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Product</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Creator</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Type</th>
+                    <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Amount</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {orders.map(order => {
+                    let thumbnailUrl: string | null = null
+                    try {
+                      const imgs = JSON.parse(order.product.images)
+                      thumbnailUrl = Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null
+                    } catch {
+                      thumbnailUrl = null
+                    }
+
+                    return (
+                      <tr key={order.id} className="hover:bg-background/50 transition-colors">
+                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
+                          {formatDate(order.createdAt)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/account/orders/${order.id}`}
+                            className="font-mono text-xs text-primary hover:underline"
+                          >
+                            #{order.id.slice(-8).toUpperCase()}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            {thumbnailUrl && (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={thumbnailUrl}
+                                alt={order.product.title}
+                                className="w-8 h-8 rounded object-cover flex-shrink-0"
+                              />
+                            )}
+                            <span className="text-foreground font-medium truncate max-w-[160px]">
+                              {order.product.title}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {order.creator?.name ?? '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              typeStyles[order.product.type as ProductType] ?? 'bg-muted/20 text-muted-foreground'
+                            }`}
+                          >
+                            {order.product.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right font-medium text-foreground whitespace-nowrap">
+                          {formatAmount(order.amountUsd)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              statusStyles[order.status as OrderStatus] ?? 'bg-muted/20 text-muted-foreground'
+                            }`}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -370,7 +421,26 @@ export default async function StatementsPage({
       {refundTransactions.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-foreground mb-3">Refunds</h2>
-          <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {refundTransactions.map(txn => (
+              <div key={txn.id} className="bg-surface rounded-xl border border-border p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/account/orders/${txn.order.id}`}
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    #{txn.order.id.slice(-8).toUpperCase()}
+                  </Link>
+                  <span className="font-semibold text-green-400 text-sm">+{formatAmount(txn.amount)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{formatDate(txn.createdAt)}</p>
+                {txn.note && <p className="text-xs text-muted-foreground mt-1">{txn.note}</p>}
+              </div>
+            ))}
+          </div>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">

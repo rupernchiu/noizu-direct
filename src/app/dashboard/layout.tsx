@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
+import { MobileNavDrawer } from '@/components/ui/MobileNavDrawer'
 import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Sliders, Settings, Palette } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
@@ -68,82 +69,84 @@ export default async function DashboardLayout({ children }: { children: React.Re
     }
   }
 
+  const navItems = (
+    <>
+      <Link
+        href="/account"
+        className="flex items-center gap-1.5 px-2 py-1 mb-1 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-border/40 shrink-0"
+      >
+        ← Member Account
+      </Link>
+      <NavLink href="/dashboard"><LayoutDashboard className="size-4" />Overview</NavLink>
+      <NavLink href="/dashboard/listings"><Package className="size-4" />Listings</NavLink>
+      <NavLink href="/dashboard/commissions"><Palette className="size-4" />Commissions</NavLink>
+      <NavLink href="/dashboard/orders"><ShoppingBag className="size-4" />Orders</NavLink>
+      <NavLink href="/dashboard/messages"><MessageCircle className="size-4" />Messages</NavLink>
+      <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
+      <NavLink href="/dashboard/statement"><FileText className="size-4" />Statement</NavLink>
+      <NavLink href="/dashboard/fans"><Users className="size-4" />Fans</NavLink>
+      <div className="my-2 h-px bg-border" />
+      <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
+      <NavLink href="/dashboard/subscribers"><Users className="size-4" />Subscribers</NavLink>
+      <div className="my-2 h-px bg-border" />
+      <p className="px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
+        Reviews
+      </p>
+      <NavLink href="/dashboard/reviews/products"><Star className="size-4" />Product Reviews</NavLink>
+      <NavLink href="/dashboard/reviews/messages"><MessageCircle className="size-4" />Storefront Messages</NavLink>
+      <div className="my-2 h-px bg-border" />
+      <p className="px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
+        Settings
+      </p>
+      <NavLink href="/dashboard/settings"><Settings className="size-4" />Overview</NavLink>
+      <NavLink href="/dashboard/profile"><User className="size-4" />Profile</NavLink>
+      <NavLink href="/dashboard/settings/commissions"><Sliders className="size-4" />Commissions</NavLink>
+      <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
+      <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
+      <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
+      <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
+      <NavLink href="/dashboard/verification">
+        <ShieldCheck className="size-4" />
+        Verification
+        {kycIncomplete && (
+          <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
+        )}
+      </NavLink>
+      <NavLink href="/dashboard/storage">
+        <HardDrive className="size-4" />
+        Storage
+        <Suspense fallback={null}>
+          <StorageUsageDot userId={userId} />
+        </Suspense>
+      </NavLink>
+      <div className="my-2 h-px bg-border" />
+      <p className="px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
+        Member Account
+      </p>
+      <NavLink href="/account/orders"><ShoppingBag className="size-4" />My Orders</NavLink>
+      <NavLink href="/account/downloads"><Download className="size-4" />My Downloads</NavLink>
+      <NavLink href="/account/wishlist"><Heart className="size-4" />Wishlist</NavLink>
+      <NavLink href="/account/following"><Users className="size-4" />Following</NavLink>
+      <NavLink href="/account/statements"><FileText className="size-4" />My Statements</NavLink>
+      <NavLink href="/account/disputes"><Scale className="size-4" />Disputes</NavLink>
+      <NavLink href="/account/messages"><MessageCircle className="size-4" />Messages</NavLink>
+    </>
+  )
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Creator Dashboard</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <MobileNavDrawer title="Creator Dashboard">{navItems}</MobileNavDrawer>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Creator Dashboard</h1>
+          </div>
           <NotificationBell />
         </div>
         <div className="flex gap-8 flex-col md:flex-row">
-          <aside className="md:w-56 shrink-0">
-            <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {/* Member account switch link */}
-              <Link
-                href="/account"
-                className="flex items-center gap-1.5 px-2 py-1 mb-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors rounded-md hover:bg-border/40 shrink-0"
-              >
-                ← Member Account
-              </Link>
-              {/* Store management */}
-              <NavLink href="/dashboard"><LayoutDashboard className="size-4" />Overview</NavLink>
-              <NavLink href="/dashboard/listings"><Package className="size-4" />Listings</NavLink>
-              <NavLink href="/dashboard/commissions"><Palette className="size-4" />Commissions</NavLink>
-              <NavLink href="/dashboard/orders"><ShoppingBag className="size-4" />Orders</NavLink>
-              <NavLink href="/dashboard/messages"><MessageCircle className="size-4" />Messages</NavLink>
-              <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
-              <NavLink href="/dashboard/statement"><FileText className="size-4" />Statement</NavLink>
-              <NavLink href="/dashboard/fans"><Users className="size-4" />Fans</NavLink>
-              {/* Separator */}
-              <div className="hidden md:block my-2 h-px bg-border" />
-              {/* Content */}
-              <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
-              <NavLink href="/dashboard/subscribers"><Users className="size-4" />Subscribers</NavLink>
-              {/* Separator */}
-              <div className="hidden md:block my-2 h-px bg-border" />
-              <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
-                Reviews
-              </p>
-              <NavLink href="/dashboard/reviews/products"><Star className="size-4" />Product Reviews</NavLink>
-              <NavLink href="/dashboard/reviews/messages"><MessageCircle className="size-4" />Storefront Messages</NavLink>
-              {/* Separator */}
-              <div className="hidden md:block my-2 h-px bg-border" />
-              <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
-                Settings
-              </p>
-              <NavLink href="/dashboard/settings"><Settings className="size-4" />Overview</NavLink>
-              <NavLink href="/dashboard/profile"><User className="size-4" />Profile</NavLink>
-              <NavLink href="/dashboard/settings/commissions"><Sliders className="size-4" />Commissions</NavLink>
-              <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
-              <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
-              <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
-              <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
-              <NavLink href="/dashboard/verification">
-                <ShieldCheck className="size-4" />
-                Verification
-                {kycIncomplete && (
-                  <span className="ml-auto size-2 rounded-full bg-amber-400 shrink-0 animate-pulse" />
-                )}
-              </NavLink>
-              <NavLink href="/dashboard/storage">
-                <HardDrive className="size-4" />
-                Storage
-                <Suspense fallback={null}>
-                  <StorageUsageDot userId={userId} />
-                </Suspense>
-              </NavLink>
-              {/* Member Account section */}
-              <div className="hidden md:block my-2 h-px bg-border" />
-              <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
-                Member Account
-              </p>
-              <NavLink href="/account/orders"><ShoppingBag className="size-4" />My Orders</NavLink>
-              <NavLink href="/account/downloads"><Download className="size-4" />My Downloads</NavLink>
-              <NavLink href="/account/wishlist"><Heart className="size-4" />Wishlist</NavLink>
-              <NavLink href="/account/following"><Users className="size-4" />Following</NavLink>
-              <NavLink href="/account/statements"><FileText className="size-4" />My Statements</NavLink>
-              <NavLink href="/account/disputes"><Scale className="size-4" />Disputes</NavLink>
-              <NavLink href="/account/messages"><MessageCircle className="size-4" />Messages</NavLink>
+          <aside className="hidden md:block md:w-56 shrink-0">
+            <nav className="flex flex-col gap-1">
+              {navItems}
             </nav>
           </aside>
           <main className="flex-1 min-w-0">

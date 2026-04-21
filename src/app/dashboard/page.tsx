@@ -159,8 +159,8 @@ export default async function DashboardPage() {
       <OnboardingChecklistWrapper steps={onboardingSteps} allComplete={allOnboardingComplete} dismissed={profile.onboardingDismissed} />
 
       {/* Recent orders */}
-      <div className="bg-surface rounded-xl border border-border overflow-hidden">
-        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-foreground">Recent Orders</h2>
           <Link href="/dashboard/orders" className="text-xs text-primary hover:underline">
             View all
@@ -176,42 +176,68 @@ export default async function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-5 py-3 text-left font-medium">Buyer</th>
-                  <th className="px-5 py-3 text-left font-medium">Product</th>
-                  <th className="px-5 py-3 text-left font-medium">Amount</th>
-                  <th className="px-5 py-3 text-left font-medium">Status</th>
-                  <th className="px-5 py-3 text-left font-medium">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                    <td className="px-5 py-3 text-foreground">{order.buyer?.name ?? 'Unknown'}</td>
-                    <td className="px-5 py-3 text-muted-foreground truncate max-w-[160px]">
-                      {order.product?.title ?? '—'}
-                    </td>
-                    <td className="px-5 py-3 text-foreground">
-                      ${order.amountUsd.toFixed(2)}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                          statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'
-                        }`}
-                      >
-                        {STATUS_LABELS[order.status] ?? order.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{formatDate(order.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {recentOrders.map((order) => (
+                <div key={order.id} className="bg-surface rounded-xl border border-border p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-foreground font-semibold text-sm truncate">{order.product?.title ?? '—'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {order.buyer?.name ?? 'Unknown'} · {formatDate(order.createdAt)}
+                      </p>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium shrink-0 ${statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'}`}>
+                      {STATUS_LABELS[order.status] ?? order.status}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-border">
+                    <span className="text-foreground font-semibold text-sm">${order.amountUsd.toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-muted-foreground border-b border-border">
+                      <th className="px-5 py-3 text-left font-medium">Buyer</th>
+                      <th className="px-5 py-3 text-left font-medium">Product</th>
+                      <th className="px-5 py-3 text-left font-medium">Amount</th>
+                      <th className="px-5 py-3 text-left font-medium">Status</th>
+                      <th className="px-5 py-3 text-left font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentOrders.map((order) => (
+                      <tr key={order.id} className="border-b border-border last:border-0 hover:bg-card/50">
+                        <td className="px-5 py-3 text-foreground">{order.buyer?.name ?? 'Unknown'}</td>
+                        <td className="px-5 py-3 text-muted-foreground truncate max-w-[160px]">
+                          {order.product?.title ?? '—'}
+                        </td>
+                        <td className="px-5 py-3 text-foreground">
+                          ${order.amountUsd.toFixed(2)}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                              statusStyles[order.status as OrderStatus] ?? 'bg-muted-foreground/20 text-muted-foreground'
+                            }`}
+                          >
+                            {STATUS_LABELS[order.status] ?? order.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-muted-foreground">{formatDate(order.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

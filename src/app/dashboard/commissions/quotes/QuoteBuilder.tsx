@@ -117,7 +117,7 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Buyer email</label>
           <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder="buyer@example.com"
-            className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
           <p className="text-xs text-muted-foreground mt-1">The email address the buyer uses on noizu.direct. They&apos;ll be notified when you send the quote.</p>
         </div>
       )}
@@ -125,35 +125,35 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Title</label>
         <input value={title} onChange={e => setTitle(e.target.value)} maxLength={200}
-          className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+          className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
       </div>
 
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Description</label>
         <textarea value={description} onChange={e => setDescription(e.target.value)} rows={5}
-          className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+          className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Total ($)</label>
           <input type="number" step="0.01" min="1" value={amountDollars} onChange={e => setAmountDollars(e.target.value)}
-            className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
         </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Deposit %</label>
           <input type="number" min="0" max="100" value={depositPercent} onChange={e => setDepositPercent(e.target.value)} disabled={isMilestoneBased}
-            className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground disabled:opacity-50" />
+            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground disabled:opacity-50" />
         </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Revisions</label>
           <input type="number" min="0" max="20" value={revisionsIncluded} onChange={e => setRevisionsIncluded(e.target.value)}
-            className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
         </div>
         <div>
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Turnaround (d)</label>
           <input type="number" min="1" max="365" value={turnaroundDays} onChange={e => setTurnaroundDays(e.target.value)}
-            className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
         </div>
       </div>
 
@@ -182,11 +182,11 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
                 )}
               </div>
               <input value={m.title} onChange={e => updateMilestone(i, { title: e.target.value })} placeholder="Title"
-                className="w-full text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
+                className="w-full text-base sm:text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
               <textarea value={m.description} onChange={e => updateMilestone(i, { description: e.target.value })} placeholder="Description (optional)" rows={2}
-                className="w-full text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
+                className="w-full text-base sm:text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
               <input type="number" step="0.01" min="1" value={m.amountDollars} onChange={e => updateMilestone(i, { amountDollars: e.target.value })} placeholder="Amount ($)"
-                className="w-full text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
+                className="w-full text-base sm:text-sm p-2 rounded-lg bg-background border border-border text-foreground" />
             </div>
           ))}
           {milestones.length < 10 && (
@@ -200,16 +200,16 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
       <div>
         <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Terms (optional)</label>
         <textarea value={termsText} onChange={e => setTermsText(e.target.value)} rows={3}
-          className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
+          className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
-      <div className="flex flex-wrap gap-2 pt-2">
-        <button onClick={() => save(false)} disabled={busy} className="text-sm px-5 py-2.5 rounded-lg border border-border text-foreground hover:border-foreground disabled:opacity-50">
+      <div className="flex flex-col-reverse sm:flex-row sm:flex-wrap gap-2 pt-2">
+        <button onClick={() => save(false)} disabled={busy} className="text-sm px-5 py-3 rounded-lg border border-border text-foreground hover:border-foreground disabled:opacity-50">
           {busy ? 'Saving…' : 'Save as draft'}
         </button>
-        <button onClick={() => save(true)} disabled={busy} className="text-sm px-5 py-2.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50">
+        <button onClick={() => save(true)} disabled={busy} className="text-sm px-5 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50">
           {busy ? 'Sending…' : 'Save & send to buyer'}
         </button>
       </div>

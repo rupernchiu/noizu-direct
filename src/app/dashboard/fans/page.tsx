@@ -80,37 +80,60 @@ export default async function FansPage({
           </p>
         </div>
       ) : (
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-5 py-3 text-left font-medium">Fan</th>
-                  <th className="px-5 py-3 text-left font-medium">Email</th>
-                  <th className="px-5 py-3 text-left font-medium">Orders</th>
-                  <th className="px-5 py-3 text-left font-medium">Total Spent</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fans.map(({ buyer, total, orderCount }) => (
-                  <tr key={buyer.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
-                          {buyer.name?.[0]?.toUpperCase() ?? '?'}
-                        </div>
-                        <span className="font-medium text-foreground">{buyer.name ?? 'Unknown'}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{buyer.email ?? '—'}</td>
-                    <td className="px-5 py-3 text-foreground">{orderCount}</td>
-                    <td className="px-5 py-3 text-secondary font-medium">${(total / 100).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {fans.map(({ buyer, total, orderCount }) => (
+              <div key={buyer.id} className="bg-surface rounded-xl border border-border p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/30 flex items-center justify-center text-sm font-bold text-primary shrink-0">
+                    {buyer.name?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground text-sm truncate">{buyer.name ?? 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground truncate">{buyer.email ?? '—'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-border text-xs">
+                  <span className="text-muted-foreground">{orderCount} order{orderCount !== 1 ? 's' : ''}</span>
+                  <span className="text-secondary font-semibold">${(total / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-muted-foreground border-b border-border">
+                    <th className="px-5 py-3 text-left font-medium">Fan</th>
+                    <th className="px-5 py-3 text-left font-medium">Email</th>
+                    <th className="px-5 py-3 text-left font-medium">Orders</th>
+                    <th className="px-5 py-3 text-left font-medium">Total Spent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fans.map(({ buyer, total, orderCount }) => (
+                    <tr key={buyer.id} className="border-b border-border last:border-0 hover:bg-card/50">
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center text-xs font-bold text-primary shrink-0">
+                            {buyer.name?.[0]?.toUpperCase() ?? '?'}
+                          </div>
+                          <span className="font-medium text-foreground">{buyer.name ?? 'Unknown'}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">{buyer.email ?? '—'}</td>
+                      <td className="px-5 py-3 text-foreground">{orderCount}</td>
+                      <td className="px-5 py-3 text-secondary font-medium">${(total / 100).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       <Suspense fallback={null}>

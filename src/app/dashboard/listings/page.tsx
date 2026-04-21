@@ -70,25 +70,29 @@ export default async function ListingsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-foreground">Listings</h1>
           <p className="text-sm text-muted-foreground mt-1">{total} product{total !== 1 ? 's' : ''}</p>
         </div>
         <Link
           href="/dashboard/listings/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium transition-colors whitespace-nowrap shrink-0"
         >
-          + New Product
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">New Product</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3">
         <Suspense fallback={null}>
-          <SearchBar placeholder="Search by title..." className="min-w-48 flex-1" />
-          <FilterSelect paramName="category" options={CATEGORY_OPTIONS} allLabel="All Categories" className="w-44" />
-          <FilterSelect paramName="type" options={TYPE_OPTIONS} allLabel="All Types" className="w-36" />
-          <FilterSelect paramName="status" options={STATUS_OPTIONS} allLabel="All Statuses" className="w-36" />
+          <SearchBar placeholder="Search by title..." className="sm:min-w-48 sm:flex-1" />
+          <div className="grid grid-cols-3 gap-2 sm:contents">
+            <FilterSelect paramName="category" options={CATEGORY_OPTIONS} allLabel="Category" className="w-full sm:w-44" />
+            <FilterSelect paramName="type" options={TYPE_OPTIONS} allLabel="Type" className="w-full sm:w-36" />
+            <FilterSelect paramName="status" options={STATUS_OPTIONS} allLabel="Status" className="w-full sm:w-36" />
+          </div>
         </Suspense>
       </div>
 
@@ -110,49 +114,80 @@ export default async function ListingsPage({
           <p className="text-muted-foreground text-sm">No products match your filters.</p>
         </div>
       ) : (
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-5 py-3 text-left font-medium">Title</th>
-                  <th className="px-5 py-3 text-left font-medium">Category</th>
-                  <th className="px-5 py-3 text-left font-medium">Type</th>
-                  <th className="px-5 py-3 text-left font-medium">Price</th>
-                  <th className="px-5 py-3 text-left font-medium">Status</th>
-                  <th className="px-5 py-3 text-left font-medium">Pinned</th>
-                  <th className="px-5 py-3 text-left font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => (
-                  <tr key={product.id} className="border-b border-border last:border-0 hover:bg-card/50">
-                    <td className="px-5 py-3">
-                      <span className="font-medium text-foreground line-clamp-1">{product.title}</span>
-                    </td>
-                    <td className="px-5 py-3 text-muted-foreground">{product.category}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{product.type}</td>
-                    <td className="px-5 py-3 text-foreground">{formatPrice(product.price)}</td>
-                    <td className="px-5 py-3">
-                      <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="status" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="pin" />
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <Link href={`/dashboard/listings/${product.id}/edit`} className="text-xs text-primary hover:underline">
-                          Edit
-                        </Link>
-                        <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="delete" />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {products.map((product) => (
+              <div key={product.id} className="bg-surface rounded-xl border border-border p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground font-semibold text-sm line-clamp-1">{product.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {product.category} · {product.type}
+                    </p>
+                  </div>
+                  <span className="text-foreground font-semibold text-sm shrink-0">{formatPrice(product.price)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 pt-3 border-t border-border">
+                  <div className="flex items-center gap-3">
+                    <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="status" />
+                    <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="pin" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Link href={`/dashboard/listings/${product.id}/edit`} className="text-xs text-primary hover:underline">
+                      Edit
+                    </Link>
+                    <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="delete" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+          {/* Desktop table */}
+          <div className="hidden md:block bg-surface rounded-xl border border-border overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-xs text-muted-foreground border-b border-border">
+                    <th className="px-5 py-3 text-left font-medium">Title</th>
+                    <th className="px-5 py-3 text-left font-medium">Category</th>
+                    <th className="px-5 py-3 text-left font-medium">Type</th>
+                    <th className="px-5 py-3 text-left font-medium">Price</th>
+                    <th className="px-5 py-3 text-left font-medium">Status</th>
+                    <th className="px-5 py-3 text-left font-medium">Pinned</th>
+                    <th className="px-5 py-3 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((product) => (
+                    <tr key={product.id} className="border-b border-border last:border-0 hover:bg-card/50">
+                      <td className="px-5 py-3">
+                        <span className="font-medium text-foreground line-clamp-1">{product.title}</span>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">{product.category}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{product.type}</td>
+                      <td className="px-5 py-3 text-foreground">{formatPrice(product.price)}</td>
+                      <td className="px-5 py-3">
+                        <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="status" />
+                      </td>
+                      <td className="px-5 py-3">
+                        <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="pin" />
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <Link href={`/dashboard/listings/${product.id}/edit`} className="text-xs text-primary hover:underline">
+                            Edit
+                          </Link>
+                          <ListingsActions productId={product.id} isActive={product.isActive} isPinned={product.isPinned} mode="delete" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
 
       <Suspense fallback={null}>

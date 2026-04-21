@@ -22,7 +22,7 @@ type Initial = {
   defaults: CommissionDefaults
 }
 
-const inputCls = 'w-full text-sm p-2.5 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
+const inputCls = 'w-full text-base sm:text-sm p-2.5 rounded-lg bg-background border border-border text-foreground focus:outline-none focus:ring-1 focus:ring-primary'
 
 export function CommissionSettingsForm({ initial }: { initial: Initial }) {
   const router = useRouter()
@@ -162,13 +162,15 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
         {tiers.length === 0 && <p className="text-sm text-muted-foreground">No pricing tiers yet. Add up to 5 to help buyers gauge budget.</p>}
         <div className="space-y-3">
           {tiers.map((t, i) => (
-            <div key={i} className="grid grid-cols-12 gap-2 items-start">
-              <input value={t.tier} onChange={(e) => updateTier(i, 'tier', e.target.value)} placeholder="Tier name (e.g. Bust)" className={`${inputCls} col-span-4`} />
-              <input type="number" min={0} value={t.price} onChange={(e) => updateTier(i, 'price', Number(e.target.value))} placeholder="Price (USD)" className={`${inputCls} col-span-2`} />
-              <input value={t.description} onChange={(e) => updateTier(i, 'description', e.target.value)} placeholder="Short description" className={`${inputCls} col-span-5`} />
-              <button type="button" onClick={() => removeTier(i)} className="col-span-1 size-9 rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 inline-flex items-center justify-center">
-                <Trash2 className="size-4" />
-              </button>
+            <div key={i} className="rounded-lg border border-border bg-background/50 p-3 sm:p-0 sm:border-0 sm:bg-transparent sm:grid sm:grid-cols-12 sm:gap-2 sm:items-start space-y-2 sm:space-y-0">
+              <input value={t.tier} onChange={(e) => updateTier(i, 'tier', e.target.value)} placeholder="Tier name (e.g. Bust)" className={`${inputCls} sm:col-span-4`} />
+              <div className="flex gap-2 sm:contents">
+                <input type="number" min={0} value={t.price} onChange={(e) => updateTier(i, 'price', Number(e.target.value))} placeholder="Price (USD)" className={`${inputCls} w-28 sm:w-auto sm:col-span-2`} />
+                <input value={t.description} onChange={(e) => updateTier(i, 'description', e.target.value)} placeholder="Short description" className={`${inputCls} flex-1 sm:col-span-5`} />
+                <button type="button" onClick={() => removeTier(i)} aria-label="Remove tier" className="sm:col-span-1 shrink-0 size-10 sm:size-9 rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 inline-flex items-center justify-center">
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -204,12 +206,12 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
 
       {/* Milestone templates */}
       <section className="bg-card border border-border rounded-xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-foreground">Milestone templates</h3>
             <p className="text-xs text-muted-foreground">Reusable n-stage splits. Each stage releases its share of escrow on approval.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <select
               onChange={(e) => {
                 const idx = Number(e.target.value)
@@ -217,12 +219,12 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
                 e.currentTarget.value = ''
               }}
               defaultValue=""
-              className="text-xs px-2 py-1.5 rounded-lg bg-background border border-border text-foreground"
+              className="text-xs px-2 py-2 rounded-lg bg-background border border-border text-foreground flex-1 sm:flex-none"
             >
               <option value="" disabled>+ Add from preset…</option>
               {BUILTIN_TEMPLATES.map((t, i) => <option key={i} value={i}>{t.name}</option>)}
             </select>
-            <button type="button" onClick={() => addTemplate()} disabled={defaults.milestoneTemplates.length >= 10} className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 inline-flex items-center gap-1">
+            <button type="button" onClick={() => addTemplate()} disabled={defaults.milestoneTemplates.length >= 10} className="text-xs px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground disabled:opacity-40 inline-flex items-center gap-1 shrink-0">
               <Plus className="size-3" /> Custom
             </button>
           </div>
@@ -239,8 +241,8 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
         </div>
       </section>
 
-      <div className="flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="text-sm px-5 py-2.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-40">
+      <div className="flex items-center gap-3 sticky bottom-0 bg-background/95 backdrop-blur sm:static sm:bg-transparent sm:backdrop-blur-none -mx-4 sm:mx-0 px-4 sm:px-0 py-3 sm:py-0 border-t border-border sm:border-0">
+        <button onClick={save} disabled={saving} className="w-full sm:w-auto text-sm px-5 py-3 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-40">
           {saving ? 'Saving…' : 'Save settings'}
         </button>
       </div>
@@ -280,14 +282,14 @@ function TemplateEditor({ tpl, onChange, onRemove }: { tpl: MilestoneTemplate; o
 
       <div className="space-y-2">
         {tpl.stages.map((st, i) => (
-          <div key={i} className="grid grid-cols-12 gap-2 items-center">
-            <GripVertical className="col-span-1 size-4 text-muted-foreground" />
-            <input value={st.label} onChange={(e) => updateStage(i, 'label', e.target.value)} placeholder="Stage label" className={`${inputCls} col-span-6`} />
-            <div className="col-span-3 flex items-center gap-1">
-              <input type="number" min={1} max={100} value={st.percent} onChange={(e) => updateStage(i, 'percent', Number(e.target.value))} className={inputCls} />
+          <div key={i} className="flex items-center gap-2">
+            <GripVertical className="shrink-0 size-4 text-muted-foreground hidden sm:block" />
+            <input value={st.label} onChange={(e) => updateStage(i, 'label', e.target.value)} placeholder="Stage label" className={`${inputCls} flex-1 min-w-0`} />
+            <div className="flex items-center gap-1 shrink-0">
+              <input type="number" min={1} max={100} value={st.percent} onChange={(e) => updateStage(i, 'percent', Number(e.target.value))} className={`${inputCls} w-16`} />
               <span className="text-xs text-muted-foreground">%</span>
             </div>
-            <button type="button" onClick={() => removeStage(i)} className="col-span-2 size-9 rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 inline-flex items-center justify-center">
+            <button type="button" onClick={() => removeStage(i)} aria-label="Remove stage" className="shrink-0 size-10 sm:size-9 rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-500/50 inline-flex items-center justify-center">
               <Trash2 className="size-4" />
             </button>
           </div>

@@ -196,7 +196,7 @@ export default function MessagesPage() {
         <p className="text-sm text-muted-foreground mt-1">Chat with creators</p>
       </div>
 
-      <div className="bg-surface rounded-xl border border-border overflow-hidden h-[600px] flex">
+      <div className="bg-surface rounded-xl border border-border overflow-hidden h-[calc(100dvh-10rem)] md:h-[600px] flex">
         {/* Conversations list */}
         <div
           className={`w-full md:w-72 md:block shrink-0 border-r border-border flex flex-col ${
@@ -308,8 +308,9 @@ export default function MessagesPage() {
               <div className="px-4 py-3 border-b border-border flex items-center gap-3">
                 <button
                   suppressHydrationWarning
-                  className="md:hidden text-muted-foreground hover:text-foreground mr-1"
+                  className="md:hidden flex items-center justify-center size-10 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
                   onClick={() => setMobileShowThread(false)}
+                  aria-label="Back to conversations"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -384,13 +385,13 @@ export default function MessagesPage() {
                   }}
                   placeholder={newConvoTarget ? `Message ${newConvoTarget.displayName}…` : 'Type a message…'}
                   rows={1}
-                  className="flex-1 resize-none rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="flex-1 resize-none rounded-lg bg-background border border-border px-3 py-2 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
                 <button
                   suppressHydrationWarning
                   onClick={sendMessage}
                   disabled={sending || !content.trim() || !otherUserId}
-                  className="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-primary hover:bg-primary/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="shrink-0 inline-flex items-center justify-center size-11 sm:size-9 rounded-lg bg-primary hover:bg-primary/90 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path

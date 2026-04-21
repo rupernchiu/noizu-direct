@@ -141,10 +141,10 @@ export default async function OrdersPage({
         <p className="text-sm text-muted-foreground mt-1">Your purchase history</p>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3">
         <Suspense fallback={null}>
-          <SearchBar placeholder="Search by order ID or product..." className="min-w-48 flex-1" />
-          <FilterSelect paramName="status" options={STATUS_OPTIONS} allLabel="All Statuses" className="w-40" />
+          <SearchBar placeholder="Search by order ID or product..." className="sm:min-w-48 sm:flex-1" />
+          <FilterSelect paramName="status" options={STATUS_OPTIONS} allLabel="All Statuses" className="w-full sm:w-40" />
         </Suspense>
       </div>
 
@@ -196,23 +196,25 @@ export default async function OrdersPage({
                     })
 
                     return (
-                      <div key={order.id} className="bg-surface p-4 flex gap-4 items-start border-b border-border last:border-b-0">
-                        <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
-                          {thumb ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={thumb} alt={order.product.title} className="w-full h-full object-cover" />
-                          ) : (
-                            <Package className="size-6 text-muted-foreground/40" />
-                          )}
+                      <div key={order.id} className="bg-surface p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-start border-b border-border last:border-b-0">
+                        <div className="flex gap-3 sm:gap-4 sm:contents">
+                          <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
+                            {thumb ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={thumb} alt={order.product.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="size-6 text-muted-foreground/40" />
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground text-sm truncate">{order.product.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
+                          </div>
                         </div>
 
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-foreground truncate">{order.product.title}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
-                        </div>
-
-                        <div className="shrink-0 flex flex-col items-end gap-2">
+                        <div className="shrink-0 flex flex-wrap sm:flex-col items-start sm:items-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                           <span className="text-sm font-semibold text-foreground">
                             {formatAmount(order.displayAmount, order.displayCurrency, order.amountUsd)}
                           </span>
@@ -328,23 +330,25 @@ export default async function OrdersPage({
             })
 
             return (
-              <div key={order.id} className="bg-surface rounded-xl border border-border p-4 flex gap-4 items-start">
-                <div className="shrink-0 w-16 h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
-                  {thumb ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb} alt={order.product.title} className="w-full h-full object-cover" />
-                  ) : (
-                    <Package className="size-6 text-muted-foreground/40" />
-                  )}
+              <div key={order.id} className="bg-surface rounded-xl border border-border p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-start">
+                <div className="flex gap-3 sm:gap-4 sm:contents">
+                  <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={thumb} alt={order.product.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="size-6 text-muted-foreground/40" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground text-sm truncate">{order.product.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
+                  </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{order.product.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">by {order.product?.creator?.displayName ?? 'Unknown Creator'}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{CATEGORY_LABELS[order.product.category] ?? order.product.category} · {TYPE_LABELS[order.product.type] ?? order.product.type}</p>
-                </div>
-
-                <div className="shrink-0 flex flex-col items-end gap-2">
+                <div className="shrink-0 flex flex-wrap sm:flex-col items-start sm:items-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                   <span className="text-sm font-semibold text-foreground">
                     {formatAmount(order.displayAmount, order.displayCurrency, order.amountUsd)}
                   </span>
