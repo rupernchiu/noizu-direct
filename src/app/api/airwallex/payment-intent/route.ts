@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createPaymentIntent, getCurrencyFactor } from '@/lib/airwallex'
+import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 
 const SUPPORTED_CURRENCIES = ['USD', 'MYR', 'SGD', 'PHP', 'THB', 'IDR']
 
@@ -131,7 +132,8 @@ export async function POST(req: Request) {
   // Totals
   const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
   const discountedSubtotal = Math.max(0, subtotal - totalVerifiedDiscount)
-  const processingFee = Math.round(discountedSubtotal * 0.025)
+  const feeRate = await getProcessingFeeRate()
+  const processingFee = feeOnSubtotal(discountedSubtotal, feeRate)
   const grandTotal = discountedSubtotal + processingFee
 
   // Clean up any stale PENDING orders for this buyer before creating new ones

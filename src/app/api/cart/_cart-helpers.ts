@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,7 +111,8 @@ export async function getCartResponse(buyerId: string): Promise<CartResponse> {
   const groups = Array.from(groupMap.values())
 
   const subtotal = groups.reduce((acc, g) => acc + g.subtotal, 0)
-  const processingFee = Math.round(subtotal * 0.025)
+  const feeRate = await getProcessingFeeRate()
+  const processingFee = feeOnSubtotal(subtotal, feeRate)
   const total = subtotal + processingFee
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0)
 

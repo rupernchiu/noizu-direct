@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { NextResponse } from 'next/server'
 import React from 'react'
+import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -22,10 +23,11 @@ export async function POST(req: Request) {
   })
   if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const settings = await prisma.platformSettings.findFirst()
-  const feePercent = settings?.processingFeePercent ?? 2.5
-  const processingFee = Math.round(order.amountUsd * (feePercent / 100))
-  const total = order.amountUsd + processingFee
+  // order.amountUsd is gross (subtotal + fee); back out the fee for receipt line items
+  const feeRate = await getProcessingFeeRate()
+  const processingFee = feeFromGross(order.amountUsd, feeRate)
+  const subtotal = order.amountUsd - processingFee
+  const total = order.amountUsd
 
   const invoiceCount = await prisma.invoice.count()
   const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(5, '0')}`
@@ -38,7 +40,7 @@ export async function POST(req: Request) {
       buyerEmail: order.buyer.email,
       productTitle: order.product.title,
       creatorName: order.creator.name,
-      amountUsd: order.amountUsd,
+      amountUsd: subtotal,
       processingFee,
       total,
       currency: order.displayCurrency,

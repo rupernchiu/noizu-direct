@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getNewCreatorExtraDays } from '@/lib/creator-trust'
+import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 
@@ -38,8 +39,16 @@ async function sendAndLog(
 }
 
 async function handlePaymentSucceeded(intentId: string) {
-  const orders = await prisma.order.findMany({
+  // Idempotency: atomically claim all PENDING orders for this intent by flipping to PROCESSING.
+  // If a second webhook arrives, claim returns 0 and we exit — no duplicate transactions/emails.
+  const claim = await prisma.order.updateMany({
     where: { airwallexIntentId: intentId, status: 'PENDING' },
+    data: { status: 'PROCESSING', escrowStatus: 'HELD', escrowHeldAt: new Date() },
+  })
+  if (claim.count === 0) return
+
+  const orders = await prisma.order.findMany({
+    where: { airwallexIntentId: intentId, status: 'PROCESSING' },
     include: {
       buyer: { select: { email: true, name: true } },
       creator: { select: { email: true } },
@@ -50,7 +59,7 @@ async function handlePaymentSucceeded(intentId: string) {
   if (orders.length === 0) return
 
   const settings = await prisma.platformSettings.findFirst()
-  const feeRate = (settings?.processingFeePercent ?? 2.5) / 100
+  const feeRate = await getProcessingFeeRate()
   const digitalEscrowHours = settings?.digitalEscrowHours ?? 48
   const now = new Date()
 
@@ -68,22 +77,19 @@ async function handlePaymentSucceeded(intentId: string) {
     const downloadToken = isDigital ? crypto.randomUUID() : null
     const downloadExpiry = isDigital ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) : null
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: 'PROCESSING',
-        escrowStatus: 'HELD',
-        escrowHeldAt: now,
-        ...(isDigital ? {
+    if (isDigital) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
           escrowAutoReleaseAt,
           downloadToken,
           downloadExpiry,
-        } : {}),
-      },
-    })
+        },
+      })
+    }
 
-    // Create Transaction record
-    const processingFee = Math.round(order.amountUsd * feeRate / (1 + feeRate))
+    // Create Transaction record — fee is backed out of gross (amountUsd includes fee)
+    const processingFee = feeFromGross(order.amountUsd, feeRate)
     const creatorAmount = order.amountUsd - processingFee
     await prisma.transaction.create({
       data: {
@@ -191,6 +197,88 @@ async function handleTransferSucceeded(transferId: string) {
   )
 }
 
+async function handleDisputeCreated(obj: Record<string, any>) {
+  const disputeId = obj.id as string | undefined
+  if (!disputeId) return
+
+  const paymentIntentId = (obj.payment_intent_id ?? obj.payment_consent_id ?? '') as string
+  const amountUsd = Math.round(((obj.dispute_amount ?? obj.amount ?? 0) as number) * 100)
+  const currency = String(obj.dispute_currency ?? obj.currency ?? 'USD').toUpperCase()
+  const reason = String(obj.dispute_reason_type ?? obj.reason_code ?? 'GENERAL').toUpperCase()
+  const evidenceDeadline = obj.evidence_due_date
+    ? new Date(obj.evidence_due_date as string)
+    : obj.respond_by_date
+      ? new Date(obj.respond_by_date as string)
+      : null
+
+  const order = paymentIntentId
+    ? await prisma.order.findFirst({ where: { airwallexIntentId: paymentIntentId } })
+    : null
+
+  if (!order) {
+    console.warn('[airwallex/webhook] chargeback received but no matching order for intent', paymentIntentId)
+    return
+  }
+
+  await prisma.chargebackDispute.upsert({
+    where: { airwallexDisputeId: disputeId },
+    create: {
+      airwallexDisputeId: disputeId,
+      orderId: order.id,
+      paymentIntentId,
+      amountUsd,
+      currency,
+      reason,
+      status: 'OPEN',
+      evidenceDeadline,
+    },
+    update: { status: 'OPEN', evidenceDeadline },
+  })
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { escrowStatus: 'DISPUTED' },
+  }).catch(() => {})
+
+  await prisma.fraudFlag.create({
+    data: {
+      type: 'CHARGEBACK_PATTERN',
+      severity: 'HIGH',
+      description: `Chargeback raised: ${reason.replace(/_/g, ' ')} — ${currency} ${(amountUsd / 100).toFixed(2)}`,
+      orderId: order.id,
+      userId: order.buyerId,
+    },
+  }).catch(() => {})
+}
+
+async function handleDisputeUpdated(obj: Record<string, any>) {
+  const disputeId = obj.id as string | undefined
+  if (!disputeId) return
+  const existing = await prisma.chargebackDispute.findUnique({ where: { airwallexDisputeId: disputeId } })
+  if (!existing) return
+  await prisma.chargebackDispute.update({
+    where: { airwallexDisputeId: disputeId },
+    data: { status: 'UNDER_REVIEW' },
+  })
+}
+
+async function handleDisputeClosed(obj: Record<string, any>, outcome: 'WON' | 'LOST') {
+  const disputeId = obj.id as string | undefined
+  if (!disputeId) return
+  const existing = await prisma.chargebackDispute.findUnique({ where: { airwallexDisputeId: disputeId } })
+  if (!existing) return
+  await prisma.chargebackDispute.update({
+    where: { airwallexDisputeId: disputeId },
+    data: { status: outcome, outcome },
+  })
+  if (outcome === 'WON') {
+    await prisma.order.update({
+      where: { id: existing.orderId },
+      data: { escrowStatus: 'HELD' },
+    }).catch(() => {})
+  }
+}
+
 async function handleTransferFailed(transferId: string, failureReason?: string) {
   const payout = await prisma.payout.findFirst({
     where: { airwallexTransferId: transferId },
@@ -252,10 +340,11 @@ export async function POST(req: NextRequest) {
 
   const event = JSON.parse(body) as {
     name: string
-    data?: { object?: { id?: string } }
+    data?: { object?: Record<string, any> }
   }
 
-  const intentId = event.data?.object?.id
+  const obj = event.data?.object ?? {}
+  const intentId = obj.id as string | undefined
 
   // Return 200 immediately; process async
   if (event.name === 'payment_intent.succeeded' && intentId) {
@@ -265,8 +354,28 @@ export async function POST(req: NextRequest) {
   } else if (event.name === 'transfer.succeeded' && intentId) {
     void handleTransferSucceeded(intentId)
   } else if (event.name === 'transfer.failed' && intentId) {
-    const failureReason = (event.data?.object as any)?.failure_reason as string | undefined
+    const failureReason = obj.failure_reason as string | undefined
     void handleTransferFailed(intentId, failureReason)
+  } else if (
+    event.name === 'payment.dispute.RaisedByBuyer' ||
+    event.name === 'payment_dispute.created'
+  ) {
+    void handleDisputeCreated(obj)
+  } else if (
+    event.name === 'payment.dispute.updated' ||
+    event.name === 'payment_dispute.updated'
+  ) {
+    void handleDisputeUpdated(obj)
+  } else if (
+    event.name === 'payment.dispute.Accepted' ||
+    event.name === 'payment_dispute.closed'
+  ) {
+    void handleDisputeClosed(obj, 'LOST')
+  } else if (
+    event.name === 'payment.dispute.Closed' ||
+    event.name === 'payment_dispute.won'
+  ) {
+    void handleDisputeClosed(obj, 'WON')
   }
 
   return NextResponse.json({ ok: true })

@@ -87,6 +87,7 @@ interface Props {
   processingFee: number
   total: number
   hasPhysical: boolean
+  feeRate: number
 }
 
 interface ShippingAddress {
@@ -166,7 +167,7 @@ function applyQtyChange(groups: GroupInfo[], cartItemId: string, newQty: number)
   )
 }
 
-export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initialHasPhysical }: Props) {
+export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initialHasPhysical, feeRate }: Props) {
   const router = useRouter()
   const dropinContainerRef = useRef<HTMLDivElement>(null)
   const [liveGroups, setLiveGroups] = useState<GroupInfo[]>(initialGroups)
@@ -199,7 +200,7 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
     return total + (d?.applied ? d.applied.discountAmount : 0)
   }, 0)
   const liveDiscounted    = Math.max(0, liveSubtotal - liveDiscount)
-  const liveProcessingFee = Math.round(liveDiscounted * 0.025)
+  const liveProcessingFee = Math.round(liveDiscounted * feeRate)
   const liveTotal         = liveDiscounted + liveProcessingFee
   const liveTotalItems   = liveGroups.reduce((n, g) => n + g.items.length, 0)
   const liveHasPhysical  = liveGroups.some(g =>

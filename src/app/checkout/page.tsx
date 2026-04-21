@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { CheckoutPageClient } from './CheckoutPageClient'
+import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 
 export default async function CheckoutPage() {
   const session = await auth()
@@ -26,7 +27,8 @@ export default async function CheckoutPage() {
   if (cartItems.length === 0) redirect('/marketplace')
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  const processingFee = Math.round(subtotal * 0.025)
+  const feeRate = await getProcessingFeeRate()
+  const processingFee = feeOnSubtotal(subtotal, feeRate)
   const total = subtotal + processingFee
   const hasPhysical = cartItems.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
 
@@ -50,6 +52,7 @@ export default async function CheckoutPage() {
       processingFee={processingFee}
       total={total}
       hasPhysical={hasPhysical}
+      feeRate={feeRate}
     />
   )
 }
