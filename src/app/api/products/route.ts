@@ -145,16 +145,46 @@ export async function POST(req: Request) {
     images?: string[]
     digitalFiles?: { key: string; filename: string; size: number; mime: string }[]
     stock?: number
+    // POD
+    podProviderId?: string | null
+    baseCost?: number | null
+    productionDays?: number | null
+    shippingMY?: number | null
+    shippingSG?: number | null
+    shippingPH?: number | null
+    shippingIntl?: number | null
+    showProviderPublic?: boolean
+    podExternalUrl?: string | null
+    // Commission
+    commissionDepositPercent?: number | null
+    commissionRevisionsIncluded?: number | null
+    commissionTurnaroundDays?: number | null
   }
 
   if (body.type === 'DIGITAL' && (!body.digitalFiles || body.digitalFiles.length === 0)) {
     return NextResponse.json({ error: 'At least one digital file is required' }, { status: 400 })
   }
 
+  if (body.type === 'POD' && !body.podProviderId) {
+    return NextResponse.json({ error: 'A POD provider is required' }, { status: 400 })
+  }
+
+  if (body.podProviderId) {
+    const provider = await prisma.creatorPodProvider.findFirst({
+      where: { id: body.podProviderId, creatorId: profile.id },
+    })
+    if (!provider) {
+      return NextResponse.json({ error: 'Invalid POD provider' }, { status: 400 })
+    }
+  }
+
   await Promise.all([
     invalidatePattern('marketplace:*'),
     invalidateCache(CACHE_KEYS.trending, CACHE_KEYS.creator(profile.username)),
   ])
+
+  const toCents = (v: number | null | undefined) =>
+    v == null ? null : Math.round(v * 100)
 
   const product = await prisma.product.create({
     data: {
@@ -168,6 +198,23 @@ export async function POST(req: Request) {
       digitalFiles: body.type === 'DIGITAL' ? JSON.stringify(body.digitalFiles ?? []) : null,
       stock: body.stock ?? null,
       isActive: true,
+      // POD
+      podProviderId: body.type === 'POD' ? (body.podProviderId ?? null) : null,
+      baseCost: body.type === 'POD' ? toCents(body.baseCost) : null,
+      productionDays: body.type === 'POD' ? (body.productionDays ?? null) : null,
+      shippingMY: body.type === 'POD' ? toCents(body.shippingMY) : null,
+      shippingSG: body.type === 'POD' ? toCents(body.shippingSG) : null,
+      shippingPH: body.type === 'POD' ? toCents(body.shippingPH) : null,
+      shippingIntl: body.type === 'POD' ? toCents(body.shippingIntl) : null,
+      showProviderPublic: body.type === 'POD' ? (body.showProviderPublic ?? false) : false,
+      podExternalUrl: body.type === 'POD' ? (body.podExternalUrl ?? null) : null,
+      // Commission
+      commissionDepositPercent:
+        body.type === 'COMMISSION' ? (body.commissionDepositPercent ?? 50) : null,
+      commissionRevisionsIncluded:
+        body.type === 'COMMISSION' ? (body.commissionRevisionsIncluded ?? 2) : null,
+      commissionTurnaroundDays:
+        body.type === 'COMMISSION' ? (body.commissionTurnaroundDays ?? 14) : null,
     },
   })
 

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 interface OrdersActionsProps {
   orderId: string
@@ -12,6 +13,17 @@ export function OrdersActions({ orderId, status, productType }: OrdersActionsPro
   const router = useRouter()
   const [tracking, setTracking] = useState('')
   const [loading, setLoading] = useState(false)
+
+  if (productType === 'COMMISSION') {
+    return (
+      <Link
+        href={`/dashboard/orders/${orderId}`}
+        className="text-xs text-primary hover:text-primary/80 transition-colors"
+      >
+        View
+      </Link>
+    )
+  }
 
   async function updateOrder(body: Record<string, unknown>) {
     setLoading(true)

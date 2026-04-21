@@ -19,6 +19,18 @@ export async function PATCH(
 
   const body = await req.json() as Record<string, unknown>
 
+  const toCentsOrNull = (v: unknown): number | null =>
+    v == null ? null : Math.round((v as number) * 100)
+
+  if (body.podProviderId !== undefined && body.podProviderId !== null && body.podProviderId !== '') {
+    const provider = await prisma.creatorPodProvider.findFirst({
+      where: { id: body.podProviderId as string, creatorId: product.creatorId },
+    })
+    if (!provider) {
+      return NextResponse.json({ error: 'Invalid POD provider' }, { status: 400 })
+    }
+  }
+
   const updated = await prisma.product.update({
     where: { id },
     data: {
@@ -36,6 +48,37 @@ export async function PATCH(
       ...(body.preOrderMessage !== undefined && { preOrderMessage: body.preOrderMessage as string | null }),
       ...(body.preOrderReleaseAt !== undefined && {
         preOrderReleaseAt: body.preOrderReleaseAt ? new Date(body.preOrderReleaseAt as string) : null,
+      }),
+      // POD fields
+      ...(body.podProviderId !== undefined && {
+        podProviderId: body.podProviderId ? (body.podProviderId as string) : null,
+      }),
+      ...(body.baseCost !== undefined && { baseCost: toCentsOrNull(body.baseCost) }),
+      ...(body.productionDays !== undefined && {
+        productionDays: body.productionDays == null ? null : (body.productionDays as number),
+      }),
+      ...(body.shippingMY !== undefined && { shippingMY: toCentsOrNull(body.shippingMY) }),
+      ...(body.shippingSG !== undefined && { shippingSG: toCentsOrNull(body.shippingSG) }),
+      ...(body.shippingPH !== undefined && { shippingPH: toCentsOrNull(body.shippingPH) }),
+      ...(body.shippingIntl !== undefined && { shippingIntl: toCentsOrNull(body.shippingIntl) }),
+      ...(body.showProviderPublic !== undefined && {
+        showProviderPublic: body.showProviderPublic as boolean,
+      }),
+      ...(body.podExternalUrl !== undefined && {
+        podExternalUrl: body.podExternalUrl == null ? null : (body.podExternalUrl as string),
+      }),
+      // Commission fields
+      ...(body.commissionDepositPercent !== undefined && {
+        commissionDepositPercent:
+          body.commissionDepositPercent == null ? null : (body.commissionDepositPercent as number),
+      }),
+      ...(body.commissionRevisionsIncluded !== undefined && {
+        commissionRevisionsIncluded:
+          body.commissionRevisionsIncluded == null ? null : (body.commissionRevisionsIncluded as number),
+      }),
+      ...(body.commissionTurnaroundDays !== undefined && {
+        commissionTurnaroundDays:
+          body.commissionTurnaroundDays == null ? null : (body.commissionTurnaroundDays as number),
       }),
     },
   })
