@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { SettingsForm } from './SettingsForm'
+import { MaintenanceToggle } from './MaintenanceToggle'
 import { TRENDING_CONFIG } from '@/lib/trendingConfig'
 
 export default async function AdminSettingsPage() {
@@ -17,6 +18,10 @@ export default async function AdminSettingsPage() {
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-foreground">Platform Settings</h2>
+      <MaintenanceToggle
+        enabled={settings.maintenanceMode}
+        message={settings.maintenanceMessage ?? ''}
+      />
       <SettingsForm
         settings={{
           processingFeePercent: settings.processingFeePercent,

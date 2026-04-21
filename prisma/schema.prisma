@@ -681,6 +681,8 @@ model PlatformSettings {
   commissionEscrowDays           Int    @default(30)
   newCreatorEscrowExtraDays      Int    @default(7)
   newCreatorTransactionThreshold Int    @default(10)
+  maintenanceMode                Boolean @default(false)
+  maintenanceMessage             String?
 }
 
 model NavItem {
