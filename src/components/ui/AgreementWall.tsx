@@ -19,22 +19,43 @@ interface Props {
   userLegalName: string
   gracePeriodEnd: string | null
   daysRemaining: number | null
+  skipCount: number
 }
 
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(iso))
 }
 
-export function AgreementWall({ agreements, userLegalName, gracePeriodEnd, daysRemaining }: Props) {
+const MAX_SKIPS = 3
+
+export function AgreementWall({ agreements, userLegalName, gracePeriodEnd, daysRemaining, skipCount: initialSkipCount }: Props) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
   const [signatureName, setSignatureName] = useState('')
   const [checkedRead, setCheckedRead] = useState(false)
   const [checkedAgree, setCheckedAgree] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [skipped, setSkipped] = useState(false)
+  const [skipCount, setSkipCount] = useState(initialSkipCount)
+  const [skipping, setSkipping] = useState(false)
 
   // Detect new creators: all agreements have no changeLog (never signed any before)
   const isNewCreator = agreements.every(a => !a.changeLog)
+
+  async function handleSkip() {
+    setSkipping(true)
+    try {
+      const res = await fetch('/api/agreements/skip', { method: 'POST', credentials: 'include' })
+      const data = await res.json()
+      if (res.ok) {
+        setSkipCount(data.skipCount)
+        setSkipped(true)
+      }
+    } catch { /* best effort */ }
+    setSkipping(false)
+  }
+
+  if (skipped) return null
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -126,9 +147,9 @@ export function AgreementWall({ agreements, userLegalName, gracePeriodEnd, daysR
               </span>
             </div>
           ) : (
-            <div className="mb-6 flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
-              <span className="shrink-0">⚠️</span>
-              <span>Your account will be restricted soon.</span>
+            <div className="mb-6 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-400">
+              <span className="shrink-0">📋</span>
+              <span>Your attention is needed — please review and sign the agreements below to keep your account in good standing.</span>
             </div>
           )
         )}
@@ -272,16 +293,34 @@ export function AgreementWall({ agreements, userLegalName, gracePeriodEnd, daysR
           </button>
         </div>
 
-        {/* Footer */}
-        <p className="mt-5 text-center text-xs text-muted-foreground">
-          Don&apos;t agree with the new terms?{' '}
-          <a
-            href="/dashboard/close-account"
-            className="text-primary hover:underline"
-          >
-            Request account closure instead →
-          </a>
-        </p>
+        {/* Skip / support section */}
+        <div className="mt-5 flex flex-col items-center gap-2">
+          {skipCount >= MAX_SKIPS ? (
+            <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 text-center w-full">
+              You have used all {MAX_SKIPS} skips. Please{' '}
+              <a href="mailto:hello@noizu.direct" className="underline font-medium">
+                contact support
+              </a>{' '}
+              to proceed.
+            </p>
+          ) : (
+            <button
+              suppressHydrationWarning
+              type="button"
+              onClick={handleSkip}
+              disabled={skipping}
+              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+            >
+              {skipping ? 'Saving…' : `Skip for later (${skipCount}/${MAX_SKIPS})`}
+            </button>
+          )}
+          <p className="text-center text-xs text-muted-foreground">
+            Don&apos;t agree with the new terms?{' '}
+            <a href="/dashboard/close-account" className="text-primary hover:underline">
+              Request account closure instead →
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   )

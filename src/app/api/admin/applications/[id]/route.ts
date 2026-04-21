@@ -125,13 +125,24 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json() as {
-    action: 'APPROVE' | 'REJECT'
+    action?: 'APPROVE' | 'REJECT' | 'UPDATE_LEGAL_NAME'
     rejectionReason?: string
     adminNote?: string
+    legalFullName?: string
   }
 
   const { action, rejectionReason, adminNote } = body
   const adminId = (session.user as any).id as string
+
+  if (action === 'UPDATE_LEGAL_NAME') {
+    const name = body.legalFullName?.trim()
+    if (!name) return NextResponse.json({ error: 'legalFullName is required' }, { status: 400 })
+    await prisma.creatorApplication.update({
+      where: { id },
+      data: { legalFullName: name },
+    })
+    return NextResponse.json({ ok: true })
+  }
 
   if (action !== 'APPROVE' && action !== 'REJECT') {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

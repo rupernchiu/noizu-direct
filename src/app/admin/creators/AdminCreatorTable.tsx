@@ -23,6 +23,7 @@ export interface CreatorRow {
   user: {
     email: string
     createdAt: Date
+    legalFullName?: string | null
   }
   _count: {
     products: number
@@ -247,6 +248,7 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                           isSuspended={creator.isSuspended}
                           username={creator.username}
                           badges={parsedBadges}
+                          legalFullName={creator.user.legalFullName}
                         />
                         <HealthActions
                           creatorId={creator.id}

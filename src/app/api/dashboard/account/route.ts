@@ -12,6 +12,7 @@ export async function PATCH(req: Request) {
     email?: string
     phone?: string
     avatar?: string
+    legalFullName?: string
   }
 
   // Validate email uniqueness if changing
@@ -34,6 +35,7 @@ export async function PATCH(req: Request) {
       ...(body.email !== undefined && { email: body.email }),
       ...(body.phone !== undefined && { phone: body.phone }),
       ...(body.avatar !== undefined && { avatar: body.avatar }),
+      ...(body.legalFullName !== undefined && { legalFullName: body.legalFullName }),
     },
     select: { id: true, name: true, email: true, avatar: true, phone: true },
   })

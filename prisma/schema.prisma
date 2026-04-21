@@ -31,6 +31,8 @@ model User {
   restrictionReason         String?
   closureRequestedAt        DateTime?
   agreementsLastCheckedAt   DateTime?
+  agreementSkipCount        Int       @default(0)
+  legalFullName             String?
 
   creatorProfile      CreatorProfile?
   buyerOrders         Order[]              @relation("BuyerOrders")

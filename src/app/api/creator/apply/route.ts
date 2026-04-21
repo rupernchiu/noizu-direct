@@ -91,6 +91,10 @@ export async function POST(req: NextRequest) {
     paypalEmail?: string
   }
 
+  if (!body.legalFullName?.trim()) {
+    return NextResponse.json({ error: 'Legal full name is required' }, { status: 400 })
+  }
+
   const data = {
     displayName: body.displayName ?? '',
     username: body.username ?? '',
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
     categoryTags: Array.isArray(body.categoryTags)
       ? JSON.stringify(body.categoryTags)
       : (body.categoryTags ?? '[]'),
-    legalFullName: body.legalFullName ?? '',
+    legalFullName: body.legalFullName.trim(),
     dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
     nationality: body.nationality ?? '',
     country: body.country ?? '',
@@ -138,7 +142,10 @@ export async function POST(req: NextRequest) {
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: { creatorVerificationStatus: 'PENDING' },
+      data: {
+        creatorVerificationStatus: 'PENDING',
+        legalFullName: body.legalFullName?.trim() || undefined,
+      },
     })
   } catch (err) {
     console.error('[apply POST] user update failed:', err)

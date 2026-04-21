@@ -36,7 +36,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const userId = (session.user as any).id as string
 
   const [user, unsignedAgreements, application] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { accountStatus: true, closureRequestedAt: true, creatorVerificationStatus: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { accountStatus: true, closureRequestedAt: true, creatorVerificationStatus: true, agreementSkipCount: true, legalFullName: true } }),
     prisma.agreementTemplate.findMany({
       where: {
         isActive: true,
@@ -164,9 +164,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {unsignedAgreements.length > 0 && (
         <AgreementWall
           agreements={unsignedAgreements.map(a => ({ ...a, effectiveDate: a.effectiveDate.toISOString(), publishedAt: a.publishedAt?.toISOString() ?? null }))}
-          userLegalName={application?.legalFullName ?? ''}
+          userLegalName={application?.legalFullName ?? user?.legalFullName ?? ''}
           gracePeriodEnd={gracePeriodEnd}
           daysRemaining={daysRemaining}
+          skipCount={user?.agreementSkipCount ?? 0}
         />
       )}
     </div>

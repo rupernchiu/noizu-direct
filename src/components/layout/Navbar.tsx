@@ -168,25 +168,26 @@ export default function Navbar() {
   )
 
   return (
+    <>
     <nav className="bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="max-w-screen-xl mx-auto px-6">
-        <div className="flex items-center h-14 gap-4">
+        <div className="relative flex items-center h-14">
           {/* Logo */}
           <Link href="/" className="flex items-center shrink-0">
             <Logo />
           </Link>
 
-          {/* Links — left-aligned, small gap after logo */}
-          <div className="flex items-center gap-1">
+          {/* Links — desktop only, centered */}
+          <div className="hidden md:flex items-center gap-1 md:absolute md:left-1/2 md:-translate-x-1/2">
             <Link
               href="/marketplace"
-              className="px-2 md:px-3 py-1.5 text-[13px] md:text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
+              className="px-3 py-1.5 text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
             >
               Marketplace
             </Link>
             <Link
               href="/creators"
-              className="px-2 md:px-3 py-1.5 text-[13px] md:text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
+              className="px-3 py-1.5 text-[15px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
             >
               Creators
             </Link>
@@ -275,5 +276,24 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+
+    {/* Mobile secondary nav — hidden on desktop */}
+    <div className="md:hidden border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="flex items-center gap-1 px-4 h-10">
+        <Link
+          href="/marketplace"
+          className="px-3 py-1 text-[13px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
+        >
+          Marketplace
+        </Link>
+        <Link
+          href="/creators"
+          className="px-3 py-1 text-[13px] font-medium text-foreground hover:text-secondary transition-colors rounded-lg hover:bg-border/40 whitespace-nowrap"
+        >
+          Creators
+        </Link>
+      </div>
+    </div>
+    </>
   )
 }

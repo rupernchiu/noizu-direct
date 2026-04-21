@@ -76,40 +76,44 @@ export async function POST(req: NextRequest) {
 
   let signed = 0
 
-  await prisma.$transaction(async (tx) => {
-    for (const sig of signatures) {
-      const template = templateMap.get(sig.templateId)!
+  try {
+    await prisma.$transaction(async (tx) => {
+      for (const sig of signatures) {
+        const template = templateMap.get(sig.templateId)!
 
-      // Mark any previous active agreement for this template as inactive
-      await tx.creatorAgreement.updateMany({
-        where: { userId, templateId: sig.templateId, isActive: true },
-        data: { isActive: false },
+        await tx.creatorAgreement.updateMany({
+          where: { userId, templateId: sig.templateId, isActive: true },
+          data: { isActive: false },
+        })
+
+        await tx.creatorAgreement.create({
+          data: {
+            userId,
+            templateId: sig.templateId,
+            agreementType: template.type,
+            agreementVersion: template.version,
+            agreedAt,
+            ipAddress,
+            userAgent,
+            signedName: sig.signedName.trim(),
+            agreementSnapshot: template.content,
+            isActive: true,
+          },
+        })
+
+        signed++
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { agreementsLastCheckedAt: agreedAt },
       })
-
-      await tx.creatorAgreement.create({
-        data: {
-          userId,
-          templateId: sig.templateId,
-          agreementType: template.type,
-          agreementVersion: template.version,
-          agreedAt,
-          ipAddress,
-          userAgent,
-          signedName: sig.signedName.trim(),
-          agreementSnapshot: template.content,
-          isActive: true,
-        },
-      })
-
-      signed++
-    }
-
-    // Update agreementsLastCheckedAt on the user
-    await tx.user.update({
-      where: { id: userId },
-      data: { agreementsLastCheckedAt: agreedAt },
     })
-  })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Database error'
+    console.error('[agreements/sign] transaction failed:', msg)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 
   return NextResponse.json({ ok: true, signed })
 }

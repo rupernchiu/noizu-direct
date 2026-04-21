@@ -9,7 +9,7 @@ export default async function ProfilePage() {
   if ((session.user as any).role !== 'CREATOR') redirect('/')
   const userId = (session.user as any).id as string
 
-  let user: { id: string; name: string; email: string; avatar: string | null } | null = null
+  let user: { id: string; name: string; email: string; avatar: string | null; legalFullName: string | null } | null = null
   let profile: {
     id: string; username: string; displayName: string; bio: string | null
     avatar: string | null; bannerImage: string | null; logoImage: string | null
@@ -24,7 +24,7 @@ export default async function ProfilePage() {
     ;[user, profile] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, avatar: true },
+        select: { id: true, name: true, email: true, avatar: true, legalFullName: true },
       }),
       prisma.creatorProfile.findUnique({
         where: { userId },

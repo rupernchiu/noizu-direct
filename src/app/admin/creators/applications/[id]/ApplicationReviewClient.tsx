@@ -122,6 +122,36 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
 
   // Admin note
   const [adminNote, setAdminNote] = useState(application.adminNote ?? '')
+
+  // Legal name edit
+  const [legalName, setLegalName] = useState(application.legalFullName ?? '')
+  const [legalNameSaving, setLegalNameSaving] = useState(false)
+  const [legalNameSaved, setLegalNameSaved] = useState(false)
+  const [legalNameError, setLegalNameError] = useState('')
+
+  async function handleSaveLegalName() {
+    if (!legalName.trim()) return
+    setLegalNameSaving(true)
+    setLegalNameError('')
+    try {
+      const res = await fetch(`/api/admin/applications/${application.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'UPDATE_LEGAL_NAME', legalFullName: legalName.trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setLegalNameError(data.error ?? 'Failed to save')
+      } else {
+        setLegalNameSaved(true)
+        setTimeout(() => setLegalNameSaved(false), 2500)
+        router.refresh()
+      }
+    } catch {
+      setLegalNameError('Network error')
+    }
+    setLegalNameSaving(false)
+  }
   const [noteSaving, setNoteSaving] = useState(false)
   const [noteSaved, setNoteSaved] = useState(false)
 
@@ -255,7 +285,30 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
           {/* Personal Details */}
           <section className="bg-surface border border-border rounded-xl p-6 space-y-1">
             <h3 className="text-sm font-semibold text-foreground mb-3">Personal Details</h3>
-            <InfoRow label="Legal Full Name" value={application.legalFullName} />
+            <div className="flex gap-3 py-2 border-b border-border items-start">
+              <span className="text-xs text-muted-foreground w-36 shrink-0 pt-2">Legal Full Name</span>
+              <div className="flex-1 space-y-1">
+                <div className="flex gap-2">
+                  <input
+                    value={legalName}
+                    onChange={e => setLegalName(e.target.value)}
+                    placeholder="Enter legal full name"
+                    className="flex-1 px-2 py-1 text-sm bg-background border border-border rounded text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    onClick={handleSaveLegalName}
+                    disabled={legalNameSaving || !legalName.trim()}
+                    className="px-3 py-1 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 disabled:opacity-40 transition-colors"
+                  >
+                    {legalNameSaving ? 'Saving…' : legalNameSaved ? 'Saved ✓' : 'Save'}
+                  </button>
+                </div>
+                {!application.legalFullName && (
+                  <p className="text-xs text-amber-400">⚠ No legal name on file — creator cannot sign agreements until this is set</p>
+                )}
+                {legalNameError && <p className="text-xs text-red-400">{legalNameError}</p>}
+              </div>
+            </div>
             <InfoRow
               label="Date of Birth"
               value={

@@ -31,7 +31,16 @@ export async function PATCH(
   const creator = await prisma.creatorProfile.update({
     where: { id },
     data: allowed,
+    select: { id: true, username: true, userId: true },
   })
+
+  // Update legalFullName on the User record
+  if (typeof body.legalFullName === 'string' && body.legalFullName.trim()) {
+    await prisma.user.update({
+      where: { id: creator.userId },
+      data: { legalFullName: body.legalFullName.trim() },
+    })
+  }
 
   // Audit log for health status changes (best-effort)
   if (allowed.storeStatus) {

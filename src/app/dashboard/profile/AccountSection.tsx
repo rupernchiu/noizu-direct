@@ -40,6 +40,7 @@ interface Props {
     name: string
     email: string
     avatar: string | null
+    legalFullName?: string | null
   }
 }
 
@@ -50,6 +51,7 @@ export function AccountSection({ user }: Props) {
   // Account fields
   const [name, setName] = useState(user.name)
   const [email, setEmail] = useState(user.email)
+  const [legalFullName, setLegalFullName] = useState(user.legalFullName ?? '')
   const [phone, setPhone] = useState('')
   const [avatar, setAvatar] = useState(user.avatar ?? '')
   const [uploading, setUploading] = useState(false)
@@ -103,6 +105,7 @@ export function AccountSection({ user }: Props) {
         body: JSON.stringify({
           name: name.trim() || undefined,
           phone: phone.trim() || undefined,
+          legalFullName: legalFullName.trim() || undefined,
         }),
       })
       if (!res.ok) {
@@ -231,6 +234,22 @@ export function AccountSection({ user }: Props) {
               maxLength={80}
               className={inputCls}
             />
+          </div>
+
+          {/* Legal Full Name */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">
+              Legal Full Name <span className="text-muted-foreground/60">(as shown on your ID)</span>
+            </label>
+            <input
+              value={legalFullName}
+              onChange={(e) => setLegalFullName(e.target.value)}
+              placeholder="e.g. Ahmad Farhan bin Aziz"
+              className={inputCls}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Required to sign platform agreements. Must match your government-issued ID.
+            </p>
           </div>
 
           {/* Email */}

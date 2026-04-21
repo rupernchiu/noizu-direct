@@ -71,7 +71,7 @@ export default async function AdminCreatorsPage({
     prisma.creatorProfile.findMany({
       where,
       include: {
-        user: { select: { email: true, createdAt: true } },
+        user: { select: { email: true, createdAt: true, legalFullName: true } },
         _count: { select: { products: { where: { isActive: true } } } },
       },
       orderBy: { createdAt: 'desc' },

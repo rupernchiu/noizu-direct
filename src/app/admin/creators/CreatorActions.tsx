@@ -12,6 +12,7 @@ interface CreatorActionsProps {
   isSuspended: boolean
   username: string
   badges: string[]
+  legalFullName?: string | null
 }
 
 export function CreatorActions({
@@ -21,11 +22,39 @@ export function CreatorActions({
   isSuspended,
   username,
   badges,
+  legalFullName,
 }: CreatorActionsProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [badgesOpen, setBadgesOpen] = useState(false)
+  const [legalNameOpen, setLegalNameOpen] = useState(false)
+  const [legalNameInput, setLegalNameInput] = useState(legalFullName ?? '')
+  const [legalNameSaving, setLegalNameSaving] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const legalNameRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (legalNameRef.current && !legalNameRef.current.contains(e.target as Node)) {
+        setLegalNameOpen(false)
+      }
+    }
+    if (legalNameOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [legalNameOpen])
+
+  async function saveLegalName() {
+    if (!legalNameInput.trim()) return
+    setLegalNameSaving(true)
+    await fetch(`/api/admin/creators/${creatorId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ legalFullName: legalNameInput.trim() }),
+    })
+    setLegalNameSaving(false)
+    setLegalNameOpen(false)
+    router.refresh()
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -108,6 +137,40 @@ export function CreatorActions({
       >
         Profile ↗
       </a>
+
+      {/* Legal Name */}
+      <div className="relative" ref={legalNameRef}>
+        <button
+          onClick={() => setLegalNameOpen((o) => !o)}
+          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+            legalFullName
+              ? 'bg-border text-muted-foreground hover:bg-card hover:text-foreground'
+              : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+          }`}
+        >
+          {legalFullName ? 'Legal Name ✓' : '⚠ Set Legal Name'}
+        </button>
+        {legalNameOpen && (
+          <div className="absolute left-0 top-full mt-1 z-50 min-w-[220px] bg-card border border-border rounded-lg shadow-xl p-3 space-y-2">
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Legal Full Name</p>
+            <input
+              value={legalNameInput}
+              onChange={e => setLegalNameInput(e.target.value)}
+              placeholder="e.g. Ahmad Farhan bin Aziz"
+              className="w-full px-2 py-1.5 text-xs bg-background border border-border rounded text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+              onKeyDown={e => { if (e.key === 'Enter') saveLegalName() }}
+              autoFocus
+            />
+            <button
+              onClick={saveLegalName}
+              disabled={legalNameSaving || !legalNameInput.trim()}
+              className="w-full py-1 text-xs font-medium bg-primary/20 text-primary rounded hover:bg-primary/30 disabled:opacity-40 transition-colors"
+            >
+              {legalNameSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Badges dropdown */}
       <div className="relative" ref={dropdownRef}>
