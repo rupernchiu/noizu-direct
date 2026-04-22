@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
+import { redis } from '@/lib/redis'
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin()
@@ -22,6 +23,15 @@ export async function POST(req: NextRequest) {
     select: { maintenanceMode: true, maintenanceMessage: true },
   })
 
+  // Mirror the flag into Redis so middleware (edge runtime) can read it without
+  // a per-request fetch to our own API. Middleware already caches for 30s, so
+  // worst-case staleness after toggling is 30s.
+  try {
+    await redis.set('platform:maintenance', updated.maintenanceMode ? 'true' : 'false')
+  } catch (err) {
+    console.warn('[admin/maintenance/toggle] redis sync failed', err)
+  }
+
   return NextResponse.json(updated)
 }
 
@@ -32,6 +42,12 @@ export async function GET() {
   const settings = await prisma.platformSettings.findFirst({
     select: { maintenanceMode: true, maintenanceMessage: true },
   })
+
+  // Opportunistic backfill so a fresh Redis still reflects the db state
+  // without requiring an admin to re-toggle.
+  try {
+    await redis.set('platform:maintenance', settings?.maintenanceMode ? 'true' : 'false')
+  } catch { /* non-fatal */ }
 
   return NextResponse.json({
     enabled: settings?.maintenanceMode ?? false,

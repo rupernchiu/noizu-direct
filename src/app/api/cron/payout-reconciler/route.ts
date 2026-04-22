@@ -64,7 +64,7 @@ async function runReconciler() {
           to: [payout.creator.email],
           subject: 'Your payout has been sent — noizu.direct',
           html,
-        }).catch(() => {})
+        }).catch((err: unknown) => console.error('[cron/payout-reconciler]', err))
 
       } else if (status === 'FAILED' || status === 'REJECTED') {
         await prisma.payout.update({
@@ -86,7 +86,7 @@ async function runReconciler() {
           to: [payout.creator.email],
           subject: 'Your payout failed — noizu.direct',
           html,
-        }).catch(() => {})
+        }).catch((err: unknown) => console.error('[cron/payout-reconciler]', err))
       }
     } catch (e) {
       console.error(`Reconciler error for payout ${payout.id}:`, e)

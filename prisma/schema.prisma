@@ -70,6 +70,10 @@ model User {
   storageBonusMb      Int                  @default(0) // admin-granted extra quota
   storageOverageBytes BigInt               @default(0) // accumulated overage
   storageSubscription StorageSubscription?
+
+  @@index([role])
+  @@index([accountStatus])
+  @@index([creatorVerificationStatus])
 }
 
 model CreatorProfile {
@@ -381,6 +385,12 @@ model Order {
   chargebacks        ChargebackDispute[]
   commissionQuote    CommissionQuote?      @relation(fields: [commissionQuoteId], references: [id])
   milestones         CommissionMilestone[]
+
+  @@index([airwallexIntentId])
+  @@index([escrowAutoReleaseAt])
+  @@index([status, createdAt])
+  @@index([buyerId, createdAt])
+  @@index([creatorId, status])
 }
 
 // ── Dispute ───────────────────────────────────────────────────────────────────
@@ -526,6 +536,9 @@ model Conversation {
   creator User @relation("CreatorConvos", fields: [creatorId], references: [id])
 
   @@unique([buyerId, creatorId])
+  @@index([lastMessageAt])
+  @@index([buyerId, lastMessageAt])
+  @@index([creatorId, lastMessageAt])
 }
 
 model Page {

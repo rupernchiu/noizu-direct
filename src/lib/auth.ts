@@ -40,7 +40,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           prisma.creatorProfile.updateMany({
             where: { userId: user.id },
             data: { lastLoginAt: new Date() },
-          }).catch(() => {})
+          }).catch((err: unknown) => console.error('[auth/login] lastLoginAt update failed', err))
         }
         return { id: user.id, email: user.email, name: user.name, role: user.role };
       },
@@ -60,7 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             });
           }
           user.id = existing.id;
-          (user as any).role = existing.role;
+          user.role = existing.role as 'BUYER' | 'CREATOR' | 'ADMIN';
         } else {
           const created = await prisma.user.create({
             data: {
@@ -72,7 +72,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
           user.id = created.id;
-          (user as any).role = created.role;
+          user.role = created.role as 'BUYER' | 'CREATOR' | 'ADMIN';
         }
       }
       return true;
@@ -80,14 +80,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        token.role = user.role;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
+        session.user.id = token.id;
+        session.user.role = token.role;
       }
       return session;
     },

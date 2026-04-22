@@ -35,7 +35,7 @@ async function sendAndLog(
     })
     await prisma.emailLog.create({ data: { to, subject, type, status: 'sent', resendId: data?.id ?? null } })
   } catch (e) {
-    await prisma.emailLog.create({ data: { to, subject, type, status: 'failed', error: String(e) } }).catch(() => {})
+    await prisma.emailLog.create({ data: { to, subject, type, status: 'failed', error: String(e) } }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   }
 }
 
@@ -121,7 +121,7 @@ async function handlePaymentSucceeded(intentId: string) {
         orderId: order.id,
         actionUrl: `/dashboard/orders/${order.id}`,
       },
-    }).catch(() => {})
+    }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   }
 
   // Notify buyer once
@@ -133,7 +133,7 @@ async function handlePaymentSucceeded(intentId: string) {
       message: `Your payment was received and ${orders.length} order${orders.length !== 1 ? 's are' : ' is'} being processed.`,
       actionUrl: '/account/orders',
     },
-  }).catch(() => {})
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 
   // Email buyer (include download links for digital orders)
   const buyer = orders[0].buyer
@@ -300,7 +300,7 @@ async function activateStorageSubscription(subId: string, initialIntentId: strin
         actionUrl: '/dashboard/storage',
       },
     }),
-  ]).catch(() => {})
+  ]).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   void initialIntentId
 }
 
@@ -314,7 +314,7 @@ async function handleStoragePaymentFailed(intentId: string) {
     await prisma.storageSubscription.update({
       where: { id: pending.id },
       data: { airwallexInitialIntentId: null },
-    }).catch(() => {})
+    }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
     return
   }
   // Renewal failures are handled inline by the cron (no webhook-driven dunning here)
@@ -398,7 +398,7 @@ async function handleSupportPaymentSucceeded(intentId: string): Promise<boolean>
       message: `$${(creatorAmount / 100).toFixed(2)} from ${tx.isAnonymous ? 'an anonymous supporter' : tx.supporter?.name ?? 'a supporter'}${tx.message ? `: "${tx.message}"` : ''}`,
       actionUrl: '/dashboard/support',
     },
-  }).catch(() => {})
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 
   return true
 }
@@ -447,7 +447,7 @@ async function activateSubscription(subId: string, initialIntentId: string, crea
     await prisma.supportTier.update({
       where: { id: sub.tierId },
       data: { subscriberCount: { increment: 1 } },
-    }).catch(() => {})
+    }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   }
   // For monthly gift, bump the gift monthly counters
   if (sub.type === 'MONTHLY_GIFT') {
@@ -540,7 +540,7 @@ async function handleSupportRenewalFailed(intentId: string) {
       await prisma.supportTier.update({
         where: { id: sub.tierId },
         data: { subscriberCount: { decrement: 1 } },
-      }).catch(() => {})
+      }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
     }
     return
   }
@@ -621,7 +621,7 @@ async function handleDisputeCreated(obj: Record<string, any>) {
   await prisma.order.update({
     where: { id: order.id },
     data: { escrowStatus: 'DISPUTED' },
-  }).catch(() => {})
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 
   await prisma.fraudFlag.create({
     data: {
@@ -631,7 +631,7 @@ async function handleDisputeCreated(obj: Record<string, any>) {
       orderId: order.id,
       userId: order.buyerId,
     },
-  }).catch(() => {})
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 }
 
 async function handleDisputeUpdated(obj: Record<string, any>) {
@@ -658,7 +658,7 @@ async function handleDisputeClosed(obj: Record<string, any>, outcome: 'WON' | 'L
     await prisma.order.update({
       where: { id: existing.orderId },
       data: { escrowStatus: 'HELD' },
-    }).catch(() => {})
+    }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   }
 }
 
@@ -688,7 +688,7 @@ async function handleTransferFailed(transferId: string, failureReason?: string) 
       reason: failureReason ?? 'Transfer failed',
       entityLabel: `RM ${(payout.amountUsd / 100).toFixed(2)}`,
     },
-  }).catch(() => {})
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 
   await sendAndLog(
     payout.creator.email,

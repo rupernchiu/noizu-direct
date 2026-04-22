@@ -154,7 +154,7 @@ async function runPayoutSweep() {
         to: [user.email],
         subject: `Payout of ${payoutCurrency} ${localAmount} is on the way — noizu.direct`,
         html,
-      }).catch(() => {})
+      }).catch((err: unknown) => console.error('[cron/payout]', err))
 
       processed++
     } catch (e) {

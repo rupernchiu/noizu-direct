@@ -130,7 +130,7 @@ async function bumpDunning(subId: string, userId: string, currentCount: number) 
         message: "We couldn't charge your card. We'll retry in 3 days. Please update your payment method.",
         actionUrl: '/dashboard/storage',
       },
-    }).catch(() => {})
+    }).catch((err: unknown) => console.error('[cron/storage-renewals]', err))
   } else if (attempt === 2) {
     await prisma.storageSubscription.update({
       where: { id: subId },

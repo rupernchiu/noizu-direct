@@ -79,7 +79,7 @@ async function runRenewals() {
           await tx.supportTier.update({
             where: { id: sub.tierId },
             data: { subscriberCount: { decrement: 1 } },
-          }).catch(() => {})
+          }).catch((err: unknown) => console.error('[cron/support-renewals]', err))
         }
       })
       canceled++
@@ -161,7 +161,7 @@ async function runRenewals() {
       await prisma.supportTransaction.update({
         where: { id: txId },
         data: { status: 'FAILED' },
-      }).catch(() => {})
+      }).catch((err: unknown) => console.error('[cron/support-renewals]', err))
       await bumpDunning(sub.id, sub.failedChargeCount, sub.tierId)
     }
   }
@@ -205,7 +205,7 @@ async function bumpDunning(subId: string, currentCount: number, tierId: string |
         await tx.supportTier.update({
           where: { id: tierId },
           data: { subscriberCount: { decrement: 1 } },
-        }).catch(() => {})
+        }).catch((err: unknown) => console.error('[cron/support-renewals]', err))
       }
     })
   }
