@@ -2,6 +2,44 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/guards'
+import { isOwnIdentityUrl } from '@/lib/upload-validators'
+
+// H6 — bind KYC uploads to the submitting user.
+// Preferred path: /api/upload returned an `uploadId` when the identity file
+// was stored, and the client echoes it back here as idFrontUploadId /
+// idBackUploadId / selfieUploadId. We re-look up that row and verify
+// userId matches the session.
+//
+// Fallback: if the migration hasn't been applied or the client still posts
+// raw URLs, require that the URL path includes the submitting user's id
+// (see isOwnIdentityUrl). This closes the IDOR even in the fallback path.
+
+async function resolveKycUpload(
+  uploadId: string | null | undefined,
+  userId: string,
+  expectCategory: 'id_front' | 'id_back' | 'selfie',
+): Promise<{ viewerUrl: string } | null> {
+  if (!uploadId) return null
+  try {
+    const row = await prisma.kycUpload.findFirst({ where: { id: uploadId } })
+    if (!row) return null
+    if (row.userId !== userId) return null
+    if (row.category !== expectCategory) return null
+    return { viewerUrl: row.viewerUrl }
+  } catch {
+    // Migration pending on the target DB — caller will fall back to
+    // URL-regex validation.
+    return null
+  }
+}
+
+function normaliseKycUrl(
+  candidateUrl: string | null | undefined,
+  userId: string,
+): string | null {
+  if (!candidateUrl) return null
+  return isOwnIdentityUrl(candidateUrl, userId) ? candidateUrl : null
+}
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
 
@@ -77,6 +115,11 @@ export async function POST(req: NextRequest) {
     idType?: string
     idNumber?: string
     idOtherDescription?: string
+    // H6 — preferred opaque handles (server re-looks-up and verifies ownership)
+    idFrontUploadId?: string
+    idBackUploadId?: string
+    selfieUploadId?: string
+    // Fallback raw URLs (regex-validated to include submitting user's id)
     idFrontImage?: string
     idBackImage?: string
     selfieImage?: string
@@ -95,6 +138,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Legal full name is required' }, { status: 400 })
   }
 
+  // ── H6 — resolve KYC upload references server-side ──────────────────────
+  // Prefer KycUpload.id lookup; fall back to regex on the raw URL. Either
+  // way, we refuse a URL that doesn't include the submitting user's id.
+  const idFrontResolved = (await resolveKycUpload(body.idFrontUploadId, userId, 'id_front'))?.viewerUrl
+    ?? normaliseKycUrl(body.idFrontImage, userId)
+  const idBackResolved = (await resolveKycUpload(body.idBackUploadId, userId, 'id_back'))?.viewerUrl
+    ?? normaliseKycUrl(body.idBackImage, userId)
+  const selfieResolved = (await resolveKycUpload(body.selfieUploadId, userId, 'selfie'))?.viewerUrl
+    ?? normaliseKycUrl(body.selfieImage, userId)
+
+  // If any KYC field was supplied but failed verification, reject rather than
+  // silently dropping it — the creator would get an application with a
+  // blank document and a confusing review outcome.
+  const suppliedAnyKyc = Boolean(
+    body.idFrontImage || body.idBackImage || body.selfieImage ||
+    body.idFrontUploadId || body.idBackUploadId || body.selfieUploadId,
+  )
+  const resolvedAnyKyc = Boolean(idFrontResolved || idBackResolved || selfieResolved)
+  if (suppliedAnyKyc && !resolvedAnyKyc) {
+    return NextResponse.json(
+      { error: 'Uploaded identity documents could not be verified against your account. Please re-upload.' },
+      { status: 400 },
+    )
+  }
+
   const data = {
     displayName: body.displayName ?? '',
     username: body.username ?? '',
@@ -110,9 +178,9 @@ export async function POST(req: NextRequest) {
     idType: body.idType ?? 'IC',
     idNumber: body.idNumber ?? '',
     idOtherDescription: body.idOtherDescription ?? '',
-    idFrontImage: body.idFrontImage ?? null,
-    idBackImage: body.idBackImage ?? null,
-    selfieImage: body.selfieImage ?? null,
+    idFrontImage: idFrontResolved ?? null,
+    idBackImage: idBackResolved ?? null,
+    selfieImage: selfieResolved ?? null,
     kycCompleted: body.kycCompleted ?? false,
     bankCountryCode: body.bankCountryCode ?? '',
     bankCurrency: body.bankCurrency ?? '',

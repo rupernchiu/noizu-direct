@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requireCreator } from '@/lib/guards'
 import { Prisma } from '@/generated/prisma/client'
 import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 import { auth } from '@/lib/auth'
 import { rankProducts, deriveCategoryAffinity, type ScoredProduct } from '@/lib/discovery'
+import { isCreatorOwnedDigitalKey } from '@/lib/upload-validators'
+
+// Strict shape for a creator-supplied digital deliverable. The `.key` field
+// MUST live under the caller's own digital/<profileId>/ prefix — this is
+// enforced at route level below because the schema can't see profileId.
+const digitalFileSchema = z.object({
+  key: z.string().min(1),
+  filename: z.string().min(1).max(512),
+  size: z.number().int().nonnegative(),
+  mime: z.string().min(1).max(255),
+}).strict()
 
 const DISCOVERY_POOL = 500
 
@@ -163,6 +175,26 @@ export async function POST(req: Request) {
 
   if (body.type === 'DIGITAL' && (!body.digitalFiles || body.digitalFiles.length === 0)) {
     return NextResponse.json({ error: 'At least one digital file is required' }, { status: 400 })
+  }
+
+  // ── C1 (Critical) ─────────────────────────────────────────────────────────
+  // Every creator-supplied `digitalFiles[].key` MUST live under this creator's
+  // own `digital/<creatorProfile.id>/` prefix. Without this check a creator
+  // can list `private/identity/<victim>.webp` as a paid deliverable and the
+  // download route will happily sign it.
+  if (body.type === 'DIGITAL' && body.digitalFiles) {
+    const parsed = z.array(digitalFileSchema).min(1).safeParse(body.digitalFiles)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid digital files payload' }, { status: 400 })
+    }
+    for (const f of parsed.data) {
+      if (!isCreatorOwnedDigitalKey(f.key, profile.id)) {
+        return NextResponse.json(
+          { error: 'digitalFiles[].key must live under your own digital/<profile>/ prefix' },
+          { status: 400 },
+        )
+      }
+    }
   }
 
   if (body.type === 'POD' && !body.podProviderId) {

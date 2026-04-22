@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { requireCreator, verifyProductOwnership } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
+import { isCreatorOwnedDigitalKey } from '@/lib/upload-validators'
+
+// Same strict shape as POST /api/products — see that file for context.
+const digitalFileSchema = z.object({
+  key: z.string().min(1),
+  filename: z.string().min(1).max(512),
+  size: z.number().int().nonnegative(),
+  mime: z.string().min(1).max(255),
+}).strict()
 
 export async function PATCH(
   req: Request,
@@ -38,6 +48,24 @@ export async function PATCH(
     })
     if (!provider) {
       return NextResponse.json({ error: 'Invalid POD provider' }, { status: 400 })
+    }
+  }
+
+  // ── C1 (Critical) ─────────────────────────────────────────────────────────
+  // Re-verify digitalFiles[].key ownership on update. Without this, a creator
+  // can skip the POST check by editing an existing DIGITAL product afterwards.
+  if (body.digitalFiles !== undefined) {
+    const parsed = z.array(digitalFileSchema).safeParse(body.digitalFiles)
+    if (!parsed.success) {
+      return NextResponse.json({ error: 'Invalid digital files payload' }, { status: 400 })
+    }
+    for (const f of parsed.data) {
+      if (!isCreatorOwnedDigitalKey(f.key, product.creatorId)) {
+        return NextResponse.json(
+          { error: 'digitalFiles[].key must live under your own digital/<profile>/ prefix' },
+          { status: 400 },
+        )
+      }
     }
   }
 

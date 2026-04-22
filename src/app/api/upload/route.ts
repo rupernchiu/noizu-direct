@@ -12,6 +12,8 @@ import sharp from 'sharp'
 import { uploadToR2 } from '@/lib/r2'
 import { prisma } from '@/lib/prisma'
 import { checkUploadAllowed } from '@/lib/storage-quota'
+import { isAllowedUploadFolder } from '@/lib/upload-validators'
+import { sniffFirstBytes } from '@/lib/file-sniff'
 
 // Categories that count against the user's storage quota. Transactional uploads
 // (identity docs, dispute evidence, message attachments) are admin-reviewed
@@ -22,6 +24,13 @@ const QUOTA_COUNTED_CATEGORIES = new Set([
 ])
 
 const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment'])
+
+// H6 — map upload `category` to the KycUpload.category enum string we store.
+const KYC_CATEGORY_MAP: Record<string, 'id_front' | 'id_back' | 'selfie'> = {
+  id_front: 'id_front',
+  id_back:  'id_back',
+  selfie:   'selfie',
+}
 
 // Size limits in bytes per category
 const SIZE_LIMITS: Record<string, number> = {
@@ -46,6 +55,11 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ])
 const ALLOWED_TYPES = new Set([...ALLOWED_IMAGE_TYPES, 'application/pdf'])
 
+// M18 — magic-byte sniff allow-list for identity/private originals that bypass
+// sharp re-encoding. Browser-reported MIME can lie; reject payloads whose
+// actual bytes aren't one of these.
+const IDENTITY_MAGIC_ALLOW = new Set(['pdf', 'png', 'jpg', 'webp', 'gif'])
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -64,7 +78,13 @@ export async function POST(req: Request) {
 
   // category drives routing; fall back to subdir for backward compat
   const category = (formData.get('category') as string | null) || 'other'
-  const subdir   = (formData.get('subdir')   as string | null) || category.replace(/_/g, '-')
+  const rawSubdir = (formData.get('subdir')   as string | null) || category.replace(/_/g, '-')
+
+  // ── M17 — subdir allow-list ───────────────────────────────────────────────
+  // subdir is attacker-controlled; without an allow-list a caller can pollute
+  // any existing R2 prefix (library, profile-avatars, …). Normalise and clamp
+  // to a known folder. Unknown folders fall back to `other`.
+  const subdir = isAllowedUploadFolder(rawSubdir) ? rawSubdir : 'other'
 
   // Validate MIME type
   if (!ALLOWED_TYPES.has(file.type)) {
@@ -101,6 +121,25 @@ export async function POST(req: Request) {
   const isImage   = ALLOWED_IMAGE_TYPES.has(file.type)
 
   const rawBuffer = Buffer.from(await file.arrayBuffer())
+
+  // ── M18 — magic-byte sniff for identity originals ─────────────────────────
+  // Identity/private categories keep the raw bytes (no sharp re-encode), so
+  // we must validate the actual bytes rather than trusting file.type.
+  if (category === 'identity' || category === 'dispute_evidence') {
+    const sniffed = sniffFirstBytes(rawBuffer)
+    if (!sniffed || !IDENTITY_MAGIC_ALLOW.has(sniffed)) {
+      console.warn('[upload] magic-byte mismatch on private upload', {
+        userId,
+        category,
+        claimedType: file.type,
+        sniffed,
+      })
+      return NextResponse.json(
+        { error: 'File bytes do not match the declared type.' },
+        { status: 400 },
+      )
+    }
+  }
 
   let finalBuffer: Buffer
   let finalExt: string
@@ -146,12 +185,19 @@ export async function POST(req: Request) {
   let publicUrl: string
 
   if (isPrivate) {
-    r2Key     = `private/${folder}/${filename}`
-    publicUrl = `/api/files/${folder}/${filename}`
-    await uploadToR2(finalBuffer, r2Key, mimeType)
+    // H6 — scope identity uploads under the uploading user's id so later
+    // submissions can be regex-validated even if the DB row path fails.
+    if (category === 'identity') {
+      r2Key     = `private/${folder}/${userId}/${filename}`
+      publicUrl = `/api/files/${folder}/${userId}/${filename}`
+    } else {
+      r2Key     = `private/${folder}/${filename}`
+      publicUrl = `/api/files/${folder}/${filename}`
+    }
+    await uploadToR2({ key: r2Key, body: finalBuffer, contentType: mimeType, visibility: 'private' })
   } else {
     r2Key     = `uploads/${folder}/${filename}`
-    publicUrl = await uploadToR2(finalBuffer, r2Key, mimeType)
+    publicUrl = await uploadToR2({ key: r2Key, body: finalBuffer, contentType: mimeType, visibility: 'public' })
   }
 
   // Track uploads that count against user storage so the dashboard usage +
@@ -169,11 +215,44 @@ export async function POST(req: Request) {
     }).catch(() => {})
   }
 
+  // ── H6 — persist KYC upload → userId binding ──────────────────────────────
+  // The subcategory of the identity upload (id_front/id_back/selfie) is passed
+  // as formData["kycCategory"]. We write a KycUpload row and surface its id to
+  // the client, which then submits the id (not the URL) to /api/creator/apply.
+  let uploadId: string | null = null
+  if (category === 'identity') {
+    const kycCategoryRaw = (formData.get('kycCategory') as string | null) ?? ''
+    const kycCategory = KYC_CATEGORY_MAP[kycCategoryRaw]
+    if (kycCategory) {
+      try {
+        const row = await prisma.kycUpload.create({
+          data: {
+            userId,
+            category: kycCategory,
+            r2Key,
+            viewerUrl: publicUrl,
+            mimeType,
+            fileSize: finalBuffer.length,
+          },
+        })
+        uploadId = row.id
+      } catch (err) {
+        // Migration may not have been applied yet on the target DB; the
+        // apply route has a regex fallback so this isn't fatal.
+        console.warn('[upload] kycUpload.create failed (migration pending?)', {
+          userId,
+          err: (err as Error).message,
+        })
+      }
+    }
+  }
+
   return NextResponse.json({
     url:       publicUrl,
     filename,
     mimeType,
     fileSize:  finalBuffer.length,
     isPrivate,
+    ...(uploadId ? { uploadId } : {}),
   })
 }

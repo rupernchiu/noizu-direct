@@ -214,6 +214,12 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
 
   return (
     <div className="space-y-6">
+      {/* H5 — strip Referer from any outbound request on this page so that
+          the signed-in KYC viewer URL never leaks as a Referer header to
+          third-party scripts (Clarity, analytics). Works in tandem with the
+          Referrer-Policy header the /api/files route sets. */}
+      <meta name="referrer" content="no-referrer" />
+
       {/* Header */}
       <div className="flex items-start gap-4 flex-wrap">
         <div className="flex-1 min-w-0">
