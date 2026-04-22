@@ -594,7 +594,30 @@ export function CreatorPageTabs({
       {/* ── Sticky Tab Bar ─────────────────────────────────────────────────── */}
       <div className="sticky top-[100px] z-30 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="relative">
+          {/* Mobile: full-width dropdown */}
+          <div className="md:hidden py-2.5">
+            <div className="relative">
+              <select
+                value={activeTab}
+                onChange={(e) => handleTabClick(e.target.value as Tab)}
+                className="w-full appearance-none cursor-pointer rounded-lg border border-border bg-card px-4 py-2.5 pr-10 text-sm font-semibold text-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                aria-label="Section"
+              >
+                {tabs.map((tab) => (
+                  <option key={tab.id} value={tab.id}>{tab.label}</option>
+                ))}
+              </select>
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Desktop: horizontal tab row */}
+          <div className="relative hidden md:block">
             <div className="flex overflow-x-auto scrollbar-none pb-0" style={{ WebkitOverflowScrolling: 'touch' }}>
               {tabs.map((tab) => (
                 <button
@@ -611,7 +634,7 @@ export function CreatorPageTabs({
                 </button>
               ))}
             </div>
-            {/* Gradient fade — indicates horizontal scrollability on mobile */}
+            {/* Gradient fade — indicates horizontal scrollability */}
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none" />
           </div>
         </div>
