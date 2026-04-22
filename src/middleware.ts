@@ -17,6 +17,7 @@ function buildCsp(nonce: string): string {
     `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`} https://fonts.googleapis.com`,
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://images.unsplash.com https://picsum.photos https://fastly.picsum.photos https://i.ytimg.com https://img.youtube.com",
+    "media-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://www.w3schools.com",
     "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.clarity.ms https://c.clarity.ms",
     "frame-ancestors 'self'",
     "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
