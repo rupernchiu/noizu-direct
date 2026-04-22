@@ -11,10 +11,11 @@ function buildCsp(nonce: string): string {
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
-    // style-src: Next emits inline critical CSS for App Router. In prod we
-    // cover it with the nonce; in dev React Refresh also injects inline
-    // styles, so 'unsafe-inline' stays on the dev path only.
-    `style-src 'self' ${isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`} https://fonts.googleapis.com`,
+    // style-src: React `style={{}}` compiles to inline style="..." attributes
+    // which are covered by style-src-attr, not style-src, and can't carry a
+    // nonce. Accepting 'unsafe-inline' for styles is the standard trade-off
+    // (script-src stays hardened with the nonce + strict-dynamic).
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "img-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://images.unsplash.com https://picsum.photos https://fastly.picsum.photos https://i.ytimg.com https://img.youtube.com",
     "media-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://www.w3schools.com",
