@@ -42,7 +42,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             data: { lastLoginAt: new Date() },
           }).catch((err: unknown) => console.error('[auth/login] lastLoginAt update failed', err))
         }
-        return { id: user.id, email: user.email, name: user.name, role: user.role };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role as 'BUYER' | 'CREATOR' | 'ADMIN',
+        };
       },
     }),
   ],

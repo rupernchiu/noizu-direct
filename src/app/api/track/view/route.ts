@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const productId = typeof body.productId === 'string' ? body.productId : null
     const sessionId = typeof body.sessionId === 'string' ? body.sessionId.slice(0, 128) : null
 
-    if (!productId || productId.length > 64) {
+    if (!productId || productId.length > 64 || !sessionId) {
       return NextResponse.json({ ok: true })
     }
 
