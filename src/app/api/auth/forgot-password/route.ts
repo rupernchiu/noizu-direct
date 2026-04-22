@@ -1,11 +1,22 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { clientIp, rateLimit } from '@/lib/rate-limit'
 
 const RESET_TTL_MS = 30 * 60 * 1000 // 30 minutes
+// 5 requests per IP per hour — defends against reset-spam floods without
+// blocking a genuine user who mistypes their email a few times.
+const FORGOT_RATE = { limit: 5, windowSeconds: 3600 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+  const rl = await rateLimit('auth-forgot', ip, FORGOT_RATE.limit, FORGOT_RATE.windowSeconds)
+  if (!rl.allowed) {
+    // Return 200 to preserve the no-leak invariant — still mimics success.
+    return NextResponse.json({ ok: true })
+  }
+
   try {
     const body = await req.json() as { email?: string }
     const email = (body.email ?? '').trim().toLowerCase()

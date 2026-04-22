@@ -3,6 +3,12 @@ import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
+import { clientIp, rateLimit } from './rate-limit';
+
+// 10 credential attempts per IP per 15 minutes. Generous enough for a
+// human who mistypes a password repeatedly, tight enough to block
+// online guessing against a single account or sprayed across many.
+const LOGIN_RATE = { limit: 10, windowSeconds: 900 };
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   session: { strategy: 'jwt' },
@@ -17,10 +23,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { type: 'email' },
         password: { type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null;
+
+        const ip = clientIp(request as { headers: Headers });
+        const rl = await rateLimit('auth-login', ip, LOGIN_RATE.limit, LOGIN_RATE.windowSeconds);
+        if (!rl.allowed) return null;
+
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { email: (credentials.email as string).trim().toLowerCase() },
         });
         if (!user || !user.password) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.password);

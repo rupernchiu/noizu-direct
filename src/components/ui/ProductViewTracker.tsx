@@ -4,12 +4,12 @@ import { useEffect } from 'react'
 
 interface ProductViewTrackerProps {
   productId: string
+  /** @deprecated server reads userId from session — prop kept for call-site compat */
   userId?: string
 }
 
-export function ProductViewTracker({ productId, userId }: ProductViewTrackerProps) {
+export function ProductViewTracker({ productId }: ProductViewTrackerProps) {
   useEffect(() => {
-    // Read or generate session cookie
     const getCookie = (name: string): string | undefined => {
       const match = document.cookie.split('; ').find((row) => row.startsWith(name + '='))
       return match ? match.split('=')[1] : undefined
@@ -29,7 +29,7 @@ export function ProductViewTracker({ productId, userId }: ProductViewTrackerProp
         await fetch('/api/track/view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId, sessionId, userId }),
+          body: JSON.stringify({ productId, sessionId }),
         })
       } catch {
         // fire and forget — ignore errors
@@ -37,7 +37,7 @@ export function ProductViewTracker({ productId, userId }: ProductViewTrackerProp
     }
 
     track()
-  }, [productId, userId])
+  }, [productId])
 
   return null
 }

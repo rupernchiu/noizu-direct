@@ -21,8 +21,6 @@ const QUOTA_COUNTED_CATEGORIES = new Set([
   'profile_logo', 'blog_cover', 'media', 'other',
 ])
 
-const SVG_MIME = 'image/svg+xml'
-
 const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment'])
 
 // Size limits in bytes per category
@@ -40,8 +38,11 @@ const SIZE_LIMITS: Record<string, number> = {
   other:                5 * 1024 * 1024,
 }
 
+// SVG omitted intentionally: it's an XML document that can execute script
+// and is trivially weaponized for XSS when served from the same origin as
+// authenticated pages. Avatars, banners, and product images must be raster.
 const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
 ])
 const ALLOWED_TYPES = new Set([...ALLOWED_IMAGE_TYPES, 'application/pdf'])
 
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
   // Validate MIME type
   if (!ALLOWED_TYPES.has(file.type)) {
     return NextResponse.json(
-      { error: 'Invalid file type. Allowed: JPG, PNG, WebP, GIF, SVG, PDF' },
+      { error: 'Invalid file type. Allowed: JPG, PNG, WebP, GIF, PDF' },
       { status: 400 },
     )
   }
@@ -97,7 +98,6 @@ export async function POST(req: Request) {
 
   const isPrivate = PRIVATE_CATEGORIES.has(category)
   const isPdf     = file.type === 'application/pdf'
-  const isSvg     = file.type === SVG_MIME
   const isImage   = ALLOWED_IMAGE_TYPES.has(file.type)
 
   const rawBuffer = Buffer.from(await file.arrayBuffer())
@@ -106,22 +106,32 @@ export async function POST(req: Request) {
   let finalExt: string
   let mimeType: string
 
-  if (isPdf || isSvg || isPrivate) {
-    // Keep originals: PDFs always, SVGs always, and identity docs for legibility
+  if (isPdf || isPrivate) {
+    // Keep originals: PDFs always, and identity docs for legibility.
     finalBuffer = rawBuffer
-    finalExt    = `.${extname(file.name).slice(1).toLowerCase() || (isPdf ? 'pdf' : 'svg')}`
+    finalExt    = `.${extname(file.name).slice(1).toLowerCase() || 'pdf'}`
     mimeType    = file.type
   } else if (isImage) {
-    // Convert public images to WebP
+    // Re-encode public images to WebP. Re-encoding is the sanitization boundary:
+    // it strips EXIF, neutralizes polyglot payloads, and normalizes format. If
+    // sharp rejects the bytes, we refuse to store the file — never fall back to
+    // saving raw user bytes under an image/* content-type.
     try {
       finalBuffer = await sharp(rawBuffer).webp({ quality: 88 }).toBuffer()
       finalExt    = '.webp'
       mimeType    = 'image/webp'
-    } catch {
-      // Sharp failed — save original
-      finalBuffer = rawBuffer
-      finalExt    = extname(file.name) || '.jpg'
-      mimeType    = file.type
+    } catch (err) {
+      console.warn('[upload] sharp rejected image', {
+        userId,
+        category,
+        originalType: file.type,
+        size: rawBuffer.length,
+        err: (err as Error).message,
+      })
+      return NextResponse.json(
+        { error: 'Unable to process image. Make sure the file is a valid JPG, PNG, WebP, or GIF.' },
+        { status: 400 },
+      )
     }
   } else {
     finalBuffer = rawBuffer

@@ -1,8 +1,18 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
+import { clientIp, rateLimit } from '@/lib/rate-limit'
 
-export async function POST(req: Request) {
+// 10 attempts per IP per hour — a user re-entering their password a few
+// times is fine; a token-guessing script hits the wall quickly.
+const RESET_RATE = { limit: 10, windowSeconds: 3600 }
+
+export async function POST(req: NextRequest) {
+  const ip = clientIp(req)
+  const rl = await rateLimit('auth-reset', ip, RESET_RATE.limit, RESET_RATE.windowSeconds)
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many attempts. Please try again later.' }, { status: 429 })
+  }
   try {
     const body = await req.json() as { token?: string; password?: string; confirmPassword?: string }
     const { token, password, confirmPassword } = body
