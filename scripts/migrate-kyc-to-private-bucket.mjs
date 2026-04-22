@@ -51,7 +51,19 @@ const {
 const args = new Set(process.argv.slice(2))
 const APPLY = args.has('--apply')
 const CONFIRM_DELETE = args.has('--i-understand')
-const PREFIX = 'private/'
+
+// Must stay in sync with PRIVATE_PREFIXES in src/lib/r2.ts — any key matching
+// one of these prefixes is treated as private by the runtime, so the
+// migration has to sweep all of them, not just `private/`.
+const PRIVATE_PREFIXES = [
+  'private/',
+  'identity/',
+  'dispute-evidence/',
+  'dispute_evidence/',
+  'message-attachment/',
+  'message_attachment/',
+  'kyc/',
+]
 
 const SRC_BUCKET = process.env.R2_BUCKET_NAME
 const DST_BUCKET = process.env.R2_PRIVATE_BUCKET_NAME
@@ -107,13 +119,13 @@ function writeRow(key, size, etag, action, error = '') {
   ].join(',') + '\n')
 }
 
-async function listAllPrivateKeys() {
+async function listKeysForPrefix(prefix) {
   const keys = []
   let token
   do {
     const out = await srcClient.send(new ListObjectsV2Command({
       Bucket: SRC_BUCKET,
-      Prefix: PREFIX,
+      Prefix: prefix,
       ContinuationToken: token,
       MaxKeys: 1000,
     }))
@@ -123,6 +135,22 @@ async function listAllPrivateKeys() {
     token = out.IsTruncated ? out.NextContinuationToken : undefined
   } while (token)
   return keys
+}
+
+async function listAllPrivateKeys() {
+  const byPrefix = {}
+  const all = []
+  const seen = new Set()
+  for (const prefix of PRIVATE_PREFIXES) {
+    const found = await listKeysForPrefix(prefix)
+    byPrefix[prefix] = found.length
+    for (const k of found) {
+      if (seen.has(k.Key)) continue
+      seen.add(k.Key)
+      all.push(k)
+    }
+  }
+  return { all, byPrefix }
 }
 
 async function copyOne(key) {
@@ -145,12 +173,15 @@ async function main() {
   log('mode:', APPLY ? 'LIVE' : 'DRY RUN')
   log('src bucket:', SRC_BUCKET)
   log('dst bucket:', DST_BUCKET)
-  log('prefix:', PREFIX)
+  log('prefixes:', PRIVATE_PREFIXES.join(', '))
   log('delete from src after copy:', APPLY && CONFIRM_DELETE ? 'YES (--i-understand passed)' : 'no')
   log('manifest:', manifestPath)
 
-  const objects = await listAllPrivateKeys()
-  log(`found ${objects.length} object(s) under ${PREFIX}`)
+  const { all: objects, byPrefix } = await listAllPrivateKeys()
+  for (const p of PRIVATE_PREFIXES) {
+    log(`  ${p.padEnd(22)} ${byPrefix[p] ?? 0}`)
+  }
+  log(`found ${objects.length} unique object(s) across all private prefixes`)
 
   if (objects.length === 0) {
     log('nothing to do')
