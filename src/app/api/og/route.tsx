@@ -1,10 +1,38 @@
 import { ImageResponse } from 'next/og'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
 const SITE_URL = process.env.NEXT_PUBLIC_CANONICAL_DOMAIN || 'https://noizu.direct'
 void SITE_URL
+
+// H9 — SSRF mitigation. The edge `ImageResponse` runtime fetches any URL
+// placed in an `<img src>`, which means `image=http://169.254.169.254/...`
+// would let an attacker probe cloud-metadata endpoints. Only allow images
+// coming from our storage buckets (R2) and the configured app domain.
+function getAllowedImageHosts(): Set<string> {
+  const allowed = new Set<string>()
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (appUrl) {
+    try { allowed.add(new URL(appUrl).hostname.toLowerCase()) } catch { /* ignore */ }
+  }
+  const canonical = process.env.NEXT_PUBLIC_CANONICAL_DOMAIN
+  if (canonical) {
+    try { allowed.add(new URL(canonical).hostname.toLowerCase()) } catch { /* ignore */ }
+  }
+  return allowed
+}
+
+function isAllowedImageUrl(raw: string): boolean {
+  if (!raw) return true // empty is fine — no <img> will be rendered
+  let parsed: URL
+  try { parsed = new URL(raw) } catch { return false }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false
+  const host = parsed.hostname.toLowerCase()
+  if (host.endsWith('.r2.dev')) return true
+  if (host.endsWith('.r2.cloudflarestorage.com')) return true
+  return getAllowedImageHosts().has(host)
+}
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -14,6 +42,10 @@ export async function GET(req: NextRequest) {
   const image = searchParams.get('image') || ''
   const price = searchParams.get('price') || ''
   const badge = searchParams.get('badge') || ''
+
+  if (image && !isAllowedImageUrl(image)) {
+    return NextResponse.json({ error: 'invalid image host' }, { status: 400 })
+  }
 
   // Default OG
   if (type === 'default' || !type) {

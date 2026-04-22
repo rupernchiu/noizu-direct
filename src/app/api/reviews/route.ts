@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+
+// M8 — reviews are stored and rendered on product pages. The React tree
+// escapes text, but without length caps a single reviewer could post a
+// multi-megabyte body as a DoS. Reject HTML outright (simplest rule) so
+// future renderers that use dangerouslySetInnerHTML can't be abused.
+const reviewSchema = z.object({
+  productId: z.string().min(1).max(128),
+  rating: z.number().int().min(1).max(5),
+  title: z
+    .string()
+    .trim()
+    .max(100, 'Title is too long')
+    .refine((s) => !/[<>]/.test(s), 'HTML not allowed in title')
+    .optional()
+    .nullable(),
+  body: z
+    .string()
+    .trim()
+    .max(5000, 'Body is too long')
+    .refine((s) => !/[<>]/.test(s), 'HTML not allowed in body')
+    .optional()
+    .nullable(),
+})
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,14 +38,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Admins cannot leave reviews' }, { status: 403 })
     }
 
-    const body = await req.json()
-    const { productId, rating, title, body: reviewBody } = body
-
-    if (!productId) return NextResponse.json({ error: 'productId is required' }, { status: 400 })
-
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return NextResponse.json({ error: 'Rating must be between 1 and 5' }, { status: 400 })
+    const json = await req.json().catch(() => null)
+    const parsed = reviewSchema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', issues: parsed.error.flatten() },
+        { status: 400 },
+      )
     }
+    const { productId, rating, title, body: reviewBody } = parsed.data
 
     const product = await prisma.product.findUnique({
       where: { id: productId, isActive: true },

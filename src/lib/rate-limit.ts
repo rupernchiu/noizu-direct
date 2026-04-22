@@ -1,9 +1,14 @@
 import { redis } from '@/lib/redis'
 
-// In-memory fallback when Upstash is unreachable or unconfigured.
-// Best-effort across lambdas — one per edge region — but prevents a
-// misconfigured Redis from disabling all rate limiting silently.
+// M6 — Redis-failure posture. Previously we always fell back to an
+// in-memory Map when Upstash threw, which worked per-isolate but let a
+// clever attacker rotate across edge regions and effectively bypass the
+// limiter. In production we now fail CLOSED: if Redis is unreachable,
+// rate-limited endpoints return 429 (erring on availability, correctly
+// for security). In development we keep the in-memory fallback so
+// engineers aren't blocked when they don't have UPSTASH env vars set.
 const memoryBuckets = new Map<string, { count: number; resetAt: number }>()
+const isProd = process.env.NODE_ENV === 'production'
 
 export type RateLimitResult = {
   allowed: boolean
@@ -27,8 +32,8 @@ export function clientIp(req: { headers: Headers }): string {
  *
  * Semantics: the first request in a new window sets an atomic INCR+EXPIRE
  * via a pipeline. Subsequent requests in the window increment and compare
- * to the limit. Falls back to an in-memory Map if Redis is unreachable —
- * better to throttle per-region than not at all.
+ * to the limit. Fails CLOSED in production if Redis is unreachable;
+ * falls back to an in-memory per-isolate map in development only.
  */
 export async function rateLimit(
   scope: string,
@@ -52,7 +57,19 @@ export async function rateLimit(
       remaining: Math.max(0, limit - count),
       resetAt,
     }
-  } catch {
+  } catch (err) {
+    // Log enough detail to alert on in observability.
+    console.error('[rate-limit] redis unavailable', {
+      scope,
+      identifier,
+      err: err instanceof Error ? err.message : String(err),
+    })
+    if (isProd) {
+      // Fail closed. A prod outage here denies further requests until Redis
+      // recovers — availability cost, but eliminates cross-region bypass.
+      return { allowed: false, remaining: 0, resetAt: now + windowSeconds * 1000 }
+    }
+    // Dev: keep the in-memory best-effort fallback so local work isn't blocked.
     const bucket = memoryBuckets.get(key)
     if (!bucket || bucket.resetAt <= now) {
       memoryBuckets.set(key, { count: 1, resetAt: now + windowSeconds * 1000 })

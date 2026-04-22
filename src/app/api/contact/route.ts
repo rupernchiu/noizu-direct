@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { clientIp, rateLimit, rateLimitHeaders } from '@/lib/rate-limit'
 
-// ─── In-memory rate limiter (best-effort in serverless) ───────────────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-const RATE_LIMIT = 3
-const WINDOW_MS  = 60 * 60 * 1000 // 1 hour
-
-function checkRateLimit(ip: string): boolean {
-  const now   = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + WINDOW_MS })
-    return true
-  }
-  if (entry.count >= RATE_LIMIT) return false
-  entry.count++
-  return true
-}
+// M7 — contact-form rate limit. Previously a per-isolate Map that reset on
+// cold start; now backed by Upstash so the limit is global across the edge
+// fleet. 5 contact submissions per IP per hour.
+const CONTACT_RATE = { limit: 5, windowSeconds: 60 * 60 }
 
 // ─── Dangerous pattern detection ─────────────────────────────────────────────
 const DANGEROUS_PATTERNS = [
@@ -62,15 +51,15 @@ export async function POST(req: NextRequest) {
   const ts = new Date().toISOString()
 
   try {
-    const ip = (
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      req.headers.get('x-real-ip') ??
-      'unknown'
-    )
+    const ip = clientIp(req)
 
-    if (!checkRateLimit(ip)) {
+    const rl = await rateLimit('contact', ip, CONTACT_RATE.limit, CONTACT_RATE.windowSeconds)
+    if (!rl.allowed) {
       console.warn(`[contact] Rate limited | IP: ${ip} | time: ${ts}`)
-      return errorResponse(429, 'Too many requests. Please try again later.')
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { status: 429, headers: { ...API_SECURITY_HEADERS, ...rateLimitHeaders(rl, CONTACT_RATE.limit) } },
+      )
     }
 
     const body = await req.json().catch(() => ({}))

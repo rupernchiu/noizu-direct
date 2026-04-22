@@ -2,7 +2,27 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { unlink } from 'fs/promises'
-import { join } from 'path'
+import { resolve, sep } from 'path'
+
+// M10 — path-traversal defence in depth. The `url` value comes from the DB
+// (owned by the user via `uploadedBy`), but even DB-sourced strings get
+// guard-checked before being handed to `unlink` so that a malicious admin
+// row, a migration bug, or an injection elsewhere in the stack can't
+// escape the public/uploads root. We require:
+//   1. No scheme (`:` is disallowed — blocks `file:`, `\\server\share` UNC)
+//   2. No backslash (avoids Windows-path quirks)
+//   3. No `..` segment (standard traversal guard)
+//   4. Resolved absolute path MUST start with the allowed root
+const PUBLIC_ROOT = resolve(process.cwd(), 'public')
+const UPLOADS_ROOT = resolve(PUBLIC_ROOT, 'uploads') + sep
+
+function looksLikeSafeRelative(u: string): boolean {
+  if (!u.startsWith('/uploads/')) return false
+  if (u.includes('..')) return false
+  if (u.includes('\\')) return false
+  if (u.includes(':')) return false
+  return true
+}
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -23,8 +43,24 @@ export async function POST(req: Request) {
 
   let deletedBytes = 0
   for (const file of files) {
-    if (file.url.startsWith('/uploads/')) {
-      try { await unlink(join(process.cwd(), 'public', file.url)) } catch {}
+    if (looksLikeSafeRelative(file.url)) {
+      try {
+        const absolute = resolve(PUBLIC_ROOT, '.' + file.url)
+        // Final sandbox check: the resolved path must live under /public/uploads/.
+        if (absolute.startsWith(UPLOADS_ROOT)) {
+          await unlink(absolute)
+        } else {
+          console.warn('[bulk-delete] refusing to unlink outside uploads root', {
+            userId, fileId: file.id, url: file.url, absolute,
+          })
+        }
+      } catch {
+        // Missing file / permission — best-effort, DB delete still proceeds.
+      }
+    } else {
+      console.warn('[bulk-delete] refusing to unlink suspicious url', {
+        userId, fileId: file.id, url: file.url,
+      })
     }
     deletedBytes += file.fileSize ?? 0
   }

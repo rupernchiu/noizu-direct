@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
+
+// H17 — every href here is ultimately CMS/admin-controlled. Accept either a
+// same-origin path or an http(s) absolute URL; refuse `javascript:` / `data:`
+// / protocol-relative by falling back to a harmless '/' internal path so the
+// UI still renders. '#' is deliberately avoided because it's clickable and
+// interacts badly with SPA routing.
+function safeHref(u: string | null | undefined, fallback = '/'): string {
+  return safeInternalHref(u) ?? safeExternalHref(u) ?? fallback
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -179,7 +189,7 @@ function NavTrigger({
     return (
       <div style={{ display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
         <Link
-          href={startSellingHref}
+          href={safeHref(startSellingHref, '/start-selling')}
           style={{
             display: 'flex', alignItems: 'center',
             fontSize: '13px', fontWeight: 600,
@@ -336,7 +346,7 @@ function SimpleListItem({ label, url }: { label: string; url: string }) {
   const [hovered, setHovered] = useState(false)
   return (
     <Link
-      href={url}
+      href={safeHref(url)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: '40px', padding: '0 16px',
@@ -414,7 +424,7 @@ function MegaMenuDropdown({ content }: { content: MegaMenuContent }) {
           display: 'flex', justifyContent: 'flex-end',
         }}>
           <Link
-            href={bottomBarUrl ?? '#'}
+            href={safeHref(bottomBarUrl)}
             style={{
               fontSize: '13px', fontWeight: 500, color: P,
               textDecoration: 'none',
@@ -433,7 +443,7 @@ function MegaMenuItem({ label, url, icon }: { label: string; url: string; icon?:
   const [hovered, setHovered] = useState(false)
   return (
     <Link
-      href={url}
+      href={safeHref(url)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: '34px', padding: '0 8px',
@@ -491,7 +501,7 @@ function FeaturedBanner({ featured }: { featured: MegaMenuFeatured }) {
       {/* CTA */}
       <div style={{ padding: '12px', background: 'var(--card)', flex: 1, display: 'flex', alignItems: 'center' }}>
         <Link
-          href={featured.ctaUrl}
+          href={safeHref(featured.ctaUrl)}
           style={{
             display: 'block', width: '100%', textAlign: 'center',
             background: btnHovered ? P : '#fff',
@@ -576,7 +586,7 @@ function FeatureCardDropdown({ content }: { content: FeatureCardContent }) {
 
       {/* CTA button */}
       <Link
-        href={content.ctaUrl}
+        href={safeHref(content.ctaUrl)}
         style={{
           display: 'block', width: '100%', textAlign: 'center',
           background: btnHovered ? '#6d28d9' : P,
@@ -609,7 +619,7 @@ function FeatureCardLink({ label, url }: { label: string; url: string }) {
   const [hovered, setHovered] = useState(false)
   return (
     <Link
-      href={url}
+      href={safeHref(url)}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         height: '40px', padding: '0 16px',

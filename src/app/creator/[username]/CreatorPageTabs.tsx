@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SupportModal } from '@/components/support/SupportModal'
+import { safeExternalHref } from '@/lib/safe-url'
 import {
   ShopDiscovery, AboutDiscovery, CommissionDiscovery,
   PortfolioDiscovery, VideosDiscovery, SupportDiscovery,
@@ -736,10 +737,13 @@ export function CreatorPageTabs({
                   {filledSocials.map((key) => {
                     const cfg = SOCIAL_CONFIG[key]
                     if (!cfg) return null
+                    // H17 — block `javascript:` / `data:` / relative URLs.
+                    const safeUrl = safeExternalHref(socialLinks[key])
+                    if (!safeUrl) return null
                     return (
                       <a
                         key={key}
-                        href={socialLinks[key]}
+                        href={safeUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={cfg.label}

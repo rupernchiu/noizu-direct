@@ -26,6 +26,11 @@ function buildCsp(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     'upgrade-insecure-requests',
+    // M23 — report violations to /api/csp-report. `report-uri` is the
+    // legacy directive still honoured by Chrome/Edge; `report-to` points
+    // at the Reporting-Endpoints group declared in next.config.ts headers.
+    'report-uri /api/csp-report',
+    'report-to csp-endpoint',
   ]
   return directives.join('; ')
 }

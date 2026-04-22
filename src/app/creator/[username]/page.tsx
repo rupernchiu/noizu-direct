@@ -10,6 +10,7 @@ import { CreatorPopup } from '@/components/ui/CreatorPopup'
 import { FollowButton } from '@/components/ui/FollowButton'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { SEO_CONFIG } from '@/lib/seo-config'
+import { safeExternalHref } from '@/lib/safe-url'
 
 interface PageProps {
   params: Promise<{ username: string }>
@@ -598,11 +599,14 @@ export default async function CreatorPage({ params }: PageProps) {
         {Object.keys(socialLinks).length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {Object.entries(socialLinks).map(([platform, url]) => {
-              if (!url) return null
+              // H17 — refuse to render `javascript:` / `data:` / relative
+              // URLs as social links; skip instead of falling back to `#`.
+              const safeUrl = safeExternalHref(url)
+              if (!safeUrl) return null
               return (
                 <a
                   key={platform}
-                  href={url}
+                  href={safeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-lg bg-card border border-border px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all"

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { ShieldCheck, BadgeCheck, Heart } from 'lucide-react'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
 
 interface HeroContent {
   headline: string
@@ -129,19 +130,28 @@ export default function HeroSection({ content, stats }: HeroSectionProps) {
         )}
 
         {/* CTA buttons */}
+        {/* H17 — CMS-controlled CTAs. Accept either a same-origin path or
+            an http(s) absolute URL. Anything unsafe is rendered as a <span>,
+            not a link, so it remains visible but inert. */}
         <div className={`flex flex-col sm:flex-row gap-4 justify-center ${hasVideo && messages.length > 0 ? 'mt-10' : ''}`}>
-          <Link
-            href={content.ctaPrimary.link}
-            className="inline-flex items-center justify-center px-8 py-3.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] text-base"
-          >
-            {content.ctaPrimary.text}
-          </Link>
-          <Link
-            href={content.ctaSecondary.link}
-            className="inline-flex items-center justify-center px-8 py-3.5 border border-white/70 hover:border-white bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all text-base"
-          >
-            {content.ctaSecondary.text}
-          </Link>
+          {(() => {
+            const primary = safeInternalHref(content.ctaPrimary.link) ?? safeExternalHref(content.ctaPrimary.link)
+            const baseClass = 'inline-flex items-center justify-center px-8 py-3.5 bg-primary hover:bg-primary/90 text-white font-semibold rounded-xl transition-all hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] text-base'
+            return primary ? (
+              <Link href={primary} className={baseClass}>{content.ctaPrimary.text}</Link>
+            ) : (
+              <span className={baseClass}>{content.ctaPrimary.text}</span>
+            )
+          })()}
+          {(() => {
+            const secondary = safeInternalHref(content.ctaSecondary.link) ?? safeExternalHref(content.ctaSecondary.link)
+            const baseClass = 'inline-flex items-center justify-center px-8 py-3.5 border border-white/70 hover:border-white bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all text-base'
+            return secondary ? (
+              <Link href={secondary} className={baseClass}>{content.ctaSecondary.text}</Link>
+            ) : (
+              <span className={baseClass}>{content.ctaSecondary.text}</span>
+            )
+          })()}
         </div>
 
         {/* Value claims strip */}

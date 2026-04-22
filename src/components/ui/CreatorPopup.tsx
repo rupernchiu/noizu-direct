@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
 
 export interface CreatorPopupData {
   username: string
@@ -245,8 +246,9 @@ export function CreatorPopup({
                   {popupDescription}
                 </p>
               )}
+              {/* H17 — creator-controlled CTA; refuse dangerous schemes. */}
               <Link
-                href={popupCtaLink}
+                href={safeInternalHref(popupCtaLink) ?? safeExternalHref(popupCtaLink) ?? `/creator/${username}`}
                 onClick={closePopup}
                 style={{
                   display: 'block',

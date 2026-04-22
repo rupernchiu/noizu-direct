@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
 
 interface Announcement {
   id: string
@@ -33,6 +34,13 @@ export function AnnouncementBarClient({ announcements }: Props) {
   const announcement = announcements[index]
   if (!announcement) return null
 
+  // H17 — CMS-controlled link; accept http(s) absolute or same-origin path.
+  // Anything else (`javascript:`, `data:`, protocol-relative) → render as
+  // plain text, no link.
+  const safeLink = announcement.link
+    ? (safeInternalHref(announcement.link) ?? safeExternalHref(announcement.link))
+    : null
+
   const content = (
     <div
       className="w-full py-2 px-4 text-center text-sm font-medium text-white"
@@ -43,7 +51,7 @@ export function AnnouncementBarClient({ announcements }: Props) {
       }}
     >
       {announcement.text}
-      {announcement.link && (
+      {safeLink && (
         <span className="ml-2 underline underline-offset-2 opacity-90">
           Learn more →
         </span>
@@ -51,9 +59,9 @@ export function AnnouncementBarClient({ announcements }: Props) {
     </div>
   )
 
-  if (announcement.link) {
+  if (safeLink) {
     return (
-      <Link href={announcement.link} className="block w-full hover:opacity-90 transition-opacity">
+      <Link href={safeLink} className="block w-full hover:opacity-90 transition-opacity">
         {content}
       </Link>
     )

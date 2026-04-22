@@ -7,6 +7,13 @@ import {
   LayoutGrid, Users, BookOpen, Star, Tag, Home,
   type LucideIcon,
 } from 'lucide-react'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
+
+// H17 — nav URLs come from the admin CMS; guard against `javascript:` /
+// `data:` / protocol-relative. Fall back to '/' so the tab still renders.
+function safeNavHref(u: string | null | undefined, fallback = '/'): string {
+  return safeInternalHref(u) ?? safeExternalHref(u) ?? fallback
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -143,7 +150,7 @@ function SimpleListSheet({ content }: { content: SimpleListContent }) {
           )}
           {group.items.map((item, ii) => (
             <Link
-              key={ii} href={item.url}
+              key={ii} href={safeNavHref(item.url)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 20px', height: '48px',
@@ -172,7 +179,7 @@ function MegaMenuSheet({ content }: { content: MegaMenuContent }) {
       {/* Featured banner with image */}
       {featured && (
         <Link
-          href={featured.ctaUrl}
+          href={safeNavHref(featured.ctaUrl)}
           style={{ display: 'block', margin: '0 20px 16px', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none', position: 'relative', height: '120px' }}
         >
           {featured.image ? (
@@ -199,7 +206,7 @@ function MegaMenuSheet({ content }: { content: MegaMenuContent }) {
           </p>
           {col.items.map((item, ii) => (
             <Link
-              key={ii} href={item.url}
+              key={ii} href={safeNavHref(item.url)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '0 20px', height: '44px',
@@ -216,7 +223,7 @@ function MegaMenuSheet({ content }: { content: MegaMenuContent }) {
       ))}
       {bottomBarUrl && (
         <Link
-          href={bottomBarUrl}
+          href={safeNavHref(bottomBarUrl)}
           style={{
             display: 'block', padding: '14px 20px',
             fontSize: '13px', fontWeight: 600, color: PURPLE,
@@ -273,7 +280,7 @@ function FeatureCardSheet({ content }: { content: FeatureCardContent }) {
       {/* CTA */}
       <div style={{ padding: '0 20px 16px' }}>
         <Link
-          href={content.ctaUrl}
+          href={safeNavHref(content.ctaUrl)}
           style={{
             display: 'block', textAlign: 'center',
             background: PURPLE, color: '#fff',
@@ -289,7 +296,7 @@ function FeatureCardSheet({ content }: { content: FeatureCardContent }) {
       {/* Quick links */}
       {content.items?.map((item, i) => (
         <Link
-          key={i} href={item.url}
+          key={i} href={safeNavHref(item.url)}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '0 20px', height: '48px',

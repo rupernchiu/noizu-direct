@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
 
 export interface AdminPopupData {
   id: string
@@ -176,8 +177,10 @@ export function AdminPopup({ popup }: { popup: AdminPopupData }) {
                   {popup.description}
                 </p>
               )}
+              {/* H17 — admin-controlled CTA; reject `javascript:` / `data:`
+                  / protocol-relative. Fall back to homepage if invalid. */}
               <Link
-                href={popup.ctaLink}
+                href={safeInternalHref(popup.ctaLink) ?? safeExternalHref(popup.ctaLink) ?? '/'}
                 onClick={closePopup}
                 style={{
                   display: 'block',

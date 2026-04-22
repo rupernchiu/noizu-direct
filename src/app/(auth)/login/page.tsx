@@ -60,9 +60,25 @@ function LoginForm() {
       const res = await fetch('/api/auth/session')
       const session = await res.json() as { user?: { role?: string } }
       const role = session?.user?.role
-      const callbackUrl = searchParams?.get('callbackUrl')
-      if (callbackUrl) {
-        router.push(callbackUrl)
+
+      // H16 — open redirect. router.push() will happily navigate to an
+      // absolute cross-origin URL, so a phishing link of the form
+      // /login?callbackUrl=https://evil.example/fake-dashboard would send
+      // a just-authenticated user off-site. Only accept same-origin URLs;
+      // fall back to role-based default otherwise.
+      const rawCallback = searchParams?.get('callbackUrl')
+      let safeCallback: string | null = null
+      if (rawCallback) {
+        try {
+          const u = new URL(rawCallback, window.location.origin)
+          if (u.origin === window.location.origin) {
+            safeCallback = u.pathname + u.search + u.hash
+          }
+        } catch { /* invalid URL — ignore */ }
+      }
+
+      if (safeCallback) {
+        router.push(safeCallback)
       } else if (role === 'ADMIN') {
         router.push('/admin')
       } else if (role === 'CREATOR') {
