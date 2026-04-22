@@ -34,6 +34,8 @@ export function GrantBonusForm({ userId, currentBonusMb }: { userId: string; cur
         min={0}
         value={value}
         onChange={e => setValue(e.target.value)}
+        aria-invalid={!!error || undefined}
+        aria-describedby={error ? 'grant-bonus-error' : undefined}
         className="w-20 text-xs p-1.5 rounded-lg bg-background border border-border text-foreground"
       />
       <span className="text-xs text-muted-foreground">MB</span>
@@ -44,7 +46,7 @@ export function GrantBonusForm({ userId, currentBonusMb }: { userId: string; cur
       >
         {busy ? '…' : 'Save'}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span id="grant-bonus-error" role="alert" className="text-xs text-red-400">{error}</span>}
     </div>
   )
 }

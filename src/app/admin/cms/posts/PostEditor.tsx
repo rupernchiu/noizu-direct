@@ -90,7 +90,7 @@ export function PostEditor({ post }: PostEditorProps) {
   return (
     <div className="space-y-6 max-w-4xl">
       {error && (
-        <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
+        <div id="post-error" role="alert" className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -102,6 +102,8 @@ export function PostEditor({ post }: PostEditorProps) {
               type="text"
               value={title}
               onChange={e => handleTitleChange(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'post-error' : undefined}
               placeholder="Post title"
               className="w-full h-10 rounded-lg border border-border bg-card px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -113,6 +115,8 @@ export function PostEditor({ post }: PostEditorProps) {
               type="text"
               value={slug}
               onChange={e => { setSlug(e.target.value); setSlugManual(true) }}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'post-error' : undefined}
               placeholder="post-slug"
               className="w-full h-10 rounded-lg border border-border bg-card px-3 text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -123,6 +127,8 @@ export function PostEditor({ post }: PostEditorProps) {
             <textarea
               value={excerpt}
               onChange={e => setExcerpt(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'post-error' : undefined}
               placeholder="Short summary shown in listings…"
               rows={3}
               className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -143,6 +149,8 @@ export function PostEditor({ post }: PostEditorProps) {
                 type="text"
                 value={seoTitle}
                 onChange={e => setSeoTitle(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? 'post-error' : undefined}
                 placeholder={title || 'Override page title…'}
                 className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -152,6 +160,8 @@ export function PostEditor({ post }: PostEditorProps) {
               <textarea
                 value={seoDesc}
                 onChange={e => setSeoDesc(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? 'post-error' : undefined}
                 placeholder="Description shown in search results…"
                 rows={2}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -186,6 +196,8 @@ export function PostEditor({ post }: PostEditorProps) {
                   type="datetime-local"
                   value={publishedAt}
                   onChange={e => setPublishedAt(e.target.value)}
+                  aria-invalid={!!error || undefined}
+                  aria-describedby={error ? 'post-error' : undefined}
                   className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -217,6 +229,8 @@ export function PostEditor({ post }: PostEditorProps) {
               type="url"
               value={coverImage}
               onChange={e => setCoverImage(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'post-error' : undefined}
               placeholder="https://…"
               className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -233,6 +247,8 @@ export function PostEditor({ post }: PostEditorProps) {
               type="text"
               value={tags}
               onChange={e => setTags(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'post-error' : undefined}
               placeholder="tag1, tag2, tag3"
               className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />

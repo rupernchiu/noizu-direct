@@ -75,12 +75,14 @@ export default function ForgotPasswordPage() {
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={!!error || undefined}
+                  aria-describedby={error ? 'forgot-error' : undefined}
                   className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
                 />
               </div>
 
               {error && (
-                <p className="text-sm text-destructive">{error}</p>
+                <p id="forgot-error" role="alert" className="text-sm text-destructive">{error}</p>
               )}
 
               <button

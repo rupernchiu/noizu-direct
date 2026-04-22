@@ -53,6 +53,8 @@ export function ChangePasswordForm() {
           onChange={(e) => setCurrent(e.target.value)}
           required
           autoComplete="current-password"
+          aria-invalid={(isError && !!message) || undefined}
+          aria-describedby={message ? 'password-status' : undefined}
           className={inputClass}
         />
       </div>
@@ -65,6 +67,8 @@ export function ChangePasswordForm() {
           onChange={(e) => setNext(e.target.value)}
           required
           autoComplete="new-password"
+          aria-invalid={(isError && !!message) || undefined}
+          aria-describedby={message ? 'password-status' : undefined}
           className={inputClass}
         />
       </div>
@@ -77,11 +81,13 @@ export function ChangePasswordForm() {
           onChange={(e) => setConfirm(e.target.value)}
           required
           autoComplete="new-password"
+          aria-invalid={(isError && !!message) || undefined}
+          aria-describedby={message ? 'password-status' : undefined}
           className={inputClass}
         />
       </div>
       {message && (
-        <p className={`text-sm ${isError ? 'text-destructive' : 'text-secondary'}`}>{message}</p>
+        <p id="password-status" role="alert" className={`text-sm ${isError ? 'text-destructive' : 'text-secondary'}`}>{message}</p>
       )}
       <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90 text-white">
         {loading ? 'Updating…' : 'Update Password'}

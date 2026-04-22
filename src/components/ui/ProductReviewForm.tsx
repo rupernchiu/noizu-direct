@@ -105,6 +105,8 @@ export function ProductReviewForm({ productId, userRole, alreadyReviewed }: Prod
             value={title}
             onChange={e => setTitle(e.target.value)}
             maxLength={100}
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'product-review-error' : undefined}
             className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             placeholder="Summarize your experience"
           />
@@ -116,11 +118,13 @@ export function ProductReviewForm({ productId, userRole, alreadyReviewed }: Prod
             value={body}
             onChange={e => setBody(e.target.value)}
             maxLength={1000}
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'product-review-error' : undefined}
             className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             placeholder="Tell others about your experience with this product"
           />
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p id="product-review-error" role="alert" className="text-sm text-destructive">{error}</p>}
         <button
           type="submit"
           disabled={submitting}

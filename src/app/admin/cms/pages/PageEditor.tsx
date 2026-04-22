@@ -83,7 +83,7 @@ export function PageEditor({ page }: PageEditorProps) {
   return (
     <div className="space-y-6 max-w-4xl">
       {error && (
-        <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
+        <div id="page-error" role="alert" className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm">{error}</div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -95,6 +95,8 @@ export function PageEditor({ page }: PageEditorProps) {
               type="text"
               value={title}
               onChange={e => handleTitleChange(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'page-error' : undefined}
               placeholder="Page title"
               className="w-full h-10 rounded-lg border border-border bg-card px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -106,6 +108,8 @@ export function PageEditor({ page }: PageEditorProps) {
               type="text"
               value={slug}
               onChange={e => { setSlug(e.target.value); setSlugManual(true) }}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'page-error' : undefined}
               placeholder="page-slug"
               className="w-full h-10 rounded-lg border border-border bg-card px-3 text-foreground font-mono text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -126,6 +130,8 @@ export function PageEditor({ page }: PageEditorProps) {
                 type="text"
                 value={seoTitle}
                 onChange={e => setSeoTitle(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? 'page-error' : undefined}
                 placeholder={title || 'Override page title…'}
                 className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -135,6 +141,8 @@ export function PageEditor({ page }: PageEditorProps) {
               <textarea
                 value={seoDesc}
                 onChange={e => setSeoDesc(e.target.value)}
+                aria-invalid={!!error || undefined}
+                aria-describedby={error ? 'page-error' : undefined}
                 placeholder="Description shown in search results…"
                 rows={2}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring"
@@ -212,6 +220,8 @@ export function PageEditor({ page }: PageEditorProps) {
                     type="number"
                     value={footerOrder}
                     onChange={e => setFooterOrder(e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'page-error' : undefined}
                     placeholder="1"
                     min="1"
                     className="w-full h-9 rounded-lg border border-border bg-surface px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"

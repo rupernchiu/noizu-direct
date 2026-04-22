@@ -123,7 +123,7 @@ export function PopupManager({ initialPopup }: PopupManagerProps) {
         </div>
       )}
 
-      {error   && <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
+      {error   && <p id="popup-error" role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
       {success && <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">{success}</p>}
 
       {/* Form */}
@@ -132,38 +132,38 @@ export function PopupManager({ initialPopup }: PopupManagerProps) {
 
         <div>
           <label className="block text-xs font-medium text-foreground mb-1">Title *</label>
-          <input value={form.title} onChange={field('title')} className={inputCls} placeholder="e.g. WCS Malaysia 2026 is Coming!" maxLength={100} />
+          <input value={form.title} onChange={field('title')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} placeholder="e.g. WCS Malaysia 2026 is Coming!" maxLength={100} />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-foreground mb-1">Description</label>
-          <textarea value={form.description} onChange={field('description')} rows={3} className={`${inputCls} resize-none`} placeholder="Short description shown under the title" maxLength={300} />
+          <textarea value={form.description} onChange={field('description')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} rows={3} className={`${inputCls} resize-none`} placeholder="Short description shown under the title" maxLength={300} />
         </div>
 
         <div>
           <label className="block text-xs font-medium text-foreground mb-1">Image URL (optional)</label>
-          <input value={form.imageUrl} onChange={field('imageUrl')} className={inputCls} placeholder="https://..." />
+          <input value={form.imageUrl} onChange={field('imageUrl')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} placeholder="https://..." />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Button Text *</label>
-            <input value={form.ctaText} onChange={field('ctaText')} className={inputCls} placeholder="e.g. Register Now" maxLength={40} />
+            <input value={form.ctaText} onChange={field('ctaText')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} placeholder="e.g. Register Now" maxLength={40} />
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Button Link *</label>
-            <input value={form.ctaLink} onChange={field('ctaLink')} className={inputCls} placeholder="/about or https://..." />
+            <input value={form.ctaLink} onChange={field('ctaLink')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} placeholder="/about or https://..." />
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Starts At (optional)</label>
-            <input type="datetime-local" value={form.startsAt} onChange={field('startsAt')} className={inputCls} />
+            <input type="datetime-local" value={form.startsAt} onChange={field('startsAt')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} />
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground mb-1">Ends At (optional)</label>
-            <input type="datetime-local" value={form.endsAt} onChange={field('endsAt')} className={inputCls} />
+            <input type="datetime-local" value={form.endsAt} onChange={field('endsAt')} aria-invalid={!!error || undefined} aria-describedby={error ? 'popup-error' : undefined} className={inputCls} />
           </div>
         </div>
 

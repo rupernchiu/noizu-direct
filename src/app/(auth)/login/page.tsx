@@ -97,11 +97,13 @@ function LoginForm() {
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
+            aria-invalid={!!errors.email || undefined}
+            aria-describedby={errors.email ? 'email-error' : undefined}
             {...register('email')}
             className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
           />
           {errors.email && (
-            <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+            <p id="email-error" role="alert" className="text-sm text-destructive mt-1">{errors.email.message}</p>
           )}
         </div>
 
@@ -115,6 +117,8 @@ function LoginForm() {
               type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               placeholder="••••••••"
+              aria-invalid={!!errors.password || undefined}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               {...register('password')}
               className="w-full px-3 py-2 pr-10 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
@@ -137,7 +141,7 @@ function LoginForm() {
             </button>
           </div>
           {errors.password && (
-            <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+            <p id="password-error" role="alert" className="text-sm text-destructive mt-1">{errors.password.message}</p>
           )}
           <div className="text-right">
             <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">

@@ -49,7 +49,7 @@ export function CreateRoleForm() {
         </div>
 
         {error && (
-          <p className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">{error}</p>
+          <p id="role-error" role="alert" className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">{error}</p>
         )}
         {success && (
           <p className="px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 text-xs">{success}</p>
@@ -57,12 +57,12 @@ export function CreateRoleForm() {
 
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Role name <span className="text-destructive">*</span></label>
-          <input suppressHydrationWarning value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. content_moderator" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'role-error' : undefined} value={name} onChange={(e) => setName(e.target.value)} required placeholder="e.g. content_moderator" className={inputClass} />
         </div>
 
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Description</label>
-          <textarea suppressHydrationWarning value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What does this role do?" rows={3} className={inputClass + ' resize-none'} />
+          <textarea suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'role-error' : undefined} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What does this role do?" rows={3} className={inputClass + ' resize-none'} />
         </div>
 
         <div className="flex gap-2 pt-1">

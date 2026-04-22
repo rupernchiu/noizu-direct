@@ -70,6 +70,8 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
           onChange={e => setTitle(e.target.value)}
           maxLength={MAX_TITLE}
           placeholder="e.g. Full-body illustration of my OC"
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'commission-request-error' : undefined}
           className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground"
         />
         <p className="text-xs text-muted-foreground mt-1">{title.length}/{MAX_TITLE}</p>
@@ -85,6 +87,8 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
           rows={8}
           maxLength={MAX_BRIEF}
           placeholder="Describe what you want — character, style, pose, background, usage, reference links. The more detail, the better the quote."
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'commission-request-error' : undefined}
           className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground resize-none"
         />
         <p className={`text-xs mt-1 ${briefLen < MIN_BRIEF ? 'text-muted-foreground' : 'text-muted-foreground'}`}>
@@ -102,6 +106,8 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
             value={budgetMin}
             onChange={e => setBudgetMin(e.target.value)}
             placeholder="Optional"
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'commission-request-error' : undefined}
             className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground"
           />
         </div>
@@ -112,6 +118,8 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
             value={budgetMax}
             onChange={e => setBudgetMax(e.target.value)}
             placeholder="Optional"
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'commission-request-error' : undefined}
             className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground"
           />
         </div>
@@ -124,6 +132,8 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
           value={deadline}
           onChange={e => setDeadline(e.target.value)}
           min={new Date().toISOString().slice(0, 10)}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'commission-request-error' : undefined}
           className="w-full text-sm p-3 rounded-lg bg-card border border-border text-foreground"
         />
         <p className="text-xs text-muted-foreground mt-1">Optional — the creator will confirm turnaround in their quote.</p>
@@ -133,7 +143,7 @@ export function RequestCommissionForm({ creatorProfileId, creatorUsername }: Pro
         The creator has up to 7 days to respond with a quote. You&apos;ll pay only once you accept the quote.
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p id="commission-request-error" role="alert" className="text-sm text-red-400">{error}</p>}
 
       <div className="flex flex-wrap gap-2 pt-2">
         <button

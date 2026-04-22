@@ -60,7 +60,7 @@ export function EditStaffForm({ user }: { user: StaffUser }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <p className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
+        <p id="edit-staff-error" role="alert" className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
       )}
 
       <div className="bg-surface border border-border rounded-xl p-6 space-y-4">
@@ -68,15 +68,15 @@ export function EditStaffForm({ user }: { user: StaffUser }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Full Name *</label>
-            <input suppressHydrationWarning value={form.name} onChange={(e) => set('name', e.target.value)} required className={inputClass} />
+            <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'edit-staff-error' : undefined} value={form.name} onChange={(e) => set('name', e.target.value)} required className={inputClass} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Email *</label>
-            <input suppressHydrationWarning type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required className={inputClass} />
+            <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'edit-staff-error' : undefined} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required className={inputClass} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Department</label>
-            <input suppressHydrationWarning value={form.department} onChange={(e) => set('department', e.target.value)} placeholder="Support, Trust & Safety…" className={inputClass} />
+            <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'edit-staff-error' : undefined} value={form.department} onChange={(e) => set('department', e.target.value)} placeholder="Support, Trust & Safety…" className={inputClass} />
           </div>
         </div>
 
@@ -103,11 +103,11 @@ export function EditStaffForm({ user }: { user: StaffUser }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">New Password</label>
-            <input suppressHydrationWarning type="password" value={form.newPassword} onChange={(e) => set('newPassword', e.target.value)} minLength={8} placeholder="Min. 8 characters" className={inputClass} />
+            <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'edit-staff-error' : undefined} type="password" value={form.newPassword} onChange={(e) => set('newPassword', e.target.value)} minLength={8} placeholder="Min. 8 characters" className={inputClass} />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Confirm New Password</label>
-            <input suppressHydrationWarning type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat new password" className={inputClass} />
+            <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'edit-staff-error' : undefined} type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} placeholder="Repeat new password" className={inputClass} />
           </div>
         </div>
       </div>

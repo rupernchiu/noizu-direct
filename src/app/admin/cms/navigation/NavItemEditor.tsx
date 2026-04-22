@@ -142,11 +142,11 @@ export function NavItemEditor({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>Label</Label>
-            <Input value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. All Categories" className="mt-1" />
+            <Input value={label} onChange={e => setLabel(e.target.value)} aria-invalid={!!error || undefined} aria-describedby={error ? 'nav-item-error' : undefined} placeholder="e.g. All Categories" className="mt-1" />
           </div>
           <div>
             <Label>URL</Label>
-            <Input value={url} onChange={e => setUrl(e.target.value)} placeholder="/marketplace" className="mt-1" />
+            <Input value={url} onChange={e => setUrl(e.target.value)} aria-invalid={!!error || undefined} aria-describedby={error ? 'nav-item-error' : undefined} placeholder="/marketplace" className="mt-1" />
           </div>
         </div>
 
@@ -207,7 +207,7 @@ export function NavItemEditor({
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-border flex items-center justify-between">
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p id="nav-item-error" role="alert" className="text-xs text-red-400">{error}</p>}
         <div className="flex gap-2 ml-auto">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button onClick={() => void handleSave()} disabled={saving}>

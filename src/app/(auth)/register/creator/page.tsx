@@ -160,11 +160,13 @@ export default function CreatorRegisterPage() {
                 type="text"
                 autoComplete="name"
                 placeholder="Your name"
+                aria-invalid={!!errors1.name || undefined}
+                aria-describedby={errors1.name ? 'name-error' : undefined}
                 {...registerStep1('name')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.name && (
-                <p className="text-sm text-destructive mt-1">{errors1.name.message}</p>
+                <p id="name-error" role="alert" className="text-sm text-destructive mt-1">{errors1.name.message}</p>
               )}
             </div>
 
@@ -177,11 +179,13 @@ export default function CreatorRegisterPage() {
                 type="email"
                 autoComplete="email"
                 placeholder="you@example.com"
+                aria-invalid={!!errors1.email || undefined}
+                aria-describedby={errors1.email ? 'email-error' : undefined}
                 {...registerStep1('email')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.email && (
-                <p className="text-sm text-destructive mt-1">{errors1.email.message}</p>
+                <p id="email-error" role="alert" className="text-sm text-destructive mt-1">{errors1.email.message}</p>
               )}
             </div>
 
@@ -194,11 +198,13 @@ export default function CreatorRegisterPage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
+                aria-invalid={!!errors1.password || undefined}
+                aria-describedby={errors1.password ? 'password-error' : undefined}
                 {...registerStep1('password')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.password && (
-                <p className="text-sm text-destructive mt-1">{errors1.password.message}</p>
+                <p id="password-error" role="alert" className="text-sm text-destructive mt-1">{errors1.password.message}</p>
               )}
             </div>
 
@@ -211,11 +217,13 @@ export default function CreatorRegisterPage() {
                 type="password"
                 autoComplete="new-password"
                 placeholder="••••••••"
+                aria-invalid={!!errors1.confirmPassword || undefined}
+                aria-describedby={errors1.confirmPassword ? 'confirmPassword-error' : undefined}
                 {...registerStep1('confirmPassword')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors1.confirmPassword && (
-                <p className="text-sm text-destructive mt-1">{errors1.confirmPassword.message}</p>
+                <p id="confirmPassword-error" role="alert" className="text-sm text-destructive mt-1">{errors1.confirmPassword.message}</p>
               )}
             </div>
 
@@ -241,11 +249,13 @@ export default function CreatorRegisterPage() {
                 type="text"
                 autoComplete="username"
                 placeholder="your_handle"
+                aria-invalid={!!errors2.username || undefined}
+                aria-describedby={errors2.username ? 'username-error' : undefined}
                 {...registerStep2('username')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors2.username && (
-                <p className="text-sm text-destructive mt-1">{errors2.username.message}</p>
+                <p id="username-error" role="alert" className="text-sm text-destructive mt-1">{errors2.username.message}</p>
               )}
             </div>
 
@@ -257,11 +267,13 @@ export default function CreatorRegisterPage() {
                 id="displayName"
                 type="text"
                 placeholder="The name fans will see"
+                aria-invalid={!!errors2.displayName || undefined}
+                aria-describedby={errors2.displayName ? 'displayName-error' : undefined}
                 {...registerStep2('displayName')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
               />
               {errors2.displayName && (
-                <p className="text-sm text-destructive mt-1">{errors2.displayName.message}</p>
+                <p id="displayName-error" role="alert" className="text-sm text-destructive mt-1">{errors2.displayName.message}</p>
               )}
             </div>
 
@@ -274,11 +286,13 @@ export default function CreatorRegisterPage() {
                 id="bio"
                 rows={3}
                 placeholder="Tell fans about yourself…"
+                aria-invalid={!!errors2.bio || undefined}
+                aria-describedby={errors2.bio ? 'bio-error' : undefined}
                 {...registerStep2('bio')}
                 className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors resize-none"
               />
               {errors2.bio && (
-                <p className="text-sm text-destructive mt-1">{errors2.bio.message}</p>
+                <p id="bio-error" role="alert" className="text-sm text-destructive mt-1">{errors2.bio.message}</p>
               )}
             </div>
 
@@ -304,7 +318,7 @@ export default function CreatorRegisterPage() {
                 })}
               </div>
               {errors2.categoryTags && (
-                <p className="text-sm text-destructive mt-1">{errors2.categoryTags.message}</p>
+                <p id="categoryTags-error" role="alert" className="text-sm text-destructive mt-1">{errors2.categoryTags.message}</p>
               )}
             </div>
 

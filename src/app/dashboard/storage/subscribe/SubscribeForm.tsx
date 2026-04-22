@@ -73,7 +73,7 @@ export function SubscribeForm({ plans, currentPlan }: { plans: StoragePlanOption
       <div className="bg-card border border-border rounded-xl p-5 space-y-4">
         <p className="text-sm text-foreground">Confirm your first month&apos;s payment:</p>
         <div ref={dropinRef} className="min-h-[280px]" />
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p id="subscribe-error" role="alert" className="text-sm text-red-400">{error}</p>}
         <p className="text-xs text-muted-foreground">
           Your card is saved so we can renew monthly without prompting you again.
         </p>
@@ -103,7 +103,7 @@ export function SubscribeForm({ plans, currentPlan }: { plans: StoragePlanOption
           </div>
         )
       })}
-      {error && <p className="sm:col-span-2 text-sm text-red-400">{error}</p>}
+      {error && <p id="subscribe-error" role="alert" className="sm:col-span-2 text-sm text-red-400">{error}</p>}
     </div>
   )
 }

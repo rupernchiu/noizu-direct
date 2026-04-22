@@ -94,6 +94,8 @@ export function ReviewForm({ orderId, productId, productTitle, onSuccess }: Revi
           onChange={(e) => setTitle(e.target.value.slice(0, 100))}
           placeholder="Summary (optional)"
           maxLength={100}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'review-error' : undefined}
           className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
         />
       </div>
@@ -106,6 +108,8 @@ export function ReviewForm({ orderId, productId, productTitle, onSuccess }: Revi
           placeholder="Share your experience (optional)"
           maxLength={500}
           rows={4}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'review-error' : undefined}
           className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
         />
         <p className="text-xs text-muted-foreground mt-1 text-right">{body.length}/500</p>
@@ -113,7 +117,7 @@ export function ReviewForm({ orderId, productId, productTitle, onSuccess }: Revi
 
       {/* Error */}
       {error && (
-        <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
+        <p id="review-error" role="alert" className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
       )}
 
       {/* Submit */}

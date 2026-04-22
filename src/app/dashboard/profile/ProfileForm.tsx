@@ -105,9 +105,9 @@ const btnPrimary =
 
 // ─── Alert helpers ────────────────────────────────────────────────────────────
 
-function ErrorAlert({ msg }: { msg: string }) {
+function ErrorAlert({ msg, id }: { msg: string; id?: string }) {
   return (
-    <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+    <div id={id} role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
       {msg}
     </div>
   )
@@ -225,7 +225,7 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && <ErrorAlert msg={error} />}
+      {error && <ErrorAlert msg={error} id="appearance-error" />}
       {success && <SuccessAlert msg="Profile saved successfully." />}
 
       {/* Banner & Avatar */}
@@ -325,6 +325,8 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           maxLength={80}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'appearance-error' : undefined}
           className={inputCls}
         />
       </div>
@@ -338,6 +340,8 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
           rows={3}
           maxLength={500}
           placeholder="Tell fans about yourself..."
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'appearance-error' : undefined}
           className={`${inputCls} resize-none`}
         />
       </div>
@@ -348,6 +352,8 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
         <select
           value={commissionStatus}
           onChange={(e) => setCommissionStatus(e.target.value)}
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'appearance-error' : undefined}
           className={inputCls}
         >
           {COMMISSION_STATUSES.map((s) => (
@@ -365,6 +371,8 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
           rows={2}
           maxLength={300}
           placeholder="Post an announcement for visitors..."
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'appearance-error' : undefined}
           className={`${inputCls} resize-none`}
         />
         <label className="flex items-center gap-2 cursor-pointer">
@@ -513,7 +521,7 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
 
   return (
     <div className="space-y-6">
-      {error && <ErrorAlert msg={error} />}
+      {error && <ErrorAlert msg={error} id="portfolio-error" />}
       {success && <SuccessAlert msg="Portfolio saved successfully." />}
 
       {/* Item list */}
@@ -606,6 +614,8 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
               onChange={(e) => setNewTitle(e.target.value)}
               maxLength={120}
               placeholder="e.g. Character Commission — Sakura"
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'portfolio-error' : undefined}
               className={inputCls}
             />
           </div>
@@ -618,6 +628,8 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
               rows={2}
               maxLength={400}
               placeholder="Brief description of this piece..."
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'portfolio-error' : undefined}
               className={`${inputCls} resize-none`}
             />
           </div>
@@ -627,6 +639,8 @@ function PortfolioTab({ profile }: { profile: CreatorProfile }) {
             <select
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
+              aria-invalid={!!error || undefined}
+              aria-describedby={error ? 'portfolio-error' : undefined}
               className={inputCls}
             >
               {PORTFOLIO_CATEGORIES.map((c) => (
@@ -759,7 +773,7 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
 
   return (
     <div className="space-y-6">
-      {error && <ErrorAlert msg={error} />}
+      {error && <ErrorAlert msg={error} id="store-error" />}
       {success && <SuccessAlert msg="Store settings saved." />}
 
       {/* Commission Slots */}
@@ -771,6 +785,8 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
           value={commissionSlots}
           onChange={(e) => setCommissionSlots(e.target.value)}
           placeholder="Unlimited"
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'store-error' : undefined}
           className="w-full sm:w-40 rounded-lg bg-card border border-border px-3 py-2 text-base sm:text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
         <p className="mt-1.5 text-xs text-muted-foreground">
@@ -792,6 +808,8 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
           rows={5}
           maxLength={1000}
           placeholder="Tell fans what kind of commissions you offer, your style, what makes your work special..."
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'store-error' : undefined}
           className={`${inputCls} resize-none`}
         />
         <p className="mt-1 text-xs text-muted-foreground">{commissionDescription.length}/1000 characters</p>
@@ -873,6 +891,8 @@ function StoreTab({ profile }: { profile: CreatorProfile }) {
           rows={6}
           maxLength={2000}
           placeholder="Describe your process, turnaround time, revision policy, usage rights, etc."
+          aria-invalid={!!error || undefined}
+          aria-describedby={error ? 'store-error' : undefined}
           className={`${inputCls} resize-none`}
         />
         <p className="mt-1 text-xs text-muted-foreground">{commissionTerms.length}/2000 characters</p>
@@ -1020,7 +1040,7 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
       {/* Change Password */}
       <section className="rounded-xl bg-surface border border-border p-5 space-y-4">
         <h2 className="text-sm font-semibold text-foreground">Change Password</h2>
-        {pwError && <ErrorAlert msg={pwError} />}
+        {pwError && <ErrorAlert msg={pwError} id="password-error" />}
         {pwSuccess && <SuccessAlert msg="Password changed successfully." />}
         <form onSubmit={handleChangePassword} className="space-y-3">
           <div>
@@ -1031,6 +1051,8 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               onChange={(e) => setCurrentPassword(e.target.value)}
               autoComplete="current-password"
               required
+              aria-invalid={!!pwError || undefined}
+              aria-describedby={pwError ? 'password-error' : undefined}
               className={inputCls}
             />
           </div>
@@ -1043,6 +1065,8 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               autoComplete="new-password"
               required
               minLength={8}
+              aria-invalid={!!pwError || undefined}
+              aria-describedby={pwError ? 'password-error' : undefined}
               className={inputCls}
             />
           </div>
@@ -1054,6 +1078,8 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
               required
+              aria-invalid={!!pwError || undefined}
+              aria-describedby={pwError ? 'password-error' : undefined}
               className={inputCls}
             />
           </div>
@@ -1070,7 +1096,7 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
           Current:{' '}
           <span className="font-mono text-primary">{profile.username}</span>
         </div>
-        {slugError && <ErrorAlert msg={slugError} />}
+        {slugError && <ErrorAlert msg={slugError} id="slug-error" />}
         {slugSuccess && <SuccessAlert msg="Username updated successfully." />}
         <form onSubmit={handleChangeSlug} className="space-y-3">
           <div>
@@ -1080,6 +1106,8 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               onChange={(e) => setNewSlug(e.target.value)}
               placeholder={profile.username}
               maxLength={30}
+              aria-invalid={!!slugError || undefined}
+              aria-describedby={slugError ? 'slug-error' : undefined}
               className={inputCls}
             />
             <p className="mt-1 text-xs text-muted-foreground">Letters, numbers, hyphens, underscores only (3–30 characters).</p>
@@ -1102,7 +1130,7 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
       {/* Danger Zone */}
       <section className="rounded-xl bg-red-500/5 border border-red-500/30 p-5 space-y-4">
         <h2 className="text-sm font-semibold text-red-400">Danger Zone</h2>
-        {deleteError && <ErrorAlert msg={deleteError} />}
+        {deleteError && <ErrorAlert msg={deleteError} id="delete-error" />}
         {!showDeleteConfirm ? (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
@@ -1127,6 +1155,8 @@ function SettingsTab({ profile }: { profile: CreatorProfile }) {
               value={deleteEmail}
               onChange={(e) => setDeleteEmail(e.target.value)}
               placeholder="your@email.com"
+              aria-invalid={!!deleteError || undefined}
+              aria-describedby={deleteError ? 'delete-error' : undefined}
               className={`${inputCls} border-red-500/30 focus:ring-red-500`}
             />
             <div className="flex flex-col sm:flex-row gap-2">

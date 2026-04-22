@@ -78,7 +78,7 @@ export function PermissionsGrid({ staffUserId, grouped, currentMap, isSuperAdmin
       )}
 
       {error && (
-        <p className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
+        <p id="permissions-error" role="alert" className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
       )}
 
       {components.map((component) => (

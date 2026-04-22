@@ -48,32 +48,32 @@ export function NewStaffForm() {
   return (
     <form onSubmit={handleSubmit} className="bg-surface border border-border rounded-xl p-6 space-y-4">
       {error && (
-        <p className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
+        <p id="new-staff-error" role="alert" className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">{error}</p>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Full Name *</label>
-          <input suppressHydrationWarning value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Jane Smith" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'new-staff-error' : undefined} value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Jane Smith" className={inputClass} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Email *</label>
-          <input suppressHydrationWarning type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required placeholder="jane@company.com" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'new-staff-error' : undefined} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required placeholder="jane@company.com" className={inputClass} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Department</label>
-          <input suppressHydrationWarning value={form.department} onChange={(e) => set('department', e.target.value)} placeholder="Support, Trust & Safety…" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'new-staff-error' : undefined} value={form.department} onChange={(e) => set('department', e.target.value)} placeholder="Support, Trust & Safety…" className={inputClass} />
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Password *</label>
-          <input suppressHydrationWarning type="password" value={form.password} onChange={(e) => set('password', e.target.value)} required minLength={8} placeholder="Min. 8 characters" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'new-staff-error' : undefined} type="password" value={form.password} onChange={(e) => set('password', e.target.value)} required minLength={8} placeholder="Min. 8 characters" className={inputClass} />
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-muted-foreground">Confirm Password *</label>
-          <input suppressHydrationWarning type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} required placeholder="Repeat password" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? 'new-staff-error' : undefined} type="password" value={form.confirmPassword} onChange={(e) => set('confirmPassword', e.target.value)} required placeholder="Repeat password" className={inputClass} />
         </div>
       </div>
 

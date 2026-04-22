@@ -90,9 +90,11 @@ export function ContactForm() {
           value={fields.name}
           onChange={e => set('name', e.target.value)}
           placeholder="Your full name"
+          aria-invalid={!!errors.name || undefined}
+          aria-describedby={errors.name ? 'name-error' : undefined}
           className={`h-10 px-3 rounded-lg text-sm bg-card border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors ${errors.name ? 'border-red-400' : 'border-border'}`}
         />
-        {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
+        {errors.name && <p id="name-error" role="alert" className="text-xs text-red-400">{errors.name}</p>}
       </div>
 
       {/* Email */}
@@ -108,9 +110,11 @@ export function ContactForm() {
           value={fields.email}
           onChange={e => set('email', e.target.value)}
           placeholder="you@example.com"
+          aria-invalid={!!errors.email || undefined}
+          aria-describedby={errors.email ? 'email-error' : undefined}
           className={`h-10 px-3 rounded-lg text-sm bg-card border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors ${errors.email ? 'border-red-400' : 'border-border'}`}
         />
-        {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
+        {errors.email && <p id="email-error" role="alert" className="text-xs text-red-400">{errors.email}</p>}
       </div>
 
       {/* Subject */}
@@ -141,11 +145,13 @@ export function ContactForm() {
           value={fields.message}
           onChange={e => set('message', e.target.value)}
           placeholder="Tell us how we can help..."
+          aria-invalid={!!errors.message || undefined}
+          aria-describedby={errors.message ? 'message-error' : undefined}
           className={`px-3 py-2.5 rounded-lg text-sm bg-card border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-colors resize-none ${errors.message ? 'border-red-400' : 'border-border'}`}
         />
         <div className="flex items-center justify-between">
           {errors.message
-            ? <p className="text-xs text-red-400">{errors.message}</p>
+            ? <p id="message-error" role="alert" className="text-xs text-red-400">{errors.message}</p>
             : <span />
           }
           <p className="text-xs text-muted-foreground ml-auto">{fields.message.length}/2000</p>
@@ -154,7 +160,7 @@ export function ContactForm() {
 
       {/* Error banner */}
       {status === 'error' && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+        <div id="contact-error" role="alert" className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
           <AlertCircle className="size-4 shrink-0" />
           {errorMsg}
         </div>

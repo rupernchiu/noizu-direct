@@ -240,7 +240,7 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
               <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4">
                 {error && (
-                  <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                  <div id="agreement-error" role="alert" className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                     {error}
                   </div>
                 )}
@@ -254,6 +254,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                     <select
                       value={form.type}
                       onChange={(e) => set('type', e.target.value)}
+                      aria-invalid={!!error || undefined}
+                      aria-describedby={error ? 'agreement-error' : undefined}
                       className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
                       required
                     >
@@ -273,6 +275,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                       type="text"
                       value={form.version}
                       onChange={(e) => set('version', e.target.value)}
+                      aria-invalid={!!error || undefined}
+                      aria-describedby={error ? 'agreement-error' : undefined}
                       placeholder="e.g. 1.0, 2.1"
                       className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary"
                       required
@@ -289,6 +293,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                     type="text"
                     value={form.title}
                     onChange={(e) => set('title', e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'agreement-error' : undefined}
                     placeholder="e.g. Creator Terms of Service"
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary"
                     required
@@ -304,6 +310,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                     type="date"
                     value={form.effectiveDate}
                     onChange={(e) => set('effectiveDate', e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'agreement-error' : undefined}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-primary"
                     required
                   />
@@ -317,6 +325,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                   <textarea
                     value={form.summary}
                     onChange={(e) => set('summary', e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'agreement-error' : undefined}
                     placeholder="Plain-language summary shown to creators before signing…"
                     rows={3}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary resize-y"
@@ -332,6 +342,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                   <textarea
                     value={form.content}
                     onChange={(e) => set('content', e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'agreement-error' : undefined}
                     placeholder="Full legal text of the agreement…"
                     rows={12}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary resize-y"
@@ -347,6 +359,8 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                   <textarea
                     value={form.changeLog}
                     onChange={(e) => set('changeLog', e.target.value)}
+                    aria-invalid={!!error || undefined}
+                    aria-describedby={error ? 'agreement-error' : undefined}
                     placeholder="Describe changes from the previous version…"
                     rows={3}
                     className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary resize-y"

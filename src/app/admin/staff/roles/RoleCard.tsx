@@ -64,9 +64,9 @@ export function RoleCard({ role }: { role: Role }) {
     return (
       <div className="flex items-start gap-3 px-4 py-3 bg-primary/5 border border-primary/20 rounded-xl">
         <div className="flex-1 space-y-2">
-          {error && <p className="text-xs text-destructive">{error}</p>}
-          <input suppressHydrationWarning value={name} onChange={(e) => setName(e.target.value)} placeholder="Role name" className={inputClass} />
-          <input suppressHydrationWarning value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optional)" className={inputClass} />
+          {error && <p id={`role-${role.id}-error`} role="alert" className="text-xs text-destructive">{error}</p>}
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? `role-${role.id}-error` : undefined} value={name} onChange={(e) => setName(e.target.value)} placeholder="Role name" className={inputClass} />
+          <input suppressHydrationWarning aria-invalid={!!error || undefined} aria-describedby={error ? `role-${role.id}-error` : undefined} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description (optional)" className={inputClass} />
         </div>
         <div className="flex gap-1 mt-1">
           <button onClick={save} disabled={saving} title="Save" className="p-1.5 rounded-lg text-green-400 hover:bg-green-500/10 transition-colors disabled:opacity-50">

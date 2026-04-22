@@ -91,7 +91,7 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
 
   return (
     <div className="space-y-6">
-      {error   && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">{error}</div>}
+      {error   && <div id="commission-error" role="alert" className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-400">{error}</div>}
       {success && <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm text-green-400">Saved.</div>}
 
       {/* Availability */}
@@ -123,7 +123,7 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Open slots (leave blank for unlimited)</label>
-            <input type="number" min={0} value={slots} onChange={(e) => setSlots(e.target.value)} className={inputCls} placeholder="e.g. 3" />
+            <input type="number" min={0} value={slots} onChange={(e) => setSlots(e.target.value)} aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={inputCls} placeholder="e.g. 3" />
           </div>
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer text-sm text-foreground">
@@ -140,13 +140,13 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1.5">Commission intro</label>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} placeholder="Tell fans what kind of commissions you offer..." className={`${inputCls} resize-none`} />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} maxLength={1000} placeholder="Tell fans what kind of commissions you offer..." aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={`${inputCls} resize-none`} />
           <p className="mt-1 text-xs text-muted-foreground">{description.length}/1000</p>
         </div>
 
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1.5">Terms of service</label>
-          <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={5} maxLength={3000} placeholder="Your commission rules — e.g. no NSFW, no refunds after linework, revisions included, credit required…" className={`${inputCls} resize-none`} />
+          <textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={5} maxLength={3000} placeholder="Your commission rules — e.g. no NSFW, no refunds after linework, revisions included, credit required…" aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={`${inputCls} resize-none`} />
           <p className="mt-1 text-xs text-muted-foreground">{terms.length}/3000</p>
         </div>
       </section>
@@ -186,15 +186,15 @@ export function CommissionSettingsForm({ initial }: { initial: Initial }) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Default deposit %</label>
-            <input type="number" min={0} max={100} value={defaults.depositPercent} onChange={(e) => setDefaults({ ...defaults, depositPercent: Number(e.target.value) })} className={inputCls} />
+            <input type="number" min={0} max={100} value={defaults.depositPercent} onChange={(e) => setDefaults({ ...defaults, depositPercent: Number(e.target.value) })} aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={inputCls} />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Default revisions</label>
-            <input type="number" min={0} max={20} value={defaults.revisionsIncluded} onChange={(e) => setDefaults({ ...defaults, revisionsIncluded: Number(e.target.value) })} className={inputCls} />
+            <input type="number" min={0} max={20} value={defaults.revisionsIncluded} onChange={(e) => setDefaults({ ...defaults, revisionsIncluded: Number(e.target.value) })} aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={inputCls} />
           </div>
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Default turnaround (days)</label>
-            <input type="number" min={1} max={365} value={defaults.turnaroundDays} onChange={(e) => setDefaults({ ...defaults, turnaroundDays: Number(e.target.value) })} className={inputCls} />
+            <input type="number" min={1} max={365} value={defaults.turnaroundDays} onChange={(e) => setDefaults({ ...defaults, turnaroundDays: Number(e.target.value) })} aria-invalid={!!error || undefined} aria-describedby={error ? 'commission-error' : undefined} className={inputCls} />
           </div>
         </div>
 

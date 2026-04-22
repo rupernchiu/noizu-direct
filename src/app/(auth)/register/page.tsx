@@ -97,11 +97,13 @@ export default function RegisterPage() {
               type="text"
               autoComplete="name"
               placeholder="Your name"
+              aria-invalid={!!errors.name || undefined}
+              aria-describedby={errors.name ? 'name-error' : undefined}
               {...register('name')}
               className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.name && (
-              <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
+              <p id="name-error" role="alert" className="text-sm text-destructive mt-1">{errors.name.message}</p>
             )}
           </div>
 
@@ -114,11 +116,13 @@ export default function RegisterPage() {
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
+              aria-invalid={!!errors.email || undefined}
+              aria-describedby={errors.email ? 'email-error' : undefined}
               {...register('email')}
               className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.email && (
-              <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+              <p id="email-error" role="alert" className="text-sm text-destructive mt-1">{errors.email.message}</p>
             )}
           </div>
 
@@ -131,11 +135,13 @@ export default function RegisterPage() {
               type="password"
               autoComplete="new-password"
               placeholder="••••••••"
+              aria-invalid={!!errors.password || undefined}
+              aria-describedby={errors.password ? 'password-error' : undefined}
               {...register('password')}
               className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.password && (
-              <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+              <p id="password-error" role="alert" className="text-sm text-destructive mt-1">{errors.password.message}</p>
             )}
           </div>
 
@@ -148,11 +154,13 @@ export default function RegisterPage() {
               type="password"
               autoComplete="new-password"
               placeholder="••••••••"
+              aria-invalid={!!errors.confirmPassword || undefined}
+              aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
               {...register('confirmPassword')}
               className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
             />
             {errors.confirmPassword && (
-              <p className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>
+              <p id="confirmPassword-error" role="alert" className="text-sm text-destructive mt-1">{errors.confirmPassword.message}</p>
             )}
           </div>
 

@@ -57,7 +57,7 @@ export function AvatarUploadForm() {
       <Button type="submit" disabled={loading} size="sm" className="bg-primary hover:bg-primary/90 text-white">
         {loading ? 'Uploading…' : 'Upload'}
       </Button>
-      {message && <span className="text-xs text-secondary">{message}</span>}
+      {message && <span id="avatar-status" role="alert" className="text-xs text-secondary">{message}</span>}
     </form>
   )
 }

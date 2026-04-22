@@ -208,6 +208,8 @@ export default function DisputeFormClient({
               onChange={e => setDescription(e.target.value.slice(0, 1000))}
               rows={6}
               placeholder="Please describe what happened in detail..."
+              aria-invalid={!!submitError || undefined}
+              aria-describedby={submitError ? 'dispute-error' : undefined}
               style={{
                 width: '100%', padding: '10px 12px', borderRadius: '8px',
                 border: `1px solid ${description.length >= 50 ? '#22c55e' : 'var(--border)'}`,
@@ -298,7 +300,7 @@ export default function DisputeFormClient({
               </div>
             )}
             {uploading && <p style={{ fontSize: '12px', color: 'var(--muted-foreground)', marginTop: '8px' }}>Uploading…</p>}
-            {uploadError && <p style={{ fontSize: '12px', color: RED, marginTop: '8px' }}>{uploadError}</p>}
+            {uploadError && <p id="dispute-upload-error" role="alert" style={{ fontSize: '12px', color: RED, marginTop: '8px' }}>{uploadError}</p>}
           </div>
 
           <div className="flex justify-between">
@@ -363,7 +365,7 @@ export default function DisputeFormClient({
             </div>
           </div>
 
-          {submitError && <p className="text-sm text-red-400">{submitError}</p>}
+          {submitError && <p id="dispute-error" role="alert" className="text-sm text-red-400">{submitError}</p>}
 
           <button
            suppressHydrationWarning

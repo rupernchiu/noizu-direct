@@ -109,6 +109,8 @@ function ResetPasswordForm() {
             placeholder="At least 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'reset-error' : undefined}
             className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
           />
         </div>
@@ -125,12 +127,14 @@ function ResetPasswordForm() {
             placeholder="Repeat your new password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'reset-error' : undefined}
             className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
           />
         </div>
 
         {error && (
-          <p className="text-sm text-destructive">{error}</p>
+          <p id="reset-error" role="alert" className="text-sm text-destructive">{error}</p>
         )}
 
         <button

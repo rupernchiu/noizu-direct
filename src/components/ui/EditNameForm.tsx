@@ -40,11 +40,12 @@ export function EditNameForm({ currentName }: { currentName: string }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
+          aria-describedby={message ? 'name-status' : undefined}
           className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
       {message && (
-        <p className="text-sm text-secondary">{message}</p>
+        <p id="name-status" role="alert" className="text-sm text-secondary">{message}</p>
       )}
       <Button type="submit" disabled={loading} className="bg-primary hover:bg-primary/90 text-white">
         {loading ? 'Saving…' : 'Save Name'}

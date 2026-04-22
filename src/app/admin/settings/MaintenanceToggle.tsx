@@ -96,6 +96,8 @@ export function MaintenanceToggle({ enabled: initial, message: initialMessage }:
           <input
             value={message}
             onChange={e => setMessage(e.target.value)}
+            aria-invalid={!!error || undefined}
+            aria-describedby={error ? 'maintenance-error' : undefined}
             placeholder="We'll be back shortly…"
             className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
@@ -110,7 +112,7 @@ export function MaintenanceToggle({ enabled: initial, message: initialMessage }:
       </div>
 
       {error && (
-        <p className="text-xs text-red-400 flex items-center gap-1.5">
+        <p id="maintenance-error" role="alert" className="text-xs text-red-400 flex items-center gap-1.5">
           <AlertTriangle size={11} /> {error}
         </p>
       )}

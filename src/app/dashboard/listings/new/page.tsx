@@ -133,7 +133,7 @@ export default function NewListingPage() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+        <div id="listing-error" role="alert" className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
@@ -144,9 +144,11 @@ export default function NewListingPage() {
           <input
             {...register('title')}
             placeholder="Product title"
+            aria-invalid={!!errors.title || undefined}
+            aria-describedby={errors.title ? 'title-error' : undefined}
             className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
-          {errors.title && <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>}
+          {errors.title && <p id="title-error" role="alert" className="mt-1 text-xs text-red-400">{errors.title.message}</p>}
         </div>
 
         <div>
@@ -155,10 +157,12 @@ export default function NewListingPage() {
             {...register('description')}
             rows={4}
             placeholder="Describe your product..."
+            aria-invalid={!!errors.description || undefined}
+            aria-describedby={errors.description ? 'description-error' : undefined}
             className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           />
           {errors.description && (
-            <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+            <p id="description-error" role="alert" className="mt-1 text-xs text-red-400">{errors.description.message}</p>
           )}
         </div>
 
@@ -175,16 +179,20 @@ export default function NewListingPage() {
               min="0.50"
               max="9999"
               placeholder="9.99"
+              aria-invalid={!!errors.price || undefined}
+              aria-describedby={errors.price ? 'price-error' : undefined}
               className="w-full rounded-lg bg-card border border-border pl-7 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
-          {errors.price && <p className="mt-1 text-xs text-red-400">{errors.price.message}</p>}
+          {errors.price && <p id="price-error" role="alert" className="mt-1 text-xs text-red-400">{errors.price.message}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">Category</label>
           <select
             {...register('category')}
+            aria-invalid={!!errors.category || undefined}
+            aria-describedby={errors.category ? 'category-error' : undefined}
             className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Select a category</option>
@@ -195,7 +203,7 @@ export default function NewListingPage() {
             ))}
           </select>
           {errors.category && (
-            <p className="mt-1 text-xs text-red-400">{errors.category.message}</p>
+            <p id="category-error" role="alert" className="mt-1 text-xs text-red-400">{errors.category.message}</p>
           )}
         </div>
 
@@ -236,9 +244,11 @@ export default function NewListingPage() {
               type="number"
               min="0"
               placeholder="0 = unlimited"
+              aria-invalid={!!errors.stock || undefined}
+              aria-describedby={errors.stock ? 'stock-error' : undefined}
               className="w-full rounded-lg bg-card border border-border px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
-            {errors.stock && <p className="mt-1 text-xs text-red-400">{errors.stock.message}</p>}
+            {errors.stock && <p id="stock-error" role="alert" className="mt-1 text-xs text-red-400">{errors.stock.message}</p>}
           </div>
         )}
 
@@ -323,9 +333,11 @@ export default function NewListingPage() {
                 {...register('podExternalUrl')}
                 type="url"
                 placeholder="https://printify.com/..."
+                aria-invalid={!!errors.podExternalUrl || undefined}
+                aria-describedby={errors.podExternalUrl ? 'podExternalUrl-error' : undefined}
                 className="w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
-              {errors.podExternalUrl && <p className="mt-1 text-xs text-red-400">Must be a valid URL</p>}
+              {errors.podExternalUrl && <p id="podExternalUrl-error" role="alert" className="mt-1 text-xs text-red-400">Must be a valid URL</p>}
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">
@@ -357,9 +369,11 @@ export default function NewListingPage() {
                   min="0"
                   max="100"
                   placeholder="50"
+                  aria-invalid={!!errors.commissionDepositPercent || undefined}
+                  aria-describedby={errors.commissionDepositPercent ? 'commissionDepositPercent-error' : undefined}
                   className="w-full rounded-lg bg-background border border-border px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
-                {errors.commissionDepositPercent && <p className="mt-1 text-[11px] text-red-400">0–100</p>}
+                {errors.commissionDepositPercent && <p id="commissionDepositPercent-error" role="alert" className="mt-1 text-[11px] text-red-400">0–100</p>}
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Revisions</label>
