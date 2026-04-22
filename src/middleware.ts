@@ -56,10 +56,15 @@ function allowedReferHosts(): Set<string> {
   return hosts
 }
 
-// Paths that bypass maintenance mode — admin must always be accessible to turn it off
+// Paths that bypass maintenance mode — admin must always be accessible to turn it off.
+// `/staff` is the admin login landing (src/app/staff/login); without it here, an
+// accidentally-enabled maintenance flag locks admins out of the very toggle that
+// clears the flag. 2026-04-22 prod incident: maintenance=true rewrote every
+// request — including /staff/login — to /maintenance.
 const MAINTENANCE_BYPASS = [
   '/maintenance',
   '/admin',
+  '/staff',
   '/api/',
   '/_next',
   '/favicon',
