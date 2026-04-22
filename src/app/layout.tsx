@@ -4,6 +4,7 @@ import { Poppins } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Script from 'next/script'
+import { headers } from 'next/headers'
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -57,13 +58,15 @@ export const metadata: Metadata = {
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem('noizu-theme');var d=document.documentElement;if(t==='dark'){d.classList.add('dark');}else{d.classList.add('light');}}catch(e){document.documentElement.classList.add('light');}})();`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const nonce = (await headers()).get('x-nonce') ?? undefined
   return (
     <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
       <head>
         <Script
           id="theme-init"
           strategy="beforeInteractive"
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
       </head>
@@ -98,7 +101,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Analytics />
         <SpeedInsights />
         {process.env.NEXT_PUBLIC_CLARITY_ID && (
-          <Script id="clarity" strategy="afterInteractive">
+          <Script id="clarity" strategy="afterInteractive" nonce={nonce}>
             {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${process.env.NEXT_PUBLIC_CLARITY_ID}");`}
           </Script>
         )}
