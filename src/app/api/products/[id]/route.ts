@@ -19,6 +19,16 @@ export async function PATCH(
 
   const body = await req.json() as Record<string, unknown>
 
+  // Product `type` is immutable post-create. Allowing a flip (e.g. PHYSICAL → DIGITAL)
+  // bypasses the create-time invariant checks (digital files required, shipping config,
+  // milestones, POD provider) and produces orders that cannot be fulfilled.
+  if (body.type !== undefined && body.type !== product.type) {
+    return NextResponse.json(
+      { error: 'Product type cannot be changed after creation. Archive this listing and create a new one.' },
+      { status: 400 },
+    )
+  }
+
   const toCentsOrNull = (v: unknown): number | null =>
     v == null ? null : Math.round((v as number) * 100)
 
@@ -38,7 +48,6 @@ export async function PATCH(
       ...(body.description !== undefined && { description: body.description as string }),
       ...(body.price !== undefined && { price: Math.round((body.price as number) * 100) }),
       ...(body.category !== undefined && { category: body.category as string }),
-      ...(body.type !== undefined && { type: body.type as string }),
       ...(body.images !== undefined && { images: JSON.stringify(body.images) }),
       ...(body.digitalFiles !== undefined && { digitalFiles: JSON.stringify(body.digitalFiles) }),
       ...(body.stock !== undefined && { stock: body.stock as number }),

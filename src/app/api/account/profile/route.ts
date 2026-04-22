@@ -1,8 +1,6 @@
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
-import { writeFileSync, mkdirSync } from 'fs'
-import path from 'path'
 
 export async function PATCH(req: Request) {
   const session = await auth()
@@ -10,6 +8,26 @@ export async function PATCH(req: Request) {
   const userId = (session.user as any).id
 
   const body = await req.json()
+
+  // Update avatar — must be a URL returned by /api/upload (validated shape).
+  if ('avatar' in body) {
+    const { avatar } = body
+    if (typeof avatar !== 'string') {
+      return NextResponse.json({ error: 'Invalid avatar URL' }, { status: 400 })
+    }
+    // Only accept URLs produced by our upload pipeline: absolute HTTPS, or the
+    // private-file proxy path. Reject arbitrary strings to prevent an attacker
+    // from pointing avatar at a javascript: URL or a third-party HTML they host.
+    const isAllowed =
+      avatar.startsWith('https://') ||
+      avatar.startsWith('/api/files/') ||
+      avatar === ''
+    if (!isAllowed) {
+      return NextResponse.json({ error: 'Invalid avatar URL' }, { status: 400 })
+    }
+    await prisma.user.update({ where: { id: userId }, data: { avatar: avatar || null } })
+    return NextResponse.json({ ok: true, avatar })
+  }
 
   // Update email
   if ('email' in body) {
@@ -37,32 +55,4 @@ export async function PATCH(req: Request) {
   }
   await prisma.user.update({ where: { id: userId }, data: { name: name.trim() } })
   return NextResponse.json({ ok: true })
-}
-
-export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const userId = (session.user as any).id
-
-  const formData = await req.formData()
-  const file = formData.get('file') as File | null
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-  if (!allowedTypes.includes(file.type)) {
-    return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
-  }
-
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
-  const filename = `${userId}.${ext}`
-  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
-  mkdirSync(uploadsDir, { recursive: true })
-
-  const buffer = Buffer.from(await file.arrayBuffer())
-  writeFileSync(path.join(uploadsDir, filename), buffer)
-
-  const avatarUrl = `/uploads/avatars/${filename}`
-  await prisma.user.update({ where: { id: userId }, data: { avatar: avatarUrl } })
-
-  return NextResponse.json({ ok: true, avatar: avatarUrl })
 }

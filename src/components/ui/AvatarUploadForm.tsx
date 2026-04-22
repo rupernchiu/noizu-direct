@@ -16,15 +16,27 @@ export function AvatarUploadForm() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = await fetch('/api/account/profile', {
+      formData.append('category', 'profile_avatar')
+      const uploadRes = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       })
-      if (res.ok) {
+      if (!uploadRes.ok) {
+        const data = await uploadRes.json().catch(() => ({ error: 'Upload failed' }))
+        setMessage(data.error ?? 'Failed to upload avatar.')
+        return
+      }
+      const { url } = await uploadRes.json() as { url: string }
+      const patchRes = await fetch('/api/account/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: url }),
+      })
+      if (patchRes.ok) {
         setMessage('Avatar updated. Refresh to see changes.')
       } else {
-        const data = await res.json()
-        setMessage(data.error ?? 'Failed to upload avatar.')
+        const data = await patchRes.json().catch(() => ({ error: 'Failed' }))
+        setMessage(data.error ?? 'Failed to update avatar.')
       }
     } catch {
       setMessage('An error occurred.')

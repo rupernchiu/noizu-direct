@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!product) return {}
 
   const images: string[] = (() => { try { return JSON.parse(product.images) } catch { return [] } })()
-  const price = `$${(product.price / 100).toFixed(2)} USD`
+  const price = `RM${(product.price / 100).toFixed(2)} MYR`
   const delivery = product.type === 'DIGITAL' ? 'Instant digital download.' : 'Ships from Southeast Asia.'
   const description = `${product.description ? product.description.slice(0, 100) + '. ' : ''}By ${product.creator.displayName}. ${price}. ${delivery}`
   const title = `${product.title} by ${product.creator.displayName}`
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 function formatPrice(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
+  return `RM${(cents / 100).toFixed(2)}`
 }
 
 function parseImages(raw: string): string[] {
@@ -185,7 +185,7 @@ export default async function ProductPage({ params }: PageProps) {
       '@type': 'Offer',
       url: `https://noizu.direct/product/${product.id}`,
       price: (product.price / 100).toFixed(2),
-      priceCurrency: 'USD',
+      priceCurrency: 'MYR',
       availability: jsonLdInStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Person', name: product.creator.displayName },
@@ -207,28 +207,6 @@ export default async function ProductPage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-background py-8 pb-24 md:pb-8">
       <JsonLd data={[productSchema, productBreadcrumbSchema]} />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type': 'Product',
-            name: product.title,
-            description: product.description || '',
-            url: `https://noizu.direct/product/${product.id}`,
-            offers: {
-              '@type': 'Offer',
-              price: ((product.price ?? 0) / 100).toFixed(2),
-              priceCurrency: 'MYR',
-              availability: 'https://schema.org/InStock',
-              seller: {
-                '@type': 'Person',
-                name: product.creator?.displayName ?? product.creator?.username ?? 'Creator',
-              },
-            },
-          }),
-        }}
-      />
       <ProductViewTracker productId={product.id} userId={(session?.user as any)?.id} />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* Breadcrumb */}
@@ -294,7 +272,7 @@ export default async function ProductPage({ params }: PageProps) {
             {/* Price */}
             <div className="flex flex-col gap-1">
               <span className="text-3xl font-bold text-primary">{formatPrice(product.price)}</span>
-              <span className="text-xs text-muted-foreground">2.5% processing fee may apply</span>
+              <span className="text-xs text-muted-foreground">A 2.5% processing fee is added at checkout</span>
             </div>
 
             {/* Stock indicator */}
@@ -523,7 +501,7 @@ export default async function ProductPage({ params }: PageProps) {
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center gap-3">
         <div className="flex-1">
           <span className="text-lg font-bold text-primary">{formatPrice(product.price)}</span>
-          <span className="text-xs text-muted-foreground block">+ 2.5% fee</span>
+          <span className="text-xs text-muted-foreground block">+ 2.5% fee at checkout</span>
         </div>
         <WishlistButton productId={product.id} />
         <AddToCartButton

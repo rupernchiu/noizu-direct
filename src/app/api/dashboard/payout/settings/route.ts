@@ -2,30 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { createBeneficiary } from '@/lib/airwallex'
-import crypto from 'crypto'
-
-const KEY = Buffer.from(
-  (process.env.PAYOUT_ENCRYPTION_KEY ?? 'placeholder_32_char_encryption_key').padEnd(32, '0').slice(0, 32)
-)
-
-function encrypt(text: string): string {
-  const iv = crypto.randomBytes(16)
-  const cipher = crypto.createCipheriv('aes-256-cbc', KEY, iv)
-  const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
-  return iv.toString('hex') + ':' + encrypted.toString('hex')
-}
-
-function decrypt(text: string): string {
-  try {
-    const [ivHex, encHex] = text.split(':')
-    const iv = Buffer.from(ivHex, 'hex')
-    const enc = Buffer.from(encHex, 'hex')
-    const decipher = crypto.createDecipheriv('aes-256-cbc', KEY, iv)
-    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8')
-  } catch {
-    return ''
-  }
-}
+import { encryptPayoutDetails, tryDecryptPayoutDetails } from '@/lib/payout-crypto'
 
 export async function GET() {
   const session = await requireCreator()
@@ -48,12 +25,15 @@ export async function GET() {
   let maskedAccount: string | null = null
   if (profile.payoutDetails) {
     try {
-      const details = JSON.parse(decrypt(profile.payoutDetails)) as Record<string, string>
-      if (details.accountNumber) {
-        maskedAccount = '····' + details.accountNumber.slice(-4)
-      } else if (details.paypalEmail) {
-        const [local, domain] = details.paypalEmail.split('@')
-        maskedAccount = local.slice(0, 2) + '···@' + domain
+      const raw = tryDecryptPayoutDetails(profile.payoutDetails, userId)
+      if (raw) {
+        const details = JSON.parse(raw) as Record<string, string>
+        if (details.accountNumber) {
+          maskedAccount = '····' + details.accountNumber.slice(-4)
+        } else if (details.paypalEmail) {
+          const [local, domain] = details.paypalEmail.split('@')
+          maskedAccount = local.slice(0, 2) + '···@' + domain
+        }
       }
     } catch {}
   }
@@ -115,11 +95,14 @@ export async function POST(req: Request) {
       // Store details even if Airwallex fails (demo env) — beneficiaryId stays null
     }
 
-    encryptedDetails = encrypt(JSON.stringify({ accountName, bankName, accountNumber, routingCode, swiftCode }))
+    encryptedDetails = encryptPayoutDetails(
+      JSON.stringify({ accountName, bankName, accountNumber, routingCode, swiftCode }),
+      userId,
+    )
   } else if (payoutMethod === 'paypal') {
     const { paypalEmail } = body
     if (!paypalEmail) return NextResponse.json({ error: 'PayPal email is required' }, { status: 400 })
-    encryptedDetails = encrypt(JSON.stringify({ paypalEmail }))
+    encryptedDetails = encryptPayoutDetails(JSON.stringify({ paypalEmail }), userId)
   }
 
   await prisma.creatorProfile.update({

@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/guards'
 import { Resend } from 'resend'
 import { executeTransfer } from '@/lib/airwallex'
 import { executePayPalPayout } from '@/lib/paypal'
-
-const KEY = Buffer.from(
-  (process.env.PAYOUT_ENCRYPTION_KEY ?? 'placeholder_32_char_encryption_key').padEnd(32, '0').slice(0, 32)
-)
-function decrypt(text: string): string {
-  try {
-    const [ivHex, encHex] = text.split(':')
-    const iv = Buffer.from(ivHex, 'hex')
-    const enc = Buffer.from(encHex, 'hex')
-    const decipher = crypto.createDecipheriv('aes-256-cbc', KEY, iv)
-    return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8')
-  } catch { return '' }
-}
+import { tryDecryptPayoutDetails } from '@/lib/payout-crypto'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
@@ -74,7 +61,9 @@ export async function PATCH(
     let transferId: string | null = null
 
     if (creatorProfile?.payoutMethod === 'paypal' && creatorProfile.payoutDetails) {
-      const details = JSON.parse(decrypt(creatorProfile.payoutDetails)) as { paypalEmail?: string }
+      const raw = tryDecryptPayoutDetails(creatorProfile.payoutDetails, existing.creatorId)
+      if (!raw) return NextResponse.json({ error: 'Unable to decrypt payout details' }, { status: 500 })
+      const details = JSON.parse(raw) as { paypalEmail?: string }
       if (!details.paypalEmail) {
         return NextResponse.json({ error: 'Creator PayPal email is not configured' }, { status: 400 })
       }

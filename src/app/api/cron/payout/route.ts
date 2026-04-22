@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { executeTransfer, getCurrencyFactor } from '@/lib/airwallex'
 import { Resend } from 'resend'
-import { createDecipheriv } from 'crypto'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://noizu.direct'
@@ -18,15 +17,6 @@ function isAuthorized(req: NextRequest): boolean {
     req.headers.get('authorization') === `Bearer ${secret}` ||
     req.headers.get('x-cron-secret') === secret
   )
-}
-
-function decryptPayoutDetails(encrypted: string): Record<string, string> {
-  const key = process.env.PAYOUT_ENCRYPTION_KEY ?? ''
-  const [ivHex, encHex] = encrypted.split(':')
-  const iv = Buffer.from(ivHex, 'hex')
-  const decipher = createDecipheriv('aes-256-cbc', Buffer.from(key.slice(0, 32)), iv)
-  const decrypted = decipher.update(encHex, 'hex', 'utf8') + decipher.final('utf8')
-  return JSON.parse(decrypted)
 }
 
 async function getUsdRate(to: string): Promise<number> {

@@ -729,40 +729,51 @@ export async function POST(req: NextRequest) {
   const obj = event.data?.object ?? {}
   const intentId = obj.id as string | undefined
 
-  // Return 200 immediately; process async
-  if (event.name === 'payment_intent.succeeded' && intentId) {
-    void (async () => {
-      if (await handleSupportPaymentSucceeded(intentId)) return
-      if (await handleStoragePaymentSucceeded(intentId)) return
-      await handlePaymentSucceeded(intentId)
-    })()
-  } else if (event.name === 'payment_intent.failed' && intentId) {
-    void handlePaymentFailed(intentId)
-  } else if (event.name === 'transfer.succeeded' && intentId) {
-    void handleTransferSucceeded(intentId)
-  } else if (event.name === 'transfer.failed' && intentId) {
-    const failureReason = obj.failure_reason as string | undefined
-    void handleTransferFailed(intentId, failureReason)
-  } else if (
-    event.name === 'payment.dispute.RaisedByBuyer' ||
-    event.name === 'payment_dispute.created'
-  ) {
-    void handleDisputeCreated(obj)
-  } else if (
-    event.name === 'payment.dispute.updated' ||
-    event.name === 'payment_dispute.updated'
-  ) {
-    void handleDisputeUpdated(obj)
-  } else if (
-    event.name === 'payment.dispute.Accepted' ||
-    event.name === 'payment_dispute.closed'
-  ) {
-    void handleDisputeClosed(obj, 'LOST')
-  } else if (
-    event.name === 'payment.dispute.Closed' ||
-    event.name === 'payment_dispute.won'
-  ) {
-    void handleDisputeClosed(obj, 'WON')
+  // Process synchronously before returning 200. On Vercel serverless, background
+  // promises after response-flush are not guaranteed to complete — see audit F11.
+  // Airwallex retries on non-2xx for up to 24h, so we prefer slow-but-correct.
+  try {
+    if (event.name === 'payment_intent.succeeded' && intentId) {
+      if (await handleSupportPaymentSucceeded(intentId)) {
+        // handled as support flow
+      } else if (await handleStoragePaymentSucceeded(intentId)) {
+        // handled as storage flow
+      } else {
+        await handlePaymentSucceeded(intentId)
+      }
+    } else if (event.name === 'payment_intent.failed' && intentId) {
+      await handlePaymentFailed(intentId)
+    } else if (event.name === 'transfer.succeeded' && intentId) {
+      await handleTransferSucceeded(intentId)
+    } else if (event.name === 'transfer.failed' && intentId) {
+      const failureReason = obj.failure_reason as string | undefined
+      await handleTransferFailed(intentId, failureReason)
+    } else if (
+      event.name === 'payment.dispute.RaisedByBuyer' ||
+      event.name === 'payment_dispute.created'
+    ) {
+      await handleDisputeCreated(obj)
+    } else if (
+      event.name === 'payment.dispute.updated' ||
+      event.name === 'payment_dispute.updated'
+    ) {
+      await handleDisputeUpdated(obj)
+    } else if (
+      event.name === 'payment.dispute.Accepted' ||
+      event.name === 'payment_dispute.closed'
+    ) {
+      await handleDisputeClosed(obj, 'LOST')
+    } else if (
+      event.name === 'payment.dispute.Closed' ||
+      event.name === 'payment_dispute.won'
+    ) {
+      await handleDisputeClosed(obj, 'WON')
+    }
+  } catch (err) {
+    // Returning 500 causes Airwallex to retry. The handler's idempotency guard
+    // (atomic updateMany PENDING→PROCESSING) prevents duplicate processing.
+    console.error('[airwallex/webhook] handler failed', { event: event.name, intentId, err })
+    return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true })
