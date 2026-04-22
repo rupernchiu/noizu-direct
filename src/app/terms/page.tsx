@@ -57,9 +57,9 @@ export default async function TermsPage() {
             <div className="rounded-xl bg-card border border-border p-8 space-y-4">
               <h2 className="text-lg font-semibold text-foreground">3. Purchases and Payments</h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                All transactions are processed in USD. A processing fee of 2.5% applies to each
-                transaction. By completing a purchase, you authorize the payment of the listed amount
-                plus applicable fees.
+                Prices are displayed and charged in Malaysian Ringgit (MYR). A 2.5% processing fee
+                is added at checkout. By completing a purchase, you authorize the payment of the
+                listed amount plus this processing fee.
               </p>
             </div>
 

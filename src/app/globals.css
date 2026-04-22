@@ -52,7 +52,7 @@
   --secondary: #00a389;
   --secondary-foreground: #ffffff;
   --muted: #eeeeF2;
-  --muted-foreground: #58586e;
+  --muted-foreground: #4a4a60;
   --accent: #7c3aed;
   --accent-foreground: #ffffff;
   --cta: #ea580c;
@@ -82,7 +82,7 @@
   --secondary: #00d4aa;
   --secondary-foreground: #0d0d12;
   --muted: #1e1e2a;
-  --muted-foreground: #9999bb;
+  --muted-foreground: #b4b4d0;
   --accent: #7c3aed;
   --accent-foreground: #ffffff;
   --cta: #f97316;
@@ -164,4 +164,36 @@ button:not(:disabled) {
 
 [role="tab"] {
   cursor: pointer;
+}
+
+/* Global keyboard-focus ring. Rely on :focus-visible so mouse clicks stay
+   quiet but keyboard navigation always shows where focus is. */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Skip-to-content link — positioned off-screen until focused. */
+.skip-to-main {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0.75rem 1rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 0 0 8px 0;
+  z-index: 1000;
+  transform: translateY(-150%);
+  transition: transform 0.15s ease;
+}
+.skip-to-main:focus {
+  transform: translateY(0);
+}
+
+/* Form validation affordances — pair with aria-invalid on inputs */
+[aria-invalid="true"]:not(:focus) {
+  border-color: var(--destructive);
 }

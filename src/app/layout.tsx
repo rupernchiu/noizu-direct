@@ -78,6 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           storageKey="noizu-theme"
         >
           <SessionProvider>
+            <a href="#main-content" className="skip-to-main">Skip to main content</a>
             <header className="sticky top-0 z-50 bg-background">
               <AnnouncementBar />
               <RejectionBannerWrapper />
@@ -87,7 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <SecondaryNav />
             </header>
             <SearchBar />
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
+            <main id="main-content" className="flex-1 pb-16 md:pb-0">{children}</main>
             <Footer />
             <MobileBottomNavServer />
             <Toaster position="bottom-right" />
