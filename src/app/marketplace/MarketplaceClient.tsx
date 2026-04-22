@@ -361,17 +361,6 @@ export function MarketplaceClient({ initialCategory }: MarketplaceClientProps = 
           </div>
         )}
 
-        {/* Load more button */}
-        {!loading && page < totalPages && (
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => setPage((p) => p + 1)}
-              className="px-6 py-2 rounded-lg border border-border bg-card text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-            >
-              Load more
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

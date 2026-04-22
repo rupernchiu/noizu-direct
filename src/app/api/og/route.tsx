@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // Blog OG
+  // Articles OG
   return new ImageResponse(
     (
       <div
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
             {title}
           </div>
           {subtitle && <div style={{ fontSize: '20px', color: '#94a3b8' }}>{subtitle}</div>}
-          <div style={{ marginTop: '16px', fontSize: '16px', color: '#6ee7d6' }}>noizu.direct Blog</div>
+          <div style={{ marginTop: '16px', fontSize: '16px', color: '#6ee7d6' }}>noizu.direct Articles</div>
         </div>
       </div>
     ),

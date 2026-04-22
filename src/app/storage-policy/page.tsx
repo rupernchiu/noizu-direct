@@ -4,32 +4,32 @@ import { prisma } from '@/lib/prisma'
 import sanitizeHtml from 'sanitize-html'
 import {
   ArrowUpRight,
-  ArrowRight,
-  Clock,
   Mail,
-  Sparkles,
-  HeartHandshake,
-  ShieldCheck,
-  Globe2,
-  Zap,
-  Users,
-  Palette,
-  Store,
-  Trophy,
+  Database,
+  HardDrive,
+  Cloud,
   MapPin,
+  Lock,
+  Shield,
+  Clock,
+  Archive,
+  Trash2,
+  RefreshCw,
+  FileCheck2,
+  Server,
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'About noizu.direct | SEA Creator Marketplace',
+  title: 'Storage Policy | noizu.direct',
   description:
-    'noizu.direct is the creator marketplace for Southeast Asia — built by NOIZU, organisers of World Cosplay Summit Malaysia. Creator-first pricing, escrow-protected payments, and a home for regional fandom.',
-  alternates: { canonical: 'https://noizu.direct/about' },
+    'Where noizu.direct stores data and creator files, how long we keep it, how we encrypt and back it up, and how you can request export or deletion. Malaysia primary, EEA replicas.',
+  alternates: { canonical: 'https://noizu.direct/storage-policy' },
   openGraph: {
-    title: 'About noizu.direct | SEA Creator Marketplace',
+    title: 'Storage Policy | noizu.direct',
     description:
-      'A Southeast Asian creator marketplace built by NOIZU. Cosplayers, illustrators, and doujin artists selling direct to fans.',
-    url: 'https://noizu.direct/about',
-    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'About noizu.direct' }],
+      'Data and file storage practices for the noizu.direct marketplace — regions, encryption, retention, recovery, deletion.',
+    url: 'https://noizu.direct/storage-policy',
+    images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'noizu.direct Storage Policy' }],
   },
 }
 
@@ -80,56 +80,88 @@ function extractSectionsAndAnchor(html: string): {
 }
 
 const HERO_PILLS = [
-  { icon: MapPin, label: 'Built in Malaysia' },
-  { icon: Trophy, label: 'By WCS Malaysia organisers' },
-  { icon: Sparkles, label: '0% platform fee at launch' },
+  { icon: MapPin, label: 'Primary region: Malaysia' },
+  { icon: Shield, label: 'Encrypted in transit & at rest' },
+  { icon: Archive, label: 'Daily backups, EEA replicas' },
 ] as const
 
-const STATS = [
-  { value: '0%', label: 'Platform fee during launch', tone: 'primary' as const },
-  { value: '5', label: 'SEA countries served', tone: 'accent' as const },
-  { value: '4', label: 'Product categories', tone: 'primary' as const },
-  { value: '24h', label: 'Average support reply', tone: 'accent' as const },
+const WHERE_DATA_LIVES = [
+  {
+    icon: Database,
+    title: 'Relational database',
+    body: 'Orders, accounts, listings, and financial records live in a managed Postgres cluster hosted in Malaysia, with point-in-time recovery enabled.',
+  },
+  {
+    icon: HardDrive,
+    title: 'Object storage',
+    body: 'Creator-uploaded files — product images, digital downloads, commission deliverables — are stored in encrypted object buckets with per-object access control.',
+  },
+  {
+    icon: Cloud,
+    title: 'Disaster-recovery replicas',
+    body: 'Encrypted replicas of the database and a subset of object storage sit in the European Economic Area, used only for disaster recovery and never served to users.',
+  },
+  {
+    icon: Server,
+    title: 'Isolated KYC vault',
+    body: 'Identity documents (IDs, selfies) are stored in a separate, access-restricted bucket with stricter retention rules than the rest of the platform.',
+  },
+] as const
+
+type RetentionTier = {
+  icon: typeof FileCheck2
+  label: string
+  duration: string
+  detail: string
+  tone?: 'accent'
+}
+
+const RETENTION_TIERS: readonly RetentionTier[] = [
+  {
+    icon: FileCheck2,
+    label: 'Active records',
+    duration: 'Indefinite',
+    detail: 'Live account, listings, and order data while your account is open.',
+  },
+  {
+    icon: Clock,
+    label: 'Financial records',
+    duration: '7 years',
+    detail: 'Invoices, payouts, and tax records, as required by Malaysian accounting law.',
+  },
+  {
+    icon: Archive,
+    label: 'Support correspondence',
+    duration: '36 months',
+    detail: 'Email threads, ticket logs, and dispute evidence — kept to investigate recurring issues.',
+  },
+  {
+    icon: RefreshCw,
+    label: 'Daily backups',
+    duration: '30 days',
+    detail: 'Encrypted backup snapshots, overwritten on a rolling basis.',
+    tone: 'accent',
+  },
+  {
+    icon: Lock,
+    label: 'KYC documents',
+    duration: '18 months after closure',
+    detail: 'Identity documents retained to defend against later chargebacks and fraud investigations.',
+    tone: 'accent',
+  },
+  {
+    icon: Trash2,
+    label: 'Deleted content',
+    duration: '30 days',
+    detail: 'Soft-deleted listings and unpublished digital files, then fully purged.',
+    tone: 'accent',
+  },
 ]
 
-const PILLARS = [
-  {
-    icon: HeartHandshake,
-    title: 'Creator-first, not platform-first',
-    body:
-      'Every fee, every policy, every feature is scored against one question: does this make it easier for a creator to earn a living from their art? If the answer is no, we do not ship it.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Escrow by default',
-    body:
-      'For every physical, print-on-demand, and commission order, the buyer’s payment is held by noizu.direct until delivery is confirmed. Trust should not have to be earned one order at a time.',
-  },
-  {
-    icon: Globe2,
-    title: 'Regional by design',
-    body:
-      'Multi-currency pricing, local payment rails through Airwallex, and shipping logic that treats Kuala Lumpur, Manila, Jakarta, Bangkok, and Singapore as peers — not afterthoughts.',
-  },
-  {
-    icon: Zap,
-    title: 'Built to ship weekly',
-    body:
-      'We run the platform like a modern product, not a marketplace from 2012. Weekly releases, public changelog, direct line to the founding team.',
-  },
-] as const
+export default async function StoragePolicyPage() {
+  const page = await prisma.page.findUnique({ where: { slug: 'storage-policy' } })
 
-const AUDIENCE = [
-  { icon: Users, label: 'Cosplayers', note: 'Prints, props, patterns, print-on-demand merch' },
-  { icon: Palette, label: 'Illustrators', note: 'Digital art, commissions, stickers, zines' },
-  { icon: Store, label: 'Doujin creators', note: 'Physical books, digital editions, bundles' },
-  { icon: Sparkles, label: 'Event crews', note: 'Convention drops, limited editions, pre-orders' },
-] as const
-
-export default async function AboutPage() {
-  const page = await prisma.page.findUnique({ where: { slug: 'about' } })
-
-  const title = page?.title ?? 'About noizu.direct'
+  const title = page?.title ?? 'Storage Policy'
   const rawContent = page?.content
   const safeContent = rawContent ? sanitizeHtml(rawContent, SANITIZE_OPTIONS) : null
   const { processed, sections } = safeContent
@@ -184,9 +216,9 @@ export default async function AboutPage() {
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 pt-14 pb-10 sm:pt-20 sm:pb-12">
           <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground mb-8">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" aria-hidden="true" />
-            <span className="text-primary">About</span>
+            <span className="text-primary">Storage Policy</span>
             <span className="w-8 h-px bg-border" aria-hidden="true" />
-            <span>SEA Creator Marketplace</span>
+            <span>Data & files</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-semibold tracking-tight text-foreground max-w-3xl leading-[1.1]">
@@ -194,12 +226,12 @@ export default async function AboutPage() {
           </h1>
 
           <p className="mt-5 text-base sm:text-lg text-muted-foreground max-w-2xl leading-[1.65]">
-            noizu.direct is the creator marketplace for Southeast Asia — a
-            home for cosplayers, illustrators, doujin artists, and the fans who
-            love them. Built by the team behind World Cosplay Summit Malaysia.
+            Where your data and creator files live, how we protect them, how
+            long we keep them, and how you can export or delete them. Written
+            as a companion to our <Link href="/privacy" className="text-primary font-medium hover:underline underline-offset-4">Privacy Policy</Link>.
           </p>
 
-          <ul className="mt-8 flex flex-wrap items-center gap-x-2.5 gap-y-2" aria-label="What we stand for">
+          <ul className="mt-8 flex flex-wrap items-center gap-x-2.5 gap-y-2" aria-label="Storage at a glance">
             {HERO_PILLS.map(({ icon: Icon, label }) => (
               <li
                 key={label}
@@ -212,44 +244,29 @@ export default async function AboutPage() {
           </ul>
 
           <div className="mt-10 pt-5 border-t border-border flex flex-wrap items-center gap-x-10 gap-y-3 text-sm">
+            <div className="inline-flex items-center gap-2 text-muted-foreground">
+              <span className="font-semibold text-foreground">Effective</span>
+              <span>22 April 2026</span>
+            </div>
             <Link
-              href="/marketplace"
+              href="/privacy"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline underline-offset-4"
             >
-              Browse the marketplace
+              Read Privacy Policy
               <ArrowUpRight size={14} aria-hidden="true" />
             </Link>
             <Link
-              href="/start-selling"
+              href="/terms"
               className="inline-flex items-center gap-1 font-medium text-primary hover:underline underline-offset-4"
             >
-              Start selling
+              Read Terms of Service
               <ArrowUpRight size={14} aria-hidden="true" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Stats strip ─────────────────────────────────────────── */}
-      <section className="bg-muted/40 border-b border-border py-12 sm:py-14">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
-            {STATS.map(({ value, label, tone }) => (
-              <div key={label} className="text-center sm:text-left">
-                <div
-                  className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-none mb-2"
-                  style={{ color: tone === 'primary' ? '#7c3aed' : '#0d9488' }}
-                >
-                  {value}
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground leading-snug">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pillars ─────────────────────────────────────────────── */}
+      {/* ── Where data lives ─────────────────────────────────────── */}
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
@@ -257,19 +274,19 @@ export default async function AboutPage() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-4 text-primary"
               style={{ backgroundColor: 'rgba(124,58,237,0.1)' }}
             >
-              <HeartHandshake size={12} aria-hidden="true" />
-              What we stand for
+              <Database size={12} aria-hidden="true" />
+              Where data lives
             </span>
-            <h2 id="what-we-stand-for" className="text-2xl sm:text-3xl font-extrabold text-foreground scroll-mt-28">
-              Four pillars the platform is built on
+            <h2 id="where-data-lives" className="text-2xl sm:text-3xl font-extrabold text-foreground scroll-mt-28">
+              Four systems, four purposes
             </h2>
             <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-              Every decision we make — pricing, policies, product roadmap — traces back to these.
+              Each system is tuned for what it stores and who is allowed to read it.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {PILLARS.map(({ icon: Icon, title, body }, i) => (
+            {WHERE_DATA_LIVES.map(({ icon: Icon, title, body }, i) => (
               <div key={title} className="rounded-2xl border border-border bg-card p-7">
                 <div className="flex items-center gap-4 mb-4">
                   <div
@@ -293,44 +310,69 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* ── Who the platform is for ─────────────────────────────── */}
+      {/* ── Retention tiers ──────────────────────────────────────── */}
       <section className="bg-muted/40 border-y border-border py-16 sm:py-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Who we’re for
+              Retention
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mt-2">
-              Built with and for SEA fandom
+              How long we keep each thing
             </h2>
+            <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
+              Durations follow applicable law and realistic dispute timelines — no data kept &ldquo;just in case&rdquo;.
+            </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {AUDIENCE.map(({ icon: Icon, label, note }) => (
-              <div key={label} className="rounded-2xl border border-border bg-card p-5 flex flex-col">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {RETENTION_TIERS.map(({ icon: Icon, label, duration, detail, tone }) => (
+              <div
+                key={label}
+                className="rounded-2xl border bg-card p-6"
+                style={{
+                  borderColor:
+                    tone === 'accent' ? 'rgba(13,148,136,0.35)' : 'rgba(124,58,237,0.35)',
+                }}
+              >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
-                  style={{ backgroundColor: 'rgba(124,58,237,0.10)' }}
+                  style={{
+                    backgroundColor:
+                      tone === 'accent' ? 'rgba(13,148,136,0.10)' : 'rgba(124,58,237,0.10)',
+                  }}
                 >
-                  <Icon size={18} className="text-primary" aria-hidden="true" />
+                  <Icon
+                    size={18}
+                    style={{ color: tone === 'accent' ? '#0d9488' : '#7c3aed' }}
+                    aria-hidden="true"
+                  />
                 </div>
-                <h3 className="text-sm font-bold text-foreground mb-1">{label}</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed">{note}</p>
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.2em] mb-1"
+                  style={{ color: tone === 'accent' ? '#0d9488' : '#7c3aed' }}
+                >
+                  {label}
+                </p>
+                <p className="text-xl font-extrabold text-foreground mb-2 leading-none">
+                  {duration}
+                </p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{detail}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Narrative story (CMS-editable) ──────────────────────── */}
+      {/* ── CMS narrative with TOC ───────────────────────────────── */}
       <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-              Our story
+              The detail
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-foreground mt-2">
-              Why we built noizu.direct
+              How storage actually works
             </h2>
           </div>
 
@@ -340,7 +382,7 @@ export default async function AboutPage() {
               <aside className="hidden lg:block">
                 <div className="sticky top-28">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground mb-5">
-                    Chapters
+                    Contents
                   </p>
                   <nav aria-label="Table of contents">
                     <ol className="space-y-0.5 text-sm">
@@ -369,7 +411,7 @@ export default async function AboutPage() {
               <details className="lg:hidden rounded-xl border border-border bg-card overflow-hidden group">
                 <summary className="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer select-none list-none">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground">
-                    Chapters
+                    Contents
                   </span>
                   <span className="text-xs text-muted-foreground group-open:hidden">
                     {sections.length} sections
@@ -401,10 +443,9 @@ export default async function AboutPage() {
                 <div className={proseClasses}>
                   <blockquote>
                     <p>
-                      <strong>Our story.</strong> noizu.direct was started by the
-                      team behind World Cosplay Summit Malaysia to give SEA
-                      creators a marketplace that treats them as the main
-                      character, not an afterthought.
+                      <strong>Storage detail.</strong> The detailed policy is
+                      being published here shortly. In the meantime, reach us
+                      at <a href="mailto:privacy@noizu.direct">privacy@noizu.direct</a>.
                     </p>
                   </blockquote>
                 </div>
@@ -414,59 +455,8 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* ── Dual CTA (buyer / creator) ──────────────────────────── */}
-      <section className="bg-muted/40 border-t border-border py-16 sm:py-20">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div
-              className="rounded-2xl p-8 text-white flex flex-col gap-6"
-              style={{ background: 'linear-gradient(135deg, #0d9488 0%, #00d4aa 100%)' }}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="text-white/70 text-xs font-semibold uppercase tracking-widest">For fans</div>
-                <h3 className="text-xl font-extrabold">Discover SEA creators</h3>
-                <p className="text-white/85 text-sm leading-relaxed">
-                  Original art, prints, doujin, cosplay merch and commissions from verified creators across
-                  Southeast Asia — every order escrow-protected.
-                </p>
-              </div>
-              <Link
-                href="/marketplace"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white font-semibold rounded-xl text-sm transition-all hover:bg-white/90 w-fit min-h-[44px]"
-                style={{ color: '#0d9488' }}
-              >
-                Browse Marketplace
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-
-            <div
-              className="rounded-2xl p-8 text-white flex flex-col gap-6"
-              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' }}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="text-white/70 text-xs font-semibold uppercase tracking-widest">For creators</div>
-                <h3 className="text-xl font-extrabold">Sell without the middleman</h3>
-                <p className="text-white/85 text-sm leading-relaxed">
-                  Set up your store in ten minutes and reach fans across Southeast Asia. 0% platform fee
-                  during launch, escrow keeps you paid.
-                </p>
-              </div>
-              <Link
-                href="/register/creator"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white font-semibold rounded-xl text-sm transition-all hover:bg-white/90 w-fit min-h-[44px]"
-                style={{ color: '#7c3aed' }}
-              >
-                Start Selling Free
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* ── Contact block ──────────────────────────────────────── */}
-      <section className="py-16 sm:py-20">
+      <section className="bg-muted/40 border-t border-border py-16 sm:py-20">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-start gap-6 sm:gap-8">
             <div
@@ -477,49 +467,49 @@ export default async function AboutPage() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight mb-3">
-                Talk to the team
+                Data requests & questions
               </h3>
               <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
-                Questions, press enquiries, partnership ideas, or event collaborations — we read every
-                message. Response time is usually one to two business days.
+                Request a data export, ask about a specific record, or escalate a
+                retention concern. We respond to all data-subject requests within thirty days.
               </p>
               <dl className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6 text-sm">
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                    General
+                    Privacy & exports
                   </dt>
                   <dd>
                     <a
-                      href="mailto:hello@noizu.direct"
+                      href="mailto:privacy@noizu.direct"
                       className="text-primary font-medium hover:underline underline-offset-4 break-all"
                     >
-                      hello@noizu.direct
+                      privacy@noizu.direct
                     </a>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                    Partnerships
+                    Security reports
                   </dt>
                   <dd>
                     <a
-                      href="mailto:partnerships@noizu.direct"
+                      href="mailto:security@noizu.direct"
                       className="text-primary font-medium hover:underline underline-offset-4 break-all"
                     >
-                      partnerships@noizu.direct
+                      security@noizu.direct
                     </a>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                    Press
+                    DPO
                   </dt>
                   <dd>
                     <a
-                      href="mailto:press@noizu.direct"
+                      href="mailto:dpo@noizu.direct"
                       className="text-primary font-medium hover:underline underline-offset-4 break-all"
                     >
-                      press@noizu.direct
+                      dpo@noizu.direct
                     </a>
                   </dd>
                 </div>
@@ -530,9 +520,9 @@ export default async function AboutPage() {
           <div className="mt-12 pt-6 border-t border-border text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="font-mono uppercase tracking-[0.2em] text-foreground">noizu.direct</span>
             <span aria-hidden="true">·</span>
-            <span>Operating from Kuala Lumpur, Malaysia</span>
+            <span>Data controller: NOIZU, Kuala Lumpur</span>
             <span aria-hidden="true">·</span>
-            <span>&copy; {new Date().getFullYear()} All rights reserved</span>
+            <span>Companion to our Privacy Policy</span>
           </div>
         </div>
       </section>

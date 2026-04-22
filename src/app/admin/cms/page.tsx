@@ -26,8 +26,8 @@ export default async function AdminCmsPage() {
           className="bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-colors group"
         >
           <p className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">{postCount}</p>
-          <p className="text-sm text-muted-foreground mt-0.5">Blog Posts</p>
-          <p className="text-xs text-primary mt-2 group-hover:underline">Manage posts →</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Articles</p>
+          <p className="text-xs text-primary mt-2 group-hover:underline">Manage articles →</p>
         </Link>
         <Link
           href="/admin/cms/pages"

@@ -5,15 +5,21 @@ import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
 
 // Slugs handled by dedicated routes — skip them here
-const RESERVED = new Set(['about', 'terms', 'blog', 'creators', 'marketplace', 'checkout', 'login', 'register', 'account', 'dashboard', 'admin', 'creator', 'product', 'order', 'download', 'api'])
+const RESERVED = new Set(['about', 'terms', 'privacy', 'help', 'contact', 'storage-policy', 'creator-handbook', 'fees', 'fees-payouts', 'escrow', 'blog', 'creators', 'marketplace', 'checkout', 'login', 'register', 'account', 'dashboard', 'admin', 'creator', 'product', 'order', 'download', 'api'])
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
-  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'figure', 'figcaption', 'iframe', 'h1', 'h2', 'h3', 'h4']),
+  // `u` — StarterKit's Underline emits <u>, which isn't in sanitize-html's
+  // defaults. `style` + allowedStyles — TipTap TextAlign writes inline
+  // `style="text-align:…"`; without it, alignment is silently stripped.
+  allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'figure', 'figcaption', 'iframe', 'u', 'h1', 'h2', 'h3', 'h4']),
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
     img: ['src', 'alt', 'width', 'height', 'class'],
     iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'class'],
-    '*': ['class'],
+    '*': ['class', 'style'],
+  },
+  allowedStyles: {
+    '*': { 'text-align': [/^(left|right|center|justify)$/] },
   },
   allowedIframeHostnames: ['www.youtube.com', 'www.facebook.com'],
 }
@@ -103,7 +109,19 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
         {safeContent ? (
           <div className="rounded-xl bg-card border border-border p-8">
             <div
-              className="prose prose-invert max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary"
+              // `dark:prose-invert` (not `prose-invert`) — app defaults to light
+              // theme, so unconditional invert rendered body text as light gray
+              // on white. Explicit `[&_hN]` sizes + margins ensure heading
+              // hierarchy is visible regardless of Tailwind prose plugin quirks;
+              // mirrors the sizing used in TipTapEditor so WYSIWYG holds.
+              className={[
+                'prose max-w-none dark:prose-invert',
+                'text-foreground prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground',
+                '[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-3',
+                '[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2',
+                '[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-2',
+                '[&_p]:my-2',
+              ].join(' ')}
               dangerouslySetInnerHTML={{ __html: safeContent }}
             />
           </div>

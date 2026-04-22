@@ -17,6 +17,11 @@ export async function JsonLd({ data }: JsonLdProps) {
           key={i}
           type="application/ld+json"
           nonce={nonce}
+          // React 19 strips `nonce` from client markup for security (so a
+          // server nonce can't be exfiltrated via client-read DOM). The SSR
+          // HTML still carries it for CSP script-src to pass — the resulting
+          // nonce="X" vs nonce="" diff is expected and cosmetic.
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       ))}

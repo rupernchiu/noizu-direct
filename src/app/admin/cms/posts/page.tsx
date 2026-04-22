@@ -52,12 +52,12 @@ export default async function AdminPostsPage({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">Blog Posts</h2>
+        <h2 className="text-lg font-semibold text-foreground">Articles</h2>
         <Link
           href="/admin/cms/posts/new"
           className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          + New Post
+          + New Article
         </Link>
       </div>
 

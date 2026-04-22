@@ -12,6 +12,10 @@ import { auth } from '@/lib/auth'
 import { ProductViewTracker } from '@/components/ui/ProductViewTracker'
 import { ProductCard } from '@/components/ui/ProductCard'
 import { ProductReviewForm } from '@/components/ui/ProductReviewForm'
+import {
+  ProductRail, CreatorRail, ArticleRail, dailyShuffle,
+  type RailProduct, type RailCreator, type RailArticle,
+} from '@/components/discovery/RecommendationRails'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -125,6 +129,46 @@ export default async function ProductPage({ params }: PageProps) {
       },
     },
   })
+
+  const [relatedProductsRaw, relatedCreatorsRaw, relatedArticlesRaw] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        isActive: true,
+        id: { not: product.id },
+        OR: [{ category: product.category }, { type: product.type }],
+      },
+      select: {
+        id: true, title: true, price: true, images: true,
+        creator: { select: { username: true, displayName: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+    }),
+    prisma.creatorProfile.findMany({
+      where: { id: { not: product.creatorId }, isSuspended: false },
+      select: {
+        username: true, displayName: true, avatar: true, isVerified: true, categoryTags: true,
+      },
+      orderBy: { totalSales: 'desc' },
+      take: 30,
+    }),
+    prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, title: true, excerpt: true, coverImage: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 12,
+    }),
+  ])
+
+  const relatedProducts: RailProduct[] = dailyShuffle(relatedProductsRaw, 3).slice(0, 6)
+  const relatedCreators: RailCreator[] = dailyShuffle(relatedCreatorsRaw, 4)
+    .slice(0, 6)
+    .map((c) => {
+      let tags: string[] = []
+      try { tags = JSON.parse(c.categoryTags) } catch {}
+      return { username: c.username, displayName: c.displayName, avatar: c.avatar, isVerified: c.isVerified, categoryTags: tags }
+    })
+  const relatedArticles: RailArticle[] = dailyShuffle(relatedArticlesRaw, 5).slice(0, 6)
 
   const session = await auth()
   const userId = (session?.user as any)?.id as string | undefined
@@ -495,6 +539,12 @@ export default async function ProductPage({ params }: PageProps) {
           userRole={userRole ?? null}
           alreadyReviewed={Boolean(existingReview)}
         />
+      </div>
+
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pb-10">
+        <ProductRail title="Related Products" products={relatedProducts} />
+        <CreatorRail title="Related Creators" creators={relatedCreators} />
+        <ArticleRail articles={relatedArticles} />
       </div>
 
       {/* Sticky mobile CTA bar */}

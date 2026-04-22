@@ -2,6 +2,11 @@ import type { Metadata } from 'next'
 import { MarketplaceClient } from './MarketplaceClient'
 import { CATEGORY_META, CATEGORY_KEY_MAP } from '@/lib/categories'
 import { JsonLd } from '@/components/seo/JsonLd'
+import { prisma } from '@/lib/prisma'
+import {
+  ProductRail, ArticleRail, dailyShuffle,
+  type RailProduct, type RailArticle,
+} from '@/components/discovery/RecommendationRails'
 
 export async function generateMetadata({
   searchParams,
@@ -82,6 +87,27 @@ export default async function MarketplacePage({
 
   const schemas = [breadcrumbSchema, collectionSchema].filter(Boolean) as object[]
 
+  const [railProductsRaw, railArticlesRaw] = await Promise.all([
+    prisma.product.findMany({
+      where: { isActive: true },
+      select: {
+        id: true, title: true, price: true, images: true,
+        creator: { select: { username: true, displayName: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 40,
+    }),
+    prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, title: true, excerpt: true, coverImage: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 12,
+    }),
+  ])
+
+  const recommendedProducts: RailProduct[] = dailyShuffle(railProductsRaw, 1).slice(0, 6)
+  const articleRail: RailArticle[] = dailyShuffle(railArticlesRaw, 2).slice(0, 6)
+
   return (
     <>
       <JsonLd data={schemas} />
@@ -110,6 +136,11 @@ export default async function MarketplacePage({
         </div>
       )}
       <MarketplaceClient initialCategory={dbCategory} />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
+        <ProductRail title="Recommended Products" products={recommendedProducts} />
+        <ArticleRail articles={articleRail} />
+      </div>
     </>
   )
 }

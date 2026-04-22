@@ -1308,3 +1308,21 @@ model FraudFlag {
   reviewedBy  String?
   reviewNote  String?
 }
+
+// ── Newsletter ────────────────────────────────────────────────────────────────
+
+model NewsletterSubscriber {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  source         String    @default("footer") // footer|checkout|modal|dashboard|other
+  status         String    @default("ACTIVE") // ACTIVE|UNSUBSCRIBED|BOUNCED
+  locale         String?
+  userAgent      String?
+  ip             String?
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
+  confirmedAt    DateTime?
+
+  @@index([status, subscribedAt])
+  @@index([source])
+}

@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { rankCreators, deriveCategoryAffinity, type ScoredCreator } from '@/lib/discovery'
+import {
+  CreatorRail, ArticleRail, dailyShuffle,
+  type RailCreator, type RailArticle,
+} from '@/components/discovery/RecommendationRails'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
@@ -90,6 +94,31 @@ export default async function CreatorsPage({
   )
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
+
+  // Side-sell rails
+  const [commissionCreatorsRaw, articlesRaw] = await Promise.all([
+    prisma.creatorProfile.findMany({
+      where: { isSuspended: false, commissionStatus: 'OPEN' },
+      select: { username: true, displayName: true, avatar: true, isVerified: true, categoryTags: true },
+      orderBy: { totalSales: 'desc' },
+      take: 30,
+    }),
+    prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, title: true, excerpt: true, coverImage: true },
+      orderBy: { publishedAt: 'desc' },
+      take: 12,
+    }),
+  ])
+
+  const recommendedCommissions: RailCreator[] = dailyShuffle(commissionCreatorsRaw, 6)
+    .slice(0, 6)
+    .map((c) => {
+      let tags: string[] = []
+      try { tags = JSON.parse(c.categoryTags) } catch {}
+      return { username: c.username, displayName: c.displayName, avatar: c.avatar, isVerified: c.isVerified, categoryTags: tags }
+    })
+  const creatorsArticleRail: RailArticle[] = dailyShuffle(articlesRaw, 7).slice(0, 6)
 
   // Fire-and-forget: update lastFeaturedAt for page-1 creators
   if (page === 1 && page1Ids.length > 0) {
@@ -236,6 +265,9 @@ export default async function CreatorsPage({
             )}
           </>
         )}
+
+        <CreatorRail title="Recommended Commissions" creators={recommendedCommissions} />
+        <ArticleRail articles={creatorsArticleRail} />
       </div>
     </div>
   )

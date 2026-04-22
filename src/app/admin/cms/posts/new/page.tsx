@@ -11,9 +11,9 @@ export default async function NewPostPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Link href="/admin/cms/posts" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Posts
+          ← Articles
         </Link>
-        <h2 className="text-lg font-semibold text-foreground">New Post</h2>
+        <h2 className="text-lg font-semibold text-foreground">New Article</h2>
       </div>
       <PostEditor />
     </div>

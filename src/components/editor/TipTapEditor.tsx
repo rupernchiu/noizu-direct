@@ -3,8 +3,6 @@
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import Link from '@tiptap/extension-link'
-import Underline from '@tiptap/extension-underline'
 import TextAlign from '@tiptap/extension-text-align'
 import Placeholder from '@tiptap/extension-placeholder'
 import CharacterCount from '@tiptap/extension-character-count'
@@ -57,10 +55,16 @@ export function TipTapEditor({ content, onChange, placeholder = 'Write something
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
-      Underline,
+      // StarterKit@3 bundles Link and Underline — configure Link here
+      // instead of registering it twice (duplicate extensions break the
+      // schema and silently disable commands like toggleHeading).
+      StarterKit.configure({
+        link: {
+          openOnClick: false,
+          HTMLAttributes: { class: 'text-primary underline cursor-pointer' },
+        },
+      }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({ openOnClick: false, HTMLAttributes: { class: 'text-primary underline cursor-pointer' } }),
       Image.configure({ HTMLAttributes: { class: 'max-w-full rounded-lg my-4' } }),
       Youtube.configure({ controls: true, HTMLAttributes: { class: 'w-full aspect-video rounded-lg my-4' } }),
       Placeholder.configure({ placeholder }),
@@ -70,7 +74,38 @@ export function TipTapEditor({ content, onChange, placeholder = 'Write something
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
     editorProps: {
       attributes: {
-        class: 'prose prose-invert max-w-none min-h-[320px] px-4 py-3 focus:outline-none text-sm leading-relaxed',
+        // `@tailwindcss/typography` is NOT installed in this project, so `prose`
+        // + `prose-invert` are silent no-ops. Tailwind 4's preflight also resets
+        // `list-style: none` on <ul>/<ol>, which is why list blocks authored in
+        // the editor rendered without bullets — completely invisible as lists
+        // to the author, even though the saved HTML was a real <ul><li>. All
+        // typography here is built from core `[&_el]:…` arbitrary selectors,
+        // kept in sync with terms/page.tsx so WYSIWYG holds on the public side.
+        class: [
+          'max-w-none',
+          'min-h-[320px] px-4 py-3 focus:outline-none leading-relaxed',
+          '[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-3',
+          '[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2',
+          '[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-2',
+          '[&_p]:my-2',
+          // Restore list markers stripped by Tailwind preflight
+          '[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3',
+          '[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3',
+          '[&_li]:my-1 [&_li]:marker:text-muted-foreground',
+          // Nested lists (TipTap emits these for Tab-indented items)
+          '[&_ul_ul]:list-[circle] [&_ol_ol]:list-[lower-alpha]',
+          // Inline formatting parity with public renderer
+          '[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2',
+          '[&_strong]:font-semibold',
+          '[&_em]:italic',
+          '[&_u]:underline [&_u]:underline-offset-2',
+          '[&_blockquote]:border-l-[3px] [&_blockquote]:border-l-primary [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:text-muted-foreground',
+          '[&_code]:bg-muted [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[14px]',
+          '[&_pre]:bg-muted [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:my-4 [&_pre]:overflow-x-auto',
+          '[&_pre_code]:bg-transparent [&_pre_code]:p-0',
+          '[&_hr]:border-border [&_hr]:my-6',
+          '[&_img]:rounded-lg [&_img]:my-4 [&_img]:max-w-full',
+        ].join(' '),
       },
     },
   })

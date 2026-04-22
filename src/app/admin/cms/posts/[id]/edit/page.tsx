@@ -16,9 +16,9 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
     <div className="space-y-4">
       <div className="flex items-center gap-3">
         <Link href="/admin/cms/posts" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Posts
+          ← Articles
         </Link>
-        <h2 className="text-lg font-semibold text-foreground">Edit Post</h2>
+        <h2 className="text-lg font-semibold text-foreground">Edit Article</h2>
       </div>
       <PostEditor post={{
         ...post,

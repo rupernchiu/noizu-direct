@@ -7,14 +7,20 @@ import sanitizeHtml from 'sanitize-html'
 import { JsonLd } from '@/components/seo/JsonLd'
 
 const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  // `u` — StarterKit's Underline emits <u>, missing from sanitize-html defaults.
+  // `style` + allowedStyles — TipTap TextAlign uses inline style; without it,
+  // alignment silently disappears on published posts.
   allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-    'img', 'figure', 'figcaption', 'iframe', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'img', 'figure', 'figcaption', 'iframe', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   ]),
   allowedAttributes: {
     ...sanitizeHtml.defaults.allowedAttributes,
     img: ['src', 'alt', 'width', 'height', 'class'],
     iframe: ['src', 'width', 'height', 'frameborder', 'allow', 'allowfullscreen', 'class'],
-    '*': ['class'],
+    '*': ['class', 'style'],
+  },
+  allowedStyles: {
+    '*': { 'text-align': [/^(left|right|center|justify)$/] },
   },
   allowedIframeHostnames: ['www.youtube.com', 'www.facebook.com'],
 }
@@ -41,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       description,
       url,
       type: 'article',
-      images: [{ url: ogImage, width: 800, height: 400, alt: `${title} — noizu.direct Blog` }],
+      images: [{ url: ogImage, width: 800, height: 400, alt: `${title} — noizu.direct Articles` }],
       authors: post.author?.name ? [post.author.name] : undefined,
       publishedTime: post.publishedAt?.toISOString(),
     },
@@ -92,7 +98,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://noizu.direct' },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://noizu.direct/blog' },
+      { '@type': 'ListItem', position: 2, name: 'Articles', item: 'https://noizu.direct/blog' },
       { '@type': 'ListItem', position: 3, name: post.title, item: `https://noizu.direct/blog/${post.slug}` },
     ],
   }
@@ -113,7 +119,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-8">
           <Link href="/" className="hover:text-foreground">Home</Link>
           <span>/</span>
-          <Link href="/blog" className="hover:text-foreground">Blog</Link>
+          <Link href="/blog" className="hover:text-foreground">Articles</Link>
           <span>/</span>
           <span className="text-foreground truncate">{post.title}</span>
         </nav>
@@ -121,7 +127,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {/* Header */}
         {post.coverImage && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={post.coverImage} alt={`${post.title} — noizu.direct Blog`} className="w-full aspect-video object-cover rounded-2xl mb-8" />
+          <img src={post.coverImage} alt={`${post.title} — noizu.direct Articles`} className="w-full aspect-video object-cover rounded-2xl mb-8" />
         )}
 
         {tags.length > 0 && (
@@ -149,7 +155,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         {/* Content */}
         {safeContent ? (
           <div
-            className="prose prose-invert max-w-none text-foreground prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:bg-surface prose-code:px-1 prose-code:rounded prose-pre:bg-surface"
+            // `dark:prose-invert` — app is light by default; unconditional
+            // invert rendered body as light gray on white. Explicit heading
+            // sizes mirror TipTapEditor so authors get WYSIWYG.
+            className={[
+              'prose max-w-none dark:prose-invert',
+              'text-foreground prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground',
+              'prose-code:bg-surface prose-code:px-1 prose-code:rounded prose-pre:bg-surface',
+              '[&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mt-4 [&_h1]:mb-3',
+              '[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:mt-4 [&_h2]:mb-2',
+              '[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-2',
+              '[&_p]:my-2',
+            ].join(' ')}
             dangerouslySetInnerHTML={{ __html: safeContent }}
           />
         ) : (
@@ -166,7 +183,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   <div className="rounded-xl overflow-hidden bg-card border border-border hover:border-primary/40 transition-colors">
                     {r.coverImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.coverImage} alt={`${r.title} — noizu.direct Blog`} className="w-full aspect-video object-cover" />
+                      <img src={r.coverImage} alt={`${r.title} — noizu.direct Articles`} className="w-full aspect-video object-cover" />
                     ) : (
                       <div className="w-full aspect-video bg-surface" />
                     )}

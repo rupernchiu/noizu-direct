@@ -198,7 +198,7 @@ export default async function CreatorPage({ params }: PageProps) {
 
   const [
     rawDProducts, rawDCreators, rawDCommission,
-    rawDPortfolioCreators, rawDVideos, rawDSupportCreators,
+    rawDPortfolioCreators, rawDVideos, rawDSupportCreators, rawDPodCreators,
   ] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true, ...(topCategory ? { category: topCategory } : {}), creator: { username: { not: username } } },
@@ -227,6 +227,18 @@ export default async function CreatorPage({ params }: PageProps) {
     }),
     prisma.creatorProfile.findMany({
       where: { username: { not: username }, isSuspended: false, OR: [{ supportTiers: { some: { isActive: true } } }, { supportGoals: { some: { status: 'ACTIVE' } } }] },
+      select: { username: true, displayName: true, avatar: true, isVerified: true, categoryTags: true, commissionStatus: true, commissionPricing: true, supportGoals: { where: { status: 'ACTIVE' }, take: 1, orderBy: { createdAt: 'desc' } } },
+      take: 12,
+    }),
+    prisma.creatorProfile.findMany({
+      where: {
+        username: { not: username },
+        isSuspended: false,
+        OR: [
+          { podProviders: { some: {} } },
+          { products: { some: { isActive: true, type: 'POD' } } },
+        ],
+      },
       select: { username: true, displayName: true, avatar: true, isVerified: true, categoryTags: true, commissionStatus: true, commissionPricing: true, supportGoals: { where: { status: 'ACTIVE' }, take: 1, orderBy: { createdAt: 'desc' } } },
       take: 12,
     }),
@@ -274,6 +286,12 @@ export default async function CreatorPage({ params }: PageProps) {
   }))
 
   const discoverySupport: DiscoveryCreator[] = rawDSupportCreators.slice(0, 6).map(toDiscoveryCreator)
+
+  const podUsernames = new Set(rawDPodCreators.map(c => c.username))
+  const discoveryPod: DiscoveryCreator[] = [
+    ...rawDPodCreators,
+    ...rawDCreators.filter(c => !podUsernames.has(c.username)),
+  ].slice(0, 6).map(toDiscoveryCreator)
 
   // Suspended account gate
   if (creator.isSuspended) {
@@ -692,6 +710,7 @@ export default async function CreatorPage({ params }: PageProps) {
           discoveryPortfolio={discoveryPortfolio}
           discoveryVideos={discoveryVideos}
           discoverySupport={discoverySupport}
+          discoveryPod={discoveryPod}
         />
       </div>
 

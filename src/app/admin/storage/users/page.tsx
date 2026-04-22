@@ -3,8 +3,11 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { HardDrive, Gift } from 'lucide-react'
 import { GrantBonusForm } from './GrantBonusForm'
+import { Pagination } from '@/components/ui/Pagination'
 
 export const metadata = { title: 'Storage users | noizu.direct admin' }
+
+const PER_PAGE = 50
 
 function gb(bytes: bigint | number) {
   const n = typeof bytes === 'bigint' ? Number(bytes) : bytes
@@ -13,32 +16,39 @@ function gb(bytes: bigint | number) {
   return `${(n / 1024).toFixed(0)} KB`
 }
 
-export default async function AdminStorageUsersPage({ searchParams }: { searchParams: Promise<{ q?: string; plan?: string }> }) {
+export default async function AdminStorageUsersPage({ searchParams }: { searchParams: Promise<{ q?: string; plan?: string; page?: string }> }) {
   const session = await auth()
   const user = session?.user as { role?: string } | undefined
   if (user?.role !== 'ADMIN') redirect('/login')
 
-  const { q, plan } = await searchParams
+  const { q, plan, page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
 
-  const users = await prisma.user.findMany({
-    where: {
-      ...(plan ? { storagePlan: plan } : {}),
-      ...(q ? {
-        OR: [
-          { email: { contains: q, mode: 'insensitive' } },
-          { name: { contains: q, mode: 'insensitive' } },
-        ],
-      } : {}),
-    },
-    select: {
-      id: true, email: true, name: true,
-      storagePlan: true, storageBonusMb: true,
-      storagePlanRenewsAt: true, storageOverageBytes: true,
-      storageSubscription: { select: { status: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, failedChargeCount: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  })
+  const where = {
+    ...(plan ? { storagePlan: plan } : {}),
+    ...(q ? {
+      OR: [
+        { email: { contains: q, mode: 'insensitive' as const } },
+        { name: { contains: q, mode: 'insensitive' as const } },
+      ],
+    } : {}),
+  }
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where }),
+    prisma.user.findMany({
+      where,
+      select: {
+        id: true, email: true, name: true,
+        storagePlan: true, storageBonusMb: true,
+        storagePlanRenewsAt: true, storageOverageBytes: true,
+        storageSubscription: { select: { status: true, currentPeriodEnd: true, cancelAtPeriodEnd: true, failedChargeCount: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+  ])
 
   const ids = users.map(u => u.id)
   const mediaAgg = ids.length > 0 ? await prisma.media.groupBy({
@@ -157,6 +167,8 @@ export default async function AdminStorageUsersPage({ searchParams }: { searchPa
           </tbody>
         </table>
       </div>
+
+      <Pagination total={total} page={page} perPage={PER_PAGE} />
 
       <p className="text-xs text-muted-foreground flex items-center gap-1">
         <Gift className="size-3.5" /> Bonus storage is layered on top of the user&apos;s plan quota.

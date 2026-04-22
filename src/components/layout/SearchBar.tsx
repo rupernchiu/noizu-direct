@@ -243,7 +243,7 @@ function SearchBarInner() {
                 {results!.posts.length > 0 && (
                   <div style={{ padding: '8px', borderTop: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 8px', margin: 0 }}>
-                      Blog
+                      Articles
                     </p>
                     {results!.posts.map(post => (
                       <Link

@@ -2,17 +2,34 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { Pagination } from '@/components/ui/Pagination'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT:     'bg-border text-muted-foreground',
   PUBLISHED: 'bg-green-500/20 text-green-400',
 }
 
-export default async function AdminPagesPage() {
+const PER_PAGE = 25
+
+export default async function AdminPagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const session = await auth()
   if (!session || (session.user as any).role !== 'ADMIN') redirect('/')
 
-  const pages = await prisma.page.findMany({ orderBy: { createdAt: 'asc' } })
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
+
+  const [total, pages] = await Promise.all([
+    prisma.page.count(),
+    prisma.page.findMany({
+      orderBy: { createdAt: 'asc' },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+  ])
 
   return (
     <div className="space-y-4">
@@ -74,6 +91,8 @@ export default async function AdminPagesPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination total={total} page={page} perPage={PER_PAGE} />
     </div>
   )
 }

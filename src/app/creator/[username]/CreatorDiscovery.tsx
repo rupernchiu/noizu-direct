@@ -346,6 +346,22 @@ export function VideosDiscovery({ videos }: { videos: DiscoveryVideo[] }) {
   )
 }
 
+export function PodDiscovery({ creators }: { creators: DiscoveryCreator[] }) {
+  if (creators.length === 0) return null
+  return (
+    <DiscoveryRow title="Other Creators Who Provide Print On Demand" viewAllHref="/creators">
+      {creators.map((c) => (
+        <DiscoveryCreatorCard
+          key={c.username}
+          creator={c}
+          ctaLabel="View POD"
+          ctaHref={`/creator/${c.username}?tab=pod`}
+        />
+      ))}
+    </DiscoveryRow>
+  )
+}
+
 export function SupportDiscovery({ creators }: { creators: DiscoveryCreator[] }) {
   if (creators.length === 0) return null
   return (

@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { STATUS_LABELS } from '@/lib/labels'
+import { Pagination } from '@/components/ui/Pagination'
+
+const PER_PAGE = 25
 
 function statusColor(s: string) {
   if (s === 'OPEN') return '#ef4444'
@@ -23,33 +26,44 @@ function getDisputeUrgency(createdAt: Date): { label: string; colorClass: string
   return { label: `${days} days`, colorClass: 'bg-destructive/10 text-destructive border-destructive/20' }
 }
 
-export default async function AdminDisputesPage() {
+export default async function AdminDisputesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
   const session = await auth()
   const user = session?.user as { id?: string; role?: string } | undefined
   if (user?.role !== 'ADMIN') redirect('/login')
 
-  const disputes = await prisma.dispute.findMany({
-    include: {
-      order: {
-        include: {
-          product: { select: { title: true, type: true } },
-          buyer: { select: { name: true, email: true } },
-          creator: { select: { name: true } },
-        },
-      },
-      raiser: { select: { name: true } },
-    },
-    orderBy: { createdAt: 'asc' },
-  })
+  const { page: pageParam } = await searchParams
+  const page = Math.max(1, parseInt(pageParam ?? '1', 10) || 1)
 
-  const openCount = disputes.filter(d => d.status === 'OPEN').length
+  const [total, openCount, disputes] = await Promise.all([
+    prisma.dispute.count(),
+    prisma.dispute.count({ where: { status: 'OPEN' } }),
+    prisma.dispute.findMany({
+      include: {
+        order: {
+          include: {
+            product: { select: { title: true, type: true } },
+            buyer: { select: { name: true, email: true } },
+            creator: { select: { name: true } },
+          },
+        },
+        raiser: { select: { name: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+      skip: (page - 1) * PER_PAGE,
+      take: PER_PAGE,
+    }),
+  ])
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Disputes</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{openCount} open · {disputes.length} total</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{openCount} open · {total} total</p>
         </div>
       </div>
 
@@ -104,6 +118,8 @@ export default async function AdminDisputesPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination total={total} page={page} perPage={PER_PAGE} />
     </div>
   )
 }

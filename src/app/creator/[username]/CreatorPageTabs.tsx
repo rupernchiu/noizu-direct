@@ -8,7 +8,7 @@ import { SupportModal } from '@/components/support/SupportModal'
 import { safeExternalHref } from '@/lib/safe-url'
 import {
   ShopDiscovery, AboutDiscovery, CommissionDiscovery,
-  PortfolioDiscovery, VideosDiscovery, SupportDiscovery,
+  PortfolioDiscovery, VideosDiscovery, SupportDiscovery, PodDiscovery,
   type DiscoveryProduct, type DiscoveryCreator,
   type DiscoveryVideo, type DiscoveryPortfolioItem,
 } from './CreatorDiscovery'
@@ -140,6 +140,7 @@ interface CreatorPageTabsProps {
   discoveryPortfolio: DiscoveryPortfolioItem[]
   discoveryVideos: DiscoveryVideo[]
   discoverySupport: DiscoveryCreator[]
+  discoveryPod: DiscoveryCreator[]
   podProviders: PodProvider[]
   guestbookEntries: GuestbookEntry[]
 }
@@ -409,6 +410,7 @@ export function CreatorPageTabs({
   discoveryPortfolio,
   discoveryVideos,
   discoverySupport,
+  discoveryPod,
   podProviders,
   guestbookEntries,
 }: CreatorPageTabsProps) {
@@ -438,6 +440,8 @@ export function CreatorPageTabs({
 
   const [activeTab, setActiveTab]       = useState<Tab>(tabs[0]?.id ?? 'about')
   const [shopSort, setShopSort]         = useState<'default' | 'popular'>('default')
+  const [shopPage, setShopPage]         = useState(1)
+  const [portfolioPage, setPortfolioPage] = useState(1)
   const [lightboxIdx, setLightboxIdx]   = useState<number | null>(null)
   const [loadedVideos, setLoadedVideos] = useState<Set<string>>(new Set())
   const [giftMode, setGiftMode]         = useState<'onetime' | 'monthly'>('onetime')
@@ -546,11 +550,38 @@ export function CreatorPageTabs({
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  useEffect(() => { setShopPage(1) }, [shopSort])
+
+  const SHOP_PER_PAGE = 24
+  const PORTFOLIO_PER_PAGE = 24
+
   const sortedProducts   = shopSort === 'popular'
     ? [...products].sort((a, b) => (b.trendingScore ?? 0) - (a.trendingScore ?? 0))
     : products
   const pinnedProducts   = products.filter((p) =>  p.isPinned)
   const unpinnedProducts = products.filter((p) => !p.isPinned)
+
+  // Pagination slices — pinned always visible (small count), unpinned paginated in default mode;
+  // popular mode paginates the full sorted list.
+  const shopTotalPages = shopSort === 'popular'
+    ? Math.max(1, Math.ceil(sortedProducts.length / SHOP_PER_PAGE))
+    : Math.max(1, Math.ceil(unpinnedProducts.length / SHOP_PER_PAGE))
+  const shopPageClamped = Math.min(shopPage, shopTotalPages)
+  const pagedSortedProducts = sortedProducts.slice(
+    (shopPageClamped - 1) * SHOP_PER_PAGE,
+    shopPageClamped * SHOP_PER_PAGE,
+  )
+  const pagedUnpinnedProducts = unpinnedProducts.slice(
+    (shopPageClamped - 1) * SHOP_PER_PAGE,
+    shopPageClamped * SHOP_PER_PAGE,
+  )
+
+  const portfolioTotalPages = Math.max(1, Math.ceil(portfolioItems.length / PORTFOLIO_PER_PAGE))
+  const portfolioPageClamped = Math.min(portfolioPage, portfolioTotalPages)
+  const pagedPortfolioItems = portfolioItems.slice(
+    (portfolioPageClamped - 1) * PORTFOLIO_PER_PAGE,
+    portfolioPageClamped * PORTFOLIO_PER_PAGE,
+  )
   const commissionInfo   = COMMISSION_STATUS_STYLES[commissionStatus] ?? COMMISSION_STATUS_STYLES.OPEN
 
   // Social links present in display order
@@ -621,7 +652,7 @@ export function CreatorPageTabs({
               />
             ) : shopSort === 'popular' ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                {sortedProducts.map((product) => (
+                {pagedSortedProducts.map((product) => (
                   <div key={product.id} className="relative">
                     {product.isNew && (
                       <span className="absolute top-2 left-2 z-10 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -674,7 +705,7 @@ export function CreatorPageTabs({
 
                 {unpinnedProducts.length > 0 && (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
-                    {unpinnedProducts.map((product) => (
+                    {pagedUnpinnedProducts.map((product) => (
                       <div key={product.id} className="relative">
                         {product.isNew && (
                           <span className="absolute top-2 left-2 z-10 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
@@ -694,6 +725,29 @@ export function CreatorPageTabs({
                 )}
               </>
             )}
+
+            {shopTotalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => { setShopPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={shopPageClamped <= 1}
+                  className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm text-muted-foreground">
+                  Page {shopPageClamped} of {shopTotalPages}
+                </span>
+                <button
+                  onClick={() => { setShopPage(p => Math.min(shopTotalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={shopPageClamped >= shopTotalPages}
+                  className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+
             <ShopDiscovery products={discoveryProducts} />
           </section>
         )}
@@ -795,10 +849,10 @@ export function CreatorPageTabs({
                 @media (min-width: 640px) { .portfolio-masonry { column-count: 3 !important; } }
                 @media (min-width: 1024px) { .portfolio-masonry { column-count: 4 !important; } }
               `}</style>
-              {portfolioItems.map((item, i) => (
+              {pagedPortfolioItems.map((item, i) => (
                 <div
                   key={item.id}
-                  onClick={() => setLightboxIdx(i)}
+                  onClick={() => setLightboxIdx((portfolioPageClamped - 1) * PORTFOLIO_PER_PAGE + i)}
                   style={{ breakInside: 'avoid', marginBottom: '12px', cursor: 'pointer' }}
                   className="group relative overflow-hidden rounded-xl border border-border bg-card"
                 >
@@ -826,6 +880,29 @@ export function CreatorPageTabs({
               ))}
             </div>
             )}
+
+            {portfolioTotalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-3">
+                <button
+                  onClick={() => { setPortfolioPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={portfolioPageClamped <= 1}
+                  className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm text-muted-foreground">
+                  Page {portfolioPageClamped} of {portfolioTotalPages}
+                </span>
+                <button
+                  onClick={() => { setPortfolioPage(p => Math.min(portfolioTotalPages, p + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  disabled={portfolioPageClamped >= portfolioTotalPages}
+                  className="rounded-lg border border-border bg-card px-4 py-2 text-sm text-foreground hover:border-primary/40 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+
             <PortfolioDiscovery items={discoveryPortfolio} />
           </section>
         )}
@@ -1087,6 +1164,8 @@ export function CreatorPageTabs({
                 </div>
               )}
             </div>
+
+            <PodDiscovery creators={discoveryPod} />
           </section>
         )}
 
