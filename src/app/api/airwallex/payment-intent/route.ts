@@ -1,18 +1,21 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent, getCurrencyFactor } from '@/lib/airwallex'
+import { createPaymentIntent } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
+import { convertUsdCentsTo } from '@/lib/fx'
 
 const SUPPORTED_CURRENCIES = ['USD', 'MYR', 'SGD', 'PHP', 'THB', 'IDR']
 
-/** Convert a USD-cents amount to the target currency's minor units using live rates. */
+/**
+ * Convert a USD-cents amount to the target currency's minor units using live rates.
+ *
+ * Delegates to `src/lib/fx.ts` — we used to fetch our own `/api/airwallex/fx-rate`
+ * route over HTTP which (a) bypassed middleware, (b) added an unnecessary hop,
+ * and (c) inflated Vercel function invocations (F8 / M5).
+ */
 async function convertToDisplayCurrency(amountUsdCents: number, currency: string): Promise<number> {
-  if (currency === 'USD') return amountUsdCents
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
-  const res = await fetch(`${appUrl}/api/airwallex/fx-rate?to=${currency}&amountUsd=${amountUsdCents}`)
-  if (!res.ok) throw new Error(`FX rate unavailable for ${currency}`)
-  const { displayAmount } = await res.json() as { displayAmount: number }
+  const { displayAmount } = await convertUsdCentsTo(amountUsdCents, currency)
   return displayAmount
 }
 
@@ -98,6 +101,13 @@ export async function POST(req: Request) {
   // Re-validate server-side — never trust client amounts.
   // Atomic increment prevents race-condition double-use.
   // creatorId → { amount, codeId }
+  //
+  // M4 (F7): the old version compared `dc.usedCount` (stale snapshot) inside the
+  // WHERE of `updateMany`. Under concurrent checkouts this can allow
+  // `usedCount > maxUses` because the check-then-increment is racy. We now use a
+  // Prisma field reference (`prisma.discountCode.fields.usedCount`) so the
+  // inequality is evaluated against the *current* row inside the same SQL
+  // statement — atomic compare-and-swap semantics.
   const verifiedDiscountsByCreator = new Map<string, { amount: number; codeId: string }>()
 
   for (const { discountCodeId } of discounts) {
@@ -112,7 +122,11 @@ export async function POST(req: Request) {
       where: {
         id: discountCodeId,
         isActive: true,
-        OR: [{ maxUses: null }, { maxUses: { gt: dc.usedCount } }],
+        OR: [
+          { maxUses: null },
+          // Field reference: maxUses > usedCount evaluated per-row, atomically.
+          { maxUses: { gt: prisma.discountCode.fields.usedCount } },
+        ],
       },
       data: { usedCount: { increment: 1 } },
     })
@@ -136,8 +150,15 @@ export async function POST(req: Request) {
   const processingFee = feeOnSubtotal(discountedSubtotal, feeRate)
   const grandTotal = discountedSubtotal + processingFee
 
-  // Clean up any stale PENDING orders for this buyer before creating new ones
-  await prisma.order.deleteMany({ where: { buyerId: userId, status: 'PENDING' } })
+  // Clean up *stale* PENDING orders for this buyer before creating new ones.
+  // M4 (F7): previously this blanket-deleted every PENDING order, which races
+  // against a tab the same buyer left open — their in-flight payment intent
+  // suddenly has no orders attached. Scope to orders older than 30 min so we
+  // only reap abandoned carts, not intents the buyer is actively paying.
+  const staleCutoff = new Date(Date.now() - 30 * 60 * 1000)
+  await prisma.order.deleteMany({
+    where: { buyerId: userId, status: 'PENDING', createdAt: { lt: staleCutoff } },
+  })
 
   // Group by creator and create PENDING orders
   const creatorMap = new Map<string, typeof cartItems>()

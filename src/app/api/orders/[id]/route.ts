@@ -3,10 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 // Status transitions allowed per role:
-// CREATOR: PROCESSING → SHIPPED (only when no dedicated tracking route is used)
-// ADMIN: any transition
-// BUYER: no status changes — buyers use the confirm-receipt endpoint instead
-const CREATOR_ALLOWED_STATUSES = new Set(['PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED'])
+// CREATOR: PROCESSING → SHIPPED only. DELIVERED/COMPLETED are NOT creator-settable
+//          because a creator who flips an order to COMPLETED kills the buyer's
+//          dispute window (see dispute-eligibility.ts). Those terminal states must
+//          flow through /commission/deliver, /tracking, /confirm-receipt (buyer),
+//          or the escrow-processor cron.
+// ADMIN:   any transition
+// BUYER:   no status changes — buyers use the confirm-receipt endpoint instead
+const CREATOR_ALLOWED_STATUSES = new Set(['PROCESSING', 'SHIPPED'])
 const ADMIN_ALLOWED_STATUSES   = new Set(['PROCESSING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED', 'REFUNDED', 'DISPUTED'])
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {

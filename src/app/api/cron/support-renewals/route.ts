@@ -16,15 +16,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { chargeWithConsent } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return (
-    req.headers.get('authorization') === `Bearer ${secret}` ||
-    req.headers.get('x-cron-secret') === secret
-  )
-}
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 async function runRenewals() {
   const now = new Date()
@@ -212,7 +204,7 @@ async function bumpDunning(subId: string, currentCount: number, tierId: string |
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
     return NextResponse.json(await runRenewals())
   } catch (e) {
@@ -222,7 +214,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
     return NextResponse.json(await runRenewals())
   } catch (e) {

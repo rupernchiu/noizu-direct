@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getStaffSessionFromRequest } from '@/lib/staffAuth'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export async function POST(req: NextRequest) {
-  // Allow: isSuperAdmin staff session OR valid x-cron-secret header
+  // Allow: isSuperAdmin staff session OR valid CRON_SECRET (timing-safe).
+  // We keep admin-fallback off here because this route has its own staff-session
+  // fallback above — a NextAuth admin session shouldn't be able to trigger an
+  // audit-log purge.
   const staffSession = getStaffSessionFromRequest(req)
-  const cronSecret = process.env.CRON_SECRET
-  const headerSecret = req.headers.get('x-cron-secret')
+  const authorized =
+    staffSession?.isSuperAdmin === true ||
+    (await isCronAuthorized(req, { allowAdminFallback: false }))
 
-  const isAuthorized =
-    (staffSession?.isSuperAdmin === true) ||
-    (cronSecret && headerSecret === cronSecret)
-
-  if (!isAuthorized) {
+  if (!authorized) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

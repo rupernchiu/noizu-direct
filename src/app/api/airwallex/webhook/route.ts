@@ -623,6 +623,14 @@ async function handleDisputeCreated(obj: Record<string, any>) {
     data: { escrowStatus: 'DISPUTED' },
   }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
 
+  // M3 — chargeback must pause payout even if the transaction already flipped
+  // to COMPLETED (escrow auto-released before the dispute arrived). The payout
+  // cron excludes `payoutBlocked: true` from the per-creator balance groupBy.
+  await prisma.transaction.updateMany({
+    where: { orderId: order.id, status: 'COMPLETED', payoutBlocked: false },
+    data: { payoutBlocked: true, payoutBlockReason: `Chargeback ${disputeId}` },
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
+
   await prisma.fraudFlag.create({
     data: {
       type: 'CHARGEBACK_PATTERN',
@@ -658,6 +666,13 @@ async function handleDisputeClosed(obj: Record<string, any>, outcome: 'WON' | 'L
     await prisma.order.update({
       where: { id: existing.orderId },
       data: { escrowStatus: 'HELD' },
+    }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
+
+    // Dispute resolved in merchant's favour — re-enable payout on any tx we
+    // previously flagged for this order (M3).
+    await prisma.transaction.updateMany({
+      where: { orderId: existing.orderId, payoutBlocked: true },
+      data: { payoutBlocked: false, payoutBlockReason: null },
     }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
   }
 }
@@ -703,9 +718,14 @@ async function handleTransferFailed(transferId: string, failureReason?: string) 
   )
 }
 
+// Maximum clock skew between Airwallex and our server. Airwallex's own docs use
+// 5 minutes; we match for symmetry. Replay attempts past this window are rejected.
+const WEBHOOK_MAX_SKEW_MS = 5 * 60 * 1000
+
 export async function POST(req: NextRequest) {
   const body = await req.text()
   const signature = req.headers.get('x-signature') ?? ''
+  const timestampHeader = req.headers.get('x-timestamp') ?? ''
   const secret = process.env.AIRWALLEX_WEBHOOK_SECRET ?? ''
 
   // Always enforce HMAC verification. A missing or placeholder secret is a
@@ -714,20 +734,64 @@ export async function POST(req: NextRequest) {
     console.error('[airwallex/webhook] AIRWALLEX_WEBHOOK_SECRET is not configured')
     return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
   }
-  const expected = crypto.createHmac('sha256', secret).update(body).digest('hex')
-  const sigBuf   = Buffer.from(signature)
-  const expBuf   = Buffer.from(expected)
+
+  // H3 — freshness check: Airwallex sends an `x-timestamp` header (ms since
+  // epoch). Reject anything older/newer than 5 minutes to kill naive replays.
+  // Missing header is also rejected — Airwallex always sends it.
+  if (!timestampHeader) {
+    return NextResponse.json({ error: 'Missing x-timestamp' }, { status: 400 })
+  }
+  const timestampMs = parseInt(timestampHeader, 10)
+  if (!Number.isFinite(timestampMs)) {
+    return NextResponse.json({ error: 'Invalid x-timestamp' }, { status: 400 })
+  }
+  const skew = Math.abs(Date.now() - timestampMs)
+  if (skew > WEBHOOK_MAX_SKEW_MS) {
+    console.warn('[airwallex/webhook] rejected stale event', { skew, timestampMs })
+    return NextResponse.json({ error: 'Timestamp out of window' }, { status: 401 })
+  }
+
+  // H3 — HMAC now covers `${timestamp}.${body}` per Airwallex docs. This ties
+  // each signature to a specific moment in time; it can't be replayed across
+  // the window boundary because the ts also has to be fresh.
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(`${timestampHeader}.${body}`)
+    .digest('hex')
+  const sigBuf = Buffer.from(signature)
+  const expBuf = Buffer.from(expected)
   if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   const event = JSON.parse(body) as {
+    id?: string
     name: string
     data?: { object?: Record<string, any> }
   }
 
   const obj = event.data?.object ?? {}
   const intentId = obj.id as string | undefined
+
+  // H3 — idempotent dispatch via event id. Airwallex stamps every event with a
+  // top-level `id`; if we've seen it before we ack 200 without re-firing any
+  // side-effects. We insert first (creating the row is our claim), so two
+  // concurrent deliveries can't both proceed. The unique constraint on
+  // airwallexEventId guarantees at-most-once processing.
+  const eventId = typeof event.id === 'string' && event.id.length > 0 ? event.id : null
+  if (eventId) {
+    try {
+      await prisma.processedWebhookEvent.create({
+        data: { airwallexEventId: eventId, eventName: event.name },
+      })
+    } catch (err: any) {
+      // Prisma P2002 = unique constraint violation → already processed. Ack 200.
+      if (err?.code === 'P2002') {
+        return NextResponse.json({ ok: true, replayed: true })
+      }
+      throw err
+    }
+  }
 
   // Process synchronously before returning 200. On Vercel serverless, background
   // promises after response-flush are not guaranteed to complete — see audit F11.
@@ -772,6 +836,12 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     // Returning 500 causes Airwallex to retry. The handler's idempotency guard
     // (atomic updateMany PENDING→PROCESSING) prevents duplicate processing.
+    // Roll back our dedupe row so a retry isn't short-circuited into a 200 no-op.
+    if (eventId) {
+      await prisma.processedWebhookEvent
+        .delete({ where: { airwallexEventId: eventId } })
+        .catch(() => {})
+    }
     console.error('[airwallex/webhook] handler failed', { event: event.name, intentId, err })
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   }

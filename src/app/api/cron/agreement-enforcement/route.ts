@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { prisma } from '@/lib/prisma'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
 
@@ -106,7 +107,7 @@ function accountClosureHtml(name: string): string {
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  if (req.headers.get('x-cron-secret') !== process.env.CRON_SECRET) {
+  if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

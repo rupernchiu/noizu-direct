@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server'
 import { runFulfillmentReminders } from '@/lib/escrow-processor'
-import { requireAdmin } from '@/lib/guards'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
-export async function POST() {
-  const session = await requireAdmin()
-  if (!session) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+export async function POST(req: Request) {
+  if (!(await isCronAuthorized(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  const results = await runFulfillmentReminders()
+  return NextResponse.json({ ok: true, ...results })
+}
+
+// Vercel cron schedulers only invoke GET by default — mirror POST behaviour.
+export async function GET(req: Request) {
+  if (!(await isCronAuthorized(req))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   const results = await runFulfillmentReminders()
   return NextResponse.json({ ok: true, ...results })
 }

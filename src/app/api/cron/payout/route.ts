@@ -3,21 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { executeTransfer, getCurrencyFactor } from '@/lib/airwallex'
 import { Resend } from 'resend'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://noizu.direct'
 
 // USD 10.00 minimum in cents
 const MIN_USD_CENTS = 1000
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return (
-    req.headers.get('authorization') === `Bearer ${secret}` ||
-    req.headers.get('x-cron-secret') === secret
-  )
-}
 
 async function getUsdRate(to: string): Promise<number> {
   if (to === 'USD') return 1
@@ -42,10 +34,53 @@ function emailShell(body: string) {
 }
 
 async function runPayoutSweep() {
-  // Find all creators with COMPLETED transactions
+  // H4 — before computing balances, activate any PayoutSettingChange rows whose
+  // 48-hour cooldown has elapsed. Writing straight to CreatorProfile here
+  // ensures the rest of the sweep uses the new destination; a change that's
+  // still inside the cooldown is ignored (so the old destination remains
+  // active, or if this is a first-time setup with appliedAt already stamped,
+  // no-op because it was applied inline).
+  const now = new Date()
+  const dueChanges = await prisma.payoutSettingChange.findMany({
+    where: { appliedAt: null, revokedAt: null, activatesAt: { lte: now } },
+  })
+  for (const change of dueChanges) {
+    await prisma.$transaction([
+      prisma.creatorProfile.update({
+        where: { userId: change.userId },
+        data: {
+          payoutMethod: change.newPayoutMethod,
+          payoutCountry: change.newPayoutCountry,
+          payoutCurrency: change.newPayoutCurrency,
+          payoutDetails: change.newPayoutDetails,
+          ...(change.newBeneficiaryId ? { airwallexBeneficiaryId: change.newBeneficiaryId } : {}),
+        },
+      }),
+      prisma.payoutSettingChange.update({
+        where: { id: change.id },
+        data: { appliedAt: now },
+      }),
+      prisma.auditEvent.create({
+        data: {
+          actorId: null,
+          actorName: 'System (payout cron)',
+          action: 'payouts.destination.activated',
+          entityType: 'CreatorProfile',
+          entityId: change.userId,
+          entityLabel: `payoutMethod=${change.newPayoutMethod}`,
+          reason: `Cooldown elapsed (requested at ${change.createdAt.toISOString()})`,
+        },
+      }),
+    ]).catch((err) => console.error('[cron/payout] activate change failed', { changeId: change.id, err }))
+  }
+
+  // Find all creators with COMPLETED transactions.
+  // Exclude any transaction marked `payoutBlocked` — this flag gets set when a
+  // chargeback arrives on an already-released order (see M3 / webhook:
+  // handleDisputeCreated). Keeps money from leaving while the dispute is live.
   const completedByCreator = await prisma.transaction.groupBy({
     by: ['creatorId'],
-    where: { status: 'COMPLETED' },
+    where: { status: 'COMPLETED', payoutBlocked: false },
     _sum: { creatorAmount: true },
   })
 
@@ -166,7 +201,7 @@ async function runPayoutSweep() {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
     return NextResponse.json(await runPayoutSweep())
   } catch (e) {
@@ -176,7 +211,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
     return NextResponse.json(await runPayoutSweep())
   } catch (e) {

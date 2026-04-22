@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getTransferStatus } from '@/lib/airwallex'
 import { Resend } from 'resend'
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
@@ -16,15 +17,6 @@ function emailShell(body: string): string {
 <tr><td style="background:#13131a;border:1px solid #27272f;border-radius:16px;padding:36px 32px;">${body}</td></tr>
 <tr><td style="padding-top:24px;text-align:center;"><p style="margin:0;font-size:12px;color:#4b4b5a;">noizu.direct &mdash; Creator marketplace for SEA creators</p></td></tr>
 </table></td></tr></table></body></html>`
-}
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return (
-    req.headers.get('authorization') === `Bearer ${secret}` ||
-    req.headers.get('x-cron-secret') === secret
-  )
 }
 
 async function runReconciler() {
@@ -97,7 +89,7 @@ async function runReconciler() {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
@@ -109,7 +101,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {

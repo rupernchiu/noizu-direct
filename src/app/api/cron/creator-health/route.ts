@@ -1,18 +1,10 @@
 // Schedule: runs once daily at 4am
 import { NextRequest, NextResponse } from 'next/server'
 import { runCreatorHealthCheck } from '@/lib/creatorHealthCheck'
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return false
-  return (
-    req.headers.get('authorization') === `Bearer ${secret}` ||
-    req.headers.get('x-cron-secret') === secret
-  )
-}
+import { isCronAuthorized } from '@/lib/cron-auth'
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
@@ -25,7 +17,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
