@@ -8,20 +8,25 @@ datasource db {
 }
 
 model User {
-  id                 String   @id @default(cuid())
-  email              String   @unique
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  emailVerified      DateTime?
   password           String?
-  googleId           String?  @unique
+  googleId           String?   @unique
   name               String
-  role               String   @default("BUYER")
+  role               String    @default("BUYER")
+  // Bumped by password change, password reset, role demotion, soft-delete, admin suspension.
+  // The NextAuth jwt() callback compares this against the token's tokenVersion and
+  // rejects stale tokens (invalidates all existing sessions on bump).
+  tokenVersion       Int       @default(0)
   avatar             String?
   phone              String?
-  warningCount       Int      @default(0)
-  isFlaggedForReview Boolean  @default(false)
-  payoutFrozen       Boolean  @default(false)
+  warningCount       Int       @default(0)
+  isFlaggedForReview Boolean   @default(false)
+  payoutFrozen       Boolean   @default(false)
   payoutFrozenReason String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   // Creator onboarding & verification
   creatorVerificationStatus String    @default("UNVERIFIED") // UNVERIFIED|PENDING|VERIFIED|REJECTED
@@ -340,6 +345,7 @@ model Order {
   shippingAddress                String?
   downloadToken                  String?
   downloadExpiry                 DateTime?
+  downloadCount                  Int       @default(0)
   // Escrow
   escrowStatus                   String    @default("HELD") // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
   escrowHeldAt                   DateTime?
@@ -466,9 +472,17 @@ model Transaction {
   currency           String   @default("USD")
   airwallexReference String?
   status             String   @default("PENDING")
+  // Chargeback/dispute: when a payment.dispute.created webhook fires *after* a
+  // transaction is already COMPLETED, we flip this flag so the payout cron
+  // excludes the amount from the creator's available balance until the dispute
+  // resolves. Set back to false on dispute.won.
+  payoutBlocked      Boolean  @default(false)
+  payoutBlockReason  String?
   createdAt          DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id])
+
+  @@index([payoutBlocked])
 }
 
 model Payout {
@@ -1072,6 +1086,26 @@ model CreatorAgreement {
   template AgreementTemplate @relation(fields: [templateId], references: [id])
 }
 
+// H6 — KYC upload binding. When /api/upload stores an identity file it also
+// writes a row here keyed to the uploader's userId. /api/creator/apply then
+// accepts `idFrontUploadId` / `idBackUploadId` / `selfieUploadId` opaque
+// references, looks up the row server-side, and verifies `userId ===
+// session.user.id` before copying the R2 key into CreatorApplication.
+// Without this, any user with another user's /api/files/identity/… URL can
+// submit it as their own ID.
+model KycUpload {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String   // id_front | id_back | selfie
+  r2Key     String
+  viewerUrl String
+  mimeType  String?
+  fileSize  Int?
+  createdAt DateTime @default(now())
+
+  @@index([userId, category, createdAt])
+}
+
 model CreatorApplication {
   id                 String    @id @default(cuid())
   userId             String    @unique
@@ -1219,6 +1253,44 @@ model ChargebackDispute {
   updatedAt          DateTime  @updatedAt
 
   order Order @relation(fields: [orderId], references: [id])
+}
+
+// ── Webhook idempotency ───────────────────────────────────────────────────────
+// Tracks Airwallex event IDs we've already processed, so a replayed webhook
+// (same body + signature) is a no-op. Populated on every successful dispatch.
+// See src/app/api/airwallex/webhook/route.ts.
+model ProcessedWebhookEvent {
+  id                String   @id @default(cuid())
+  airwallexEventId  String   @unique
+  eventName         String?
+  processedAt       DateTime @default(now())
+
+  @@index([processedAt])
+}
+
+// ── Payout Setting Changes (security audit trail + 48h cooldown) ─────────────
+// When a creator rotates their payout destination, the new details land here
+// with `activatesAt = now + 48h`. The payout sweep reads the active encrypted
+// details off CreatorProfile until `activatesAt` passes; this gives the real
+// account owner a window to revoke an account-takeover attempt.
+model PayoutSettingChange {
+  id                   String    @id @default(cuid())
+  userId               String
+  previousPayoutMethod String?
+  newPayoutMethod      String
+  newPayoutDetails     String // AES-256 encrypted JSON (same format as CreatorProfile.payoutDetails)
+  newBeneficiaryId     String?
+  newPayoutCountry     String?
+  newPayoutCurrency    String?
+  activatesAt          DateTime
+  appliedAt            DateTime?
+  revokedAt            DateTime?
+  ipAddress            String?
+  userAgent            String?
+  createdAt            DateTime  @default(now())
+
+  @@index([userId, activatesAt])
+  @@index([appliedAt])
 }
 
 // ── Fraud Flags ───────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { clientIp, rateLimit, rateLimitHeaders } from '@/lib/rate-limit'
+import { BCRYPT_COST } from '@/lib/auth'
 
 const schema = z.object({
   name: z.string().min(2),
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email already in use' }, { status: 400 })
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_COST)
 
     const user = await prisma.user.create({
       data: { name, email: normalizedEmail, password: hashedPassword, role: 'BUYER' },

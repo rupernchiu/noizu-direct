@@ -42,6 +42,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string
     role: AppRole
+    tokenVersion: number
   }
 }
 
@@ -49,5 +50,6 @@ declare module '@auth/core/jwt' {
   interface JWT {
     id: string
     role: AppRole
+    tokenVersion: number
   }
 }

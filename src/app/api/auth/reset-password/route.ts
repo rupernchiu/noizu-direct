@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { clientIp, rateLimit } from '@/lib/rate-limit'
+import { BCRYPT_COST } from '@/lib/auth'
 
 // 10 attempts per IP per hour — a user re-entering their password a few
 // times is fine; a token-guessing script hits the wall quickly.
@@ -44,10 +45,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Account not found.' }, { status: 400 })
     }
 
-    const hashed = await bcrypt.hash(password, 10)
+    const hashed = await bcrypt.hash(password, BCRYPT_COST)
 
     await prisma.$transaction([
-      prisma.user.update({ where: { id: user.id }, data: { password: hashed } }),
+      // M12: bump tokenVersion + stamp emailVerified (ownership of the
+      // mailbox was just demonstrated by clicking the reset link). The
+      // emailVerified stamp also unlocks the Google-link path at C3 so
+      // the legitimate owner can now attach Google without being blocked.
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: hashed,
+          tokenVersion: { increment: 1 },
+          emailVerified: user.emailVerified ?? new Date(),
+        },
+      }),
       prisma.passwordResetToken.update({ where: { id: record.id }, data: { usedAt: new Date() } }),
     ])
 

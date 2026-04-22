@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { getDisputeEligibility } from '@/lib/dispute-eligibility'
 
-function cuid() {
-  return 'd' + Math.random().toString(36).slice(2, 27)
+// M15: previously `'d' + Math.random().toString(36).slice(2, 27)` — a
+// predictable PRNG source for IDs that appear in admin-visible email
+// subjects and dispute URLs. Switched to crypto.randomUUID() for an
+// unguessable 128-bit identifier. The `d-` prefix is retained so the
+// value is still visibly a dispute ID in logs.
+function disputeId(): string {
+  return 'd-' + randomUUID()
 }
 
 export async function POST(req: NextRequest) {
@@ -55,7 +61,7 @@ export async function POST(req: NextRequest) {
   const dispute = await prisma.$transaction(async (tx) => {
     const d = await tx.dispute.create({
       data: {
-        id: cuid(),
+        id: disputeId(),
         orderId: body.orderId,
         raisedBy: session.user!.id!,
         reason: body.reason,

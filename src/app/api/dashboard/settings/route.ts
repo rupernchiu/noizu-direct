@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
+import { BCRYPT_COST, bumpTokenVersion } from '@/lib/auth'
 
 const SLUG_REGEX = /^[a-zA-Z0-9_-]{3,30}$/
 
@@ -35,8 +36,10 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 })
     }
 
-    const hashed = await bcrypt.hash(newPassword, 10)
+    const hashed = await bcrypt.hash(newPassword, BCRYPT_COST)
     await prisma.user.update({ where: { id: userId }, data: { password: hashed } })
+    // M12: invalidate every existing session on password change.
+    await bumpTokenVersion(userId)
 
     return NextResponse.json({ success: true })
   }
@@ -77,15 +80,20 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'You must type DELETE to confirm' }, { status: 400 })
     }
 
-    // Soft-delete: mark user role as DELETED and suspend creator profile
+    // Soft-delete: mark user role as DELETED and suspend creator profile.
+    // C4: bump tokenVersion so the deleted user's live JWT is invalidated
+    // on next request. Previously the user kept full CREATOR access until
+    // their 30-day JWT expired — they could still upload, list, and
+    // request payouts despite being "deleted".
     await prisma.user.update({
       where: { id: userId },
-      data: { role: 'DELETED' },
+      data: { role: 'DELETED', accountStatus: 'CLOSED' },
     })
     await prisma.creatorProfile.updateMany({
       where: { userId },
       data: { isSuspended: true },
     })
+    await bumpTokenVersion(userId)
 
     return NextResponse.json({ deleted: true })
   }

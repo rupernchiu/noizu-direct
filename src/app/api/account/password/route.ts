@@ -1,4 +1,4 @@
-import { auth } from '@/lib/auth'
+import { auth, bumpTokenVersion, BCRYPT_COST } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
@@ -31,8 +31,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 })
   }
 
-  const hashed = await bcrypt.hash(newPassword, 10)
+  const hashed = await bcrypt.hash(newPassword, BCRYPT_COST)
   await prisma.user.update({ where: { id: userId }, data: { password: hashed } })
+
+  // M12: bump tokenVersion so every other tab/device is signed out on the
+  // next request. Note: this also invalidates the caller's current JWT;
+  // the UI should prompt "Password changed — please log in again" after a
+  // successful 200. Simpler and safer than trying to selectively exempt
+  // the caller's session.
+  await bumpTokenVersion(userId)
 
   return NextResponse.json({ ok: true })
 }
