@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
 import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
+import { AdminMobileNav } from './AdminMobileNav'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -18,6 +19,41 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     showMainNav = false
   }
 
+  const mobileNavItems: { href: string; label: string; group?: string }[] = []
+  if (showMainNav) {
+    mobileNavItems.push(
+      { href: '/admin',                      label: 'Overview',         group: 'Main' },
+      { href: '/admin/creators',             label: 'Creators',         group: 'Main' },
+      { href: '/admin/products',             label: 'Products',         group: 'Main' },
+      { href: '/admin/orders',               label: 'Orders',           group: 'Main' },
+      { href: '/admin/transactions',         label: 'Transactions',     group: 'Main' },
+      { href: '/admin/payouts',              label: 'Payouts',          group: 'Main' },
+      { href: '/admin/finance',              label: 'Finance',          group: 'Main' },
+      { href: '/admin/chargebacks',          label: 'Chargebacks',      group: 'Main' },
+      { href: '/admin/fraud',                label: 'Fraud',            group: 'Main' },
+      { href: '/admin/emails',               label: 'Emails',           group: 'Main' },
+      { href: '/admin/cms',                  label: 'CMS',              group: 'Main' },
+      { href: '/admin/cms/navigation',       label: 'Navigation',       group: 'Main' },
+      { href: '/admin/popups',               label: 'Popups',           group: 'Main' },
+      { href: '/admin/announcements',        label: 'Announcements',    group: 'Main' },
+      { href: '/admin/media',                label: 'Media',            group: 'Main' },
+      { href: '/admin/settings',             label: 'Settings',         group: 'Main' },
+      { href: '/admin/storage',              label: 'Storage Monitor',  group: 'Storage' },
+      { href: '/admin/storage/pricing',      label: 'Storage Pricing',  group: 'Storage' },
+      { href: '/admin/agreements',           label: 'Agreements',       group: 'Platform' },
+      { href: '/admin/creators/applications', label: 'Applications',    group: 'Platform' },
+      { href: '/admin/reviews',              label: 'Reviews',          group: 'Platform' },
+    )
+  }
+  if (showStaffSection) {
+    mobileNavItems.push(
+      { href: '/admin/staff',             label: 'Staff Users',  group: 'Staff' },
+      { href: '/admin/staff/roles',       label: 'Roles',        group: 'Staff' },
+      { href: '/admin/staff/permissions', label: 'Permissions',  group: 'Staff' },
+      { href: '/admin/staff/audit',       label: 'Audit Log',    group: 'Staff' },
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-screen-2xl mx-auto px-4 py-6">
@@ -25,8 +61,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="px-2 py-0.5 rounded bg-destructive/20 text-destructive text-xs font-bold">ADMIN</span>
           <h1 className="text-xl font-bold text-foreground">noizu.direct Admin</h1>
         </div>
+        <AdminMobileNav items={mobileNavItems} />
         <div className="flex gap-6 flex-col md:flex-row">
-          <aside className="md:w-52 shrink-0">
+          <aside className="hidden md:block md:w-52 shrink-0">
             <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
               {showMainNav && (
                 <>
