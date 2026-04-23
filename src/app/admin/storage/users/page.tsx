@@ -105,16 +105,16 @@ export default async function AdminStorageUsersPage({ searchParams }: { searchPa
       </form>
 
       <div className="overflow-x-auto bg-card border border-border rounded-xl">
-        <table className="min-w-full text-sm">
+        <table className="min-w-full text-sm [&_td]:whitespace-nowrap">
           <thead className="bg-muted/20 text-muted-foreground text-left">
             <tr>
-              <th className="px-3 py-2 font-medium">User</th>
-              <th className="px-3 py-2 font-medium">Plan</th>
-              <th className="px-3 py-2 font-medium">Usage</th>
-              <th className="px-3 py-2 font-medium">Bonus</th>
-              <th className="px-3 py-2 font-medium">Overage</th>
-              <th className="px-3 py-2 font-medium">Sub status</th>
-              <th className="px-3 py-2 font-medium">Bonus grant</th>
+              <th className="px-3 py-1.5 font-medium">User</th>
+              <th className="px-3 py-1.5 font-medium">Plan</th>
+              <th className="px-3 py-1.5 font-medium">Usage</th>
+              <th className="px-3 py-1.5 font-medium">Bonus</th>
+              <th className="px-3 py-1.5 font-medium">Overage</th>
+              <th className="px-3 py-1.5 font-medium">Sub status</th>
+              <th className="px-3 py-1.5 font-medium">Bonus grant</th>
             </tr>
           </thead>
           <tbody>
@@ -125,22 +125,22 @@ export default async function AdminStorageUsersPage({ searchParams }: { searchPa
               const pct = quota > 0 ? Math.round((used / quota) * 100) : 0
               return (
                 <tr key={u.id} className="border-t border-border">
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-1.5">
                     <p className="text-foreground font-medium">{u.name ?? '—'}</p>
                     <p className="text-xs text-muted-foreground">{u.email}</p>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-1.5">
                     <span className={`text-xs px-2 py-0.5 rounded ${u.storagePlan === 'FREE' ? 'bg-muted text-foreground' : 'bg-primary/10 text-primary'}`}>
                       {u.storagePlan}
                     </span>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-1.5">
                     <p className="text-foreground">{gb(used)} / {gb(quota)}</p>
                     <p className={`text-xs ${pct >= 100 ? 'text-red-400' : pct >= 80 ? 'text-orange-400' : 'text-muted-foreground'}`}>{pct}%</p>
                   </td>
-                  <td className="px-3 py-3 text-foreground">{u.storageBonusMb} MB</td>
-                  <td className="px-3 py-3 text-foreground">{gb(u.storageOverageBytes)}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-1.5 text-foreground">{u.storageBonusMb} MB</td>
+                  <td className="px-3 py-1.5 text-foreground">{gb(u.storageOverageBytes)}</td>
+                  <td className="px-3 py-1.5">
                     {u.storageSubscription ? (
                       <div>
                         <p className="text-foreground text-xs">{u.storageSubscription.status}</p>
@@ -155,7 +155,7 @@ export default async function AdminStorageUsersPage({ searchParams }: { searchPa
                       </div>
                     ) : <span className="text-xs text-muted-foreground">—</span>}
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-1.5">
                     <GrantBonusForm userId={u.id} currentBonusMb={u.storageBonusMb} />
                   </td>
                 </tr>

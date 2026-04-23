@@ -123,16 +123,16 @@ export default async function AuditLogPage({
       {/* Table */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-background/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">ID</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">When</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actor</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Entity</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">IP</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hash</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">ID</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">When</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actor</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Entity</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">IP</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Hash</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -145,10 +145,10 @@ export default async function AuditLogPage({
               )}
               {events.map((e) => (
                 <tr key={e.id} className="hover:bg-background/40 transition-colors">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <code className="text-[11px] font-mono text-muted-foreground">#{e.id.slice(0, 8)}</code>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-3 py-1.5 whitespace-nowrap">
                     <p className="text-xs text-foreground">
                       {new Date(e.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </p>
@@ -156,26 +156,26 @@ export default async function AuditLogPage({
                       {new Date(e.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <p className="text-xs font-medium text-foreground">{e.actorName ?? '—'}</p>
                     <p className="text-[11px] text-muted-foreground font-mono">id={(e.actorId ?? '—').slice(0, 8)}</p>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-mono font-medium bg-primary/10 text-primary whitespace-nowrap">
                       {e.action}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <p className="text-xs text-foreground">{e.entityType ?? '—'}</p>
                     <p className="text-[11px] text-muted-foreground">#{(e.entityId ?? '—').slice(0, 8)}</p>
                     {e.entityLabel && (
                       <p className="text-[11px] text-muted-foreground truncate max-w-[120px]" title={e.entityLabel}>{e.entityLabel}</p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[11px] font-mono text-muted-foreground">
+                  <td className="px-3 py-1.5 text-[11px] font-mono text-muted-foreground">
                     {e.ipAddress ?? '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <code className="text-[11px] font-mono text-muted-foreground">
                       {e.id.slice(0, 12)}…
                     </code>

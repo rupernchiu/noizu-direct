@@ -150,10 +150,10 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-3 w-10">
+                <th className="px-3 py-1.5 w-10">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -162,14 +162,14 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                     aria-label="Select all"
                   />
                 </th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Name</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Email</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Products</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Orders</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Revenue</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Joined</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Name</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Email</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Products</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Orders</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Revenue</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Joined</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -189,7 +189,7 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                       selected.has(creator.id) ? 'bg-surface' : ''
                     }`}
                   >
-                    <td className="px-4 py-3 w-10">
+                    <td className="px-3 py-1.5 w-10">
                       <input
                         type="checkbox"
                         checked={selected.has(creator.id)}
@@ -198,7 +198,7 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                         aria-label={`Select ${creator.displayName}`}
                       />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-full bg-primary/30 flex items-center justify-center shrink-0">
                           <span className="text-xs font-bold text-primary">
@@ -211,8 +211,8 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">{creator.user.email}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs">{creator.user.email}</td>
+                    <td className="px-3 py-1.5">
                       <div className="flex flex-col gap-1">
                         {creator.isSuspended && (
                           <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400 w-fit">
@@ -234,13 +234,13 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-foreground">{creator._count.products}</td>
-                    <td className="px-4 py-3 text-foreground text-right">{creator.orderCount}</td>
-                    <td className="px-4 py-3 text-foreground text-right">${(creator.revenue / 100).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-muted-foreground text-xs">
+                    <td className="px-3 py-1.5 text-foreground">{creator._count.products}</td>
+                    <td className="px-3 py-1.5 text-foreground text-right">{creator.orderCount}</td>
+                    <td className="px-3 py-1.5 text-foreground text-right">${(creator.revenue / 100).toFixed(2)}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs">
                       {new Date(creator.user.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5">
                       <div className="flex flex-col gap-2">
                         <CreatorActions
                           creatorId={creator.id}

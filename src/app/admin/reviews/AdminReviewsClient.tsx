@@ -167,17 +167,17 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border bg-surface text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-3 py-3">Product</th>
-                  <th className="px-3 py-3">Creator</th>
-                  <th className="px-3 py-3">Member</th>
-                  <th className="px-3 py-3">Rating</th>
-                  <th className="px-3 py-3 hidden lg:table-cell">Review</th>
-                  <th className="px-3 py-3">Date / Time</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-right">Actions</th>
+                  <th className="px-3 py-1.5">Product</th>
+                  <th className="px-3 py-1.5">Creator</th>
+                  <th className="px-3 py-1.5">Member</th>
+                  <th className="px-3 py-1.5">Rating</th>
+                  <th className="px-3 py-1.5 hidden lg:table-cell">Review</th>
+                  <th className="px-3 py-1.5">Date / Time</th>
+                  <th className="px-3 py-1.5">Status</th>
+                  <th className="px-3 py-1.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-card">
@@ -186,28 +186,28 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
                 )}
                 {rRows.map(r => (
                   <tr key={r.id} className={r.isVisible ? '' : 'opacity-60'}>
-                    <td className="px-3 py-3 max-w-[140px]">
+                    <td className="px-3 py-1.5 max-w-[140px]">
                       <a href={`/product/${r.productId}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1 truncate">
                         <span className="truncate">{r.productTitle}</span>
                         <ExternalLink className="size-3 shrink-0" />
                       </a>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground text-xs whitespace-nowrap">{r.creatorName}</td>
-                    <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{r.buyerName}</td>
-                    <td className="px-3 py-3 whitespace-nowrap">
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs whitespace-nowrap">{r.creatorName}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{r.buyerName}</td>
+                    <td className="px-3 py-1.5 whitespace-nowrap">
                       <span className="text-yellow-400">{'★'.repeat(r.rating)}</span><span className="text-border">{'★'.repeat(5 - r.rating)}</span>
                     </td>
-                    <td className="hidden lg:table-cell px-3 py-3 text-muted-foreground max-w-[200px]">
+                    <td className="hidden lg:table-cell px-3 py-1.5 text-muted-foreground max-w-[200px]">
                       {r.title && <p className="text-xs font-medium text-foreground">{trunc(r.title, 60)}</p>}
                       <p className="text-xs">{trunc(r.body)}</p>
                     </td>
-                    <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">{dt(r.createdAt)}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground whitespace-nowrap">{dt(r.createdAt)}</td>
+                    <td className="px-3 py-1.5">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.isVisible ? 'bg-success/10 text-success' : 'bg-border text-muted-foreground'}`}>
                         {r.isVisible ? 'Visible' : 'Hidden'}
                       </span>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-1.5">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => toggleVisible(r.id, r.isVisible)} disabled={loading === r.id} className="p-1 rounded hover:bg-border/40 text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors" aria-label={r.isVisible ? 'Hide' : 'Show'}>
                           {r.isVisible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -245,14 +245,14 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border bg-surface text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <th className="px-3 py-3">Creator</th>
-                  <th className="px-3 py-3">Member</th>
-                  <th className="px-3 py-3">Message</th>
-                  <th className="px-3 py-3">Date / Time</th>
-                  <th className="px-3 py-3 text-right">Actions</th>
+                  <th className="px-3 py-1.5">Creator</th>
+                  <th className="px-3 py-1.5">Member</th>
+                  <th className="px-3 py-1.5">Message</th>
+                  <th className="px-3 py-1.5">Date / Time</th>
+                  <th className="px-3 py-1.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-card">
@@ -261,7 +261,7 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
                 )}
                 {mRows.map(m => (
                   <tr key={m.id}>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-1.5">
                       {m.creatorUsername ? (
                         <a href={`/creator/${m.creatorUsername}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline flex items-center gap-1 whitespace-nowrap">
                           {m.creatorName} <ExternalLink className="size-3" />
@@ -270,10 +270,10 @@ export function AdminReviewsClient({ initialReviews, initialMessages }: {
                         <span className="text-muted-foreground">{m.creatorName}</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">{m.senderName}</td>
-                    <td className="px-3 py-3 text-muted-foreground max-w-[300px]"><p className="truncate">{trunc(m.content)}</p></td>
-                    <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">{dt(m.createdAt)}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-3 py-1.5 text-muted-foreground whitespace-nowrap">{m.senderName}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground max-w-[300px]"><p className="truncate">{trunc(m.content)}</p></td>
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground whitespace-nowrap">{dt(m.createdAt)}</td>
+                    <td className="px-3 py-1.5">
                       <div className="flex justify-end">
                         <button onClick={() => setConfirmDelete({ id: m.id, type: 'message' })} disabled={loading === m.id} className="p-1 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive disabled:opacity-30 transition-colors">
                           <Trash2 className="size-4" />

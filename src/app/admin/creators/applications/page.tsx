@@ -155,15 +155,15 @@ export default async function CreatorApplicationsPage({
       {/* Table */}
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-background/40">
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Username</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Submitted</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Name</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Username</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Submitted</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Status</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -172,7 +172,7 @@ export default async function CreatorApplicationsPage({
                   key={app.id}
                   className="border-b border-border last:border-0 hover:bg-background/30 transition-colors"
                 >
-                  <td className="py-3 px-4">
+                  <td className="py-1.5 px-3">
                     <div>
                       <p className="text-foreground font-medium">
                         {app.displayName || app.user.name || '—'}
@@ -182,15 +182,15 @@ export default async function CreatorApplicationsPage({
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground text-xs">{app.user.email}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-1.5 px-3 text-muted-foreground text-xs">{app.user.email}</td>
+                  <td className="py-1.5 px-3">
                     {app.username ? (
                       <span className="text-muted-foreground font-mono text-xs">@{app.username}</span>
                     ) : (
                       <span className="text-muted-foreground/40 text-xs">—</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground text-xs">
+                  <td className="py-1.5 px-3 text-muted-foreground text-xs">
                     {app.submittedAt
                       ? new Date(app.submittedAt).toLocaleDateString('en-US', {
                           year: 'numeric',
@@ -199,10 +199,10 @@ export default async function CreatorApplicationsPage({
                         })
                       : '—'}
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-1.5 px-3">
                     <StatusBadge status={app.status} />
                   </td>
-                  <td className="py-3 px-4">
+                  <td className="py-1.5 px-3">
                     <Link
                       href={`/admin/creators/applications/${app.id}`}
                       className="px-2 py-0.5 rounded text-xs font-medium text-primary hover:bg-primary/10 transition-colors"

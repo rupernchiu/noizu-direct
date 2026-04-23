@@ -215,24 +215,24 @@ export function AgreementDetailClient({
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="border-b border-border bg-background/40">
-                  <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Creator</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Member Since</th>
-                  <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
+                  <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Creator</th>
+                  <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
+                  <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Member Since</th>
+                  <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {unsignedCreators.map((u) => (
                   <tr key={u.id} className="border-b border-border last:border-0 hover:bg-background/30 transition-colors">
-                    <td className="py-3 px-4 text-foreground font-medium">{u.name}</td>
-                    <td className="py-3 px-4 text-muted-foreground text-xs">{u.email}</td>
-                    <td className="py-3 px-4 text-muted-foreground text-xs">
+                    <td className="py-1.5 px-3 text-foreground font-medium">{u.name}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground text-xs">{u.email}</td>
+                    <td className="py-1.5 px-3 text-muted-foreground text-xs">
                       {new Date(u.memberSince).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => forceSign(u.id)}
@@ -270,29 +270,29 @@ export function AgreementDetailClient({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-background/40">
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Creator</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed Name</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Version</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed At</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">IP Address</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Creator</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Email</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed Name</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Version</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed At</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">IP Address</th>
               </tr>
             </thead>
             <tbody>
               {signingRecords.map((r) => (
                 <tr key={r.id} className="border-b border-border last:border-0 hover:bg-background/30 transition-colors">
-                  <td className="py-3 px-4 text-foreground font-medium">{r.userName}</td>
-                  <td className="py-3 px-4 text-muted-foreground text-xs">{r.userEmail}</td>
-                  <td className="py-3 px-4 text-foreground">{r.signedName}</td>
-                  <td className="py-3 px-4">
+                  <td className="py-1.5 px-3 text-foreground font-medium">{r.userName}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground text-xs">{r.userEmail}</td>
+                  <td className="py-1.5 px-3 text-foreground">{r.signedName}</td>
+                  <td className="py-1.5 px-3">
                     <span className="px-2 py-0.5 rounded text-xs font-medium bg-border text-muted-foreground">
                       v{r.agreementVersion}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground text-xs">
+                  <td className="py-1.5 px-3 text-muted-foreground text-xs">
                     {new Date(r.agreedAt).toLocaleString('en-US', {
                       year: 'numeric',
                       month: 'short',
@@ -301,7 +301,7 @@ export function AgreementDetailClient({
                       minute: '2-digit',
                     })}
                   </td>
-                  <td className="py-3 px-4 text-muted-foreground font-mono text-xs">{r.ipAddress}</td>
+                  <td className="py-1.5 px-3 text-muted-foreground font-mono text-xs">{r.ipAddress}</td>
                 </tr>
               ))}
               {signingRecords.length === 0 && (

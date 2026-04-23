@@ -186,40 +186,40 @@ export default function FraudPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border bg-muted/10">
-                <th className="px-4 py-3 text-left font-medium">Type</th>
-                <th className="px-4 py-3 text-left font-medium">Severity</th>
-                <th className="px-4 py-3 text-left font-medium">Description</th>
-                <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Linked</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">Date</th>
-                <th className="px-4 py-3 font-medium"></th>
+                <th className="px-3 py-1.5 text-left font-medium">Type</th>
+                <th className="px-3 py-1.5 text-left font-medium">Severity</th>
+                <th className="px-3 py-1.5 text-left font-medium">Description</th>
+                <th className="px-3 py-1.5 text-left font-medium hidden md:table-cell">Linked</th>
+                <th className="px-3 py-1.5 text-left font-medium">Status</th>
+                <th className="px-3 py-1.5 text-left font-medium hidden sm:table-cell">Date</th>
+                <th className="px-3 py-1.5 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {flags.map(f => (
                 <tr key={f.id} className="border-b border-border last:border-0 hover:bg-muted/10">
-                  <td className="px-4 py-3 text-xs font-medium text-muted-foreground">{f.type.replace(/_/g, ' ')}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-xs font-medium text-muted-foreground">{f.type.replace(/_/g, ' ')}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${severityStyle[f.severity] ?? ''}`}>
                       {f.severity}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-foreground truncate max-w-[200px]">{f.description}</td>
-                  <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">
+                  <td className="px-3 py-1.5 text-foreground truncate max-w-[200px]">{f.description}</td>
+                  <td className="px-3 py-1.5 hidden md:table-cell text-xs text-muted-foreground">
                     {f.orderId ? `Order: ${f.orderId.slice(-8).toUpperCase()}` : f.userId ? `User: ${f.userId.slice(-8).toUpperCase()}` : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle[f.status] ?? ''}`}>
                       {f.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
+                  <td className="px-3 py-1.5 hidden sm:table-cell text-xs text-muted-foreground">
                     {new Date(f.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <button
                       onClick={() => { setSelected(f); setReviewNote(f.reviewNote ?? '') }}
                       className="text-xs text-primary hover:underline"

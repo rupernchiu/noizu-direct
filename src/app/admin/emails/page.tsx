@@ -124,32 +124,32 @@ export default async function AdminEmailsPage({
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">To</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Subject</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Type</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Resend ID</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Date</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">To</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Subject</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Type</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Resend ID</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-foreground text-xs max-w-[160px] truncate">
+                  <td className="px-3 py-1.5 text-foreground text-xs max-w-[160px] truncate">
                     {log.to}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs max-w-[200px] truncate">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs max-w-[200px] truncate">
                     {log.subject}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-3 py-1.5 text-xs">
                     <span className="px-2 py-0.5 rounded bg-border text-muted-foreground font-medium">
                       {log.type}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-3 py-1.5 text-xs">
                     {log.status === 'sent' ? (
                       <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-400 font-medium">
                         sent
@@ -160,10 +160,10 @@ export default async function AdminEmailsPage({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs font-mono">
                     {log.resendId ? log.resendId.slice(0, 16) + '…' : <span className="text-muted-foreground/40">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs whitespace-nowrap">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs whitespace-nowrap">
                     {new Date(log.createdAt).toLocaleDateString()}
                   </td>
                 </tr>

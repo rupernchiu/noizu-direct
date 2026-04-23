@@ -224,19 +224,19 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
           {filteredRows.length === 0 ? (
             <div className="px-5 py-10 text-center text-sm text-muted-foreground">No creators match this filter.</div>
           ) : (
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="text-xs text-muted-foreground border-b border-border">
-                  <th className="px-4 py-3 text-left w-10">
+                  <th className="px-3 py-1.5 text-left w-10">
                     <input type="checkbox" checked={selected.size === pageRows.length && pageRows.length > 0} onChange={toggleSelectAll} className="rounded border-border" />
                   </th>
-                  <th className="px-4 py-3 text-left">Creator</th>
-                  <th className="px-4 py-3 text-left">Plan</th>
-                  <th className="px-4 py-3 text-left">Used</th>
-                  <th className="px-4 py-3 text-left">Quota</th>
-                  <th className="px-4 py-3 text-left">Usage</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-left">Actions</th>
+                  <th className="px-3 py-1.5 text-left">Creator</th>
+                  <th className="px-3 py-1.5 text-left">Plan</th>
+                  <th className="px-3 py-1.5 text-left">Used</th>
+                  <th className="px-3 py-1.5 text-left">Quota</th>
+                  <th className="px-3 py-1.5 text-left">Usage</th>
+                  <th className="px-3 py-1.5 text-left">Status</th>
+                  <th className="px-3 py-1.5 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -244,17 +244,17 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
                   const sc = STATUS_CONFIG[row.status]
                   return (
                     <tr key={row.id} className="hover:bg-border/20">
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleRow(row.id)} className="rounded border-border" />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <div className="font-medium text-foreground">{row.name}</div>
                         <div className="text-xs text-muted-foreground">{row.email}</div>
                       </td>
-                      <td className="px-4 py-3"><span className="text-xs px-2 py-1 rounded-full border border-border text-muted-foreground">FREE</span></td>
-                      <td className="px-4 py-3 text-muted-foreground">{fmtBytes(row.usedBytes)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{fmtBytes(row.quotaBytes)}</td>
-                      <td className="px-4 py-3 w-36">
+                      <td className="px-3 py-1.5"><span className="text-xs px-2 py-1 rounded-full border border-border text-muted-foreground">FREE</span></td>
+                      <td className="px-3 py-1.5 text-muted-foreground">{fmtBytes(row.usedBytes)}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground">{fmtBytes(row.quotaBytes)}</td>
+                      <td className="px-3 py-1.5 w-36">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
                             <div
@@ -265,10 +265,10 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
                           <span className="text-xs text-muted-foreground w-10 text-right">{row.pct}%</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <span className={`text-xs font-medium ${sc.color}`}>{sc.icon} {sc.label}</span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <div className="flex gap-1 flex-wrap">
                           <button className="text-xs px-2 py-1 rounded border border-border text-foreground hover:bg-card whitespace-nowrap">+1GB</button>
                           <button className="text-xs px-2 py-1 rounded border border-border text-foreground hover:bg-card">Adjust</button>

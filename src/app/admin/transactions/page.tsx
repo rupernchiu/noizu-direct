@@ -152,34 +152,34 @@ export default async function AdminTransactionsPage({
       {/* Table */}
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Order ID</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Buyer</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Product</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Gross</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Fee</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Creator Net</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Date</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Order ID</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Buyer</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Product</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Gross</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Fee</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Creator Net</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {transactions.map((tx) => (
                 <tr key={tx.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{tx.orderId.slice(0, 8)}…</td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{tx.order.buyer.name}</td>
-                  <td className="px-4 py-3 text-foreground max-w-xs truncate">{tx.order.product.title}</td>
-                  <td className="px-4 py-3 text-foreground text-right">{usd(tx.grossAmountUsd)}</td>
-                  <td className="px-4 py-3 text-red-400 text-right">-{usd(tx.processingFee)}</td>
-                  <td className="px-4 py-3 text-green-400 text-right">{usd(tx.creatorAmount)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-muted-foreground font-mono text-xs">{tx.orderId.slice(0, 8)}…</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{tx.order.buyer.name}</td>
+                  <td className="px-3 py-1.5 text-foreground max-w-xs truncate">{tx.order.product.title}</td>
+                  <td className="px-3 py-1.5 text-foreground text-right">{usd(tx.grossAmountUsd)}</td>
+                  <td className="px-3 py-1.5 text-red-400 text-right">-{usd(tx.processingFee)}</td>
+                  <td className="px-3 py-1.5 text-green-400 text-right">{usd(tx.creatorAmount)}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[tx.status] ?? 'bg-border text-muted-foreground'}`}>
                       {tx.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{new Date(tx.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
               {transactions.length === 0 && (

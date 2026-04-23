@@ -102,26 +102,26 @@ export default async function AdminPayoutsPage({
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Creator</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Amount</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Method</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Account</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Requested</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Creator</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Amount</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Method</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Account</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Requested</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {payouts.map((payout) => (
                 <tr key={payout.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-foreground">{payout.creator.name ?? payout.creator.email}</td>
-                  <td className="px-4 py-3 text-foreground text-right">
+                  <td className="px-3 py-1.5 text-foreground">{payout.creator.name ?? payout.creator.email}</td>
+                  <td className="px-3 py-1.5 text-foreground text-right">
                     RM {(payout.amountUsd / 100).toFixed(2)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[payout.status] ?? 'bg-border text-muted-foreground'}`}>
                       {payout.status}
                     </span>
@@ -134,14 +134,14 @@ export default async function AdminPayoutsPage({
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     {payout.payoutMethod === 'paypal' ? (
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/20 text-blue-400">PayPal</span>
                     ) : (
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">Bank Transfer</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs font-mono">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs font-mono">
                     {formatAccountDetails(payout.accountDetails)}
                     {payout.airwallexTransferId && (
                       <p className="text-xs text-muted-foreground mt-0.5 font-mono">
@@ -149,10 +149,10 @@ export default async function AdminPayoutsPage({
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">
                     {new Date(payout.requestedAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <PayoutActions
                       payoutId={payout.id}
                       status={payout.status}

@@ -75,53 +75,53 @@ export default async function AdminProductsPage({
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Title</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Creator</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Type</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Price</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Category</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Created</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Trending</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Boost</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Rating</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Reviews</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Title</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Creator</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Type</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Price</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Category</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Created</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Trending</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Boost</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Rating</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Reviews</th>
+                <th className="text-left px-3 py-2 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.map((product) => (
                 <tr key={product.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-foreground font-medium max-w-xs truncate">{product.title}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{product.creator.displayName}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="px-3 py-1.5 text-foreground font-medium max-w-xs truncate">{product.title}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{product.creator.displayName}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">
                     <span className="px-2 py-0.5 rounded text-xs bg-border">{product.type}</span>
                   </td>
-                  <td className="px-4 py-3 text-foreground">${(product.price / 100).toFixed(2)}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{product.category}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-foreground">${(product.price / 100).toFixed(2)}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{product.category}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${product.isActive ? 'bg-green-500/20 text-green-400' : 'bg-border text-muted-foreground'}`}>
                       {product.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(product.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3 text-foreground text-xs">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{new Date(product.createdAt).toLocaleDateString()}</td>
+                  <td className="px-3 py-1.5 text-foreground text-xs">
                     {product.trendingScore.toFixed(2)}
                     {product.isTrendingSuppressed && <span className="ml-1 text-[10px] text-yellow-500">suppressed</span>}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{product.manualBoost}</td>
-                  <td className="px-4 py-3 text-foreground text-xs">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{product.manualBoost}</td>
+                  <td className="px-3 py-1.5 text-foreground text-xs">
                     {product.averageRating > 0 ? `${product.averageRating.toFixed(1)} ★` : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs">
+                  <td className="px-3 py-1.5 text-xs">
                     <a href={`/admin/reviews?productId=${product.id}`} className="text-primary hover:underline">
                       {product.reviewCount > 0 ? `${product.reviewCount} review${product.reviewCount !== 1 ? 's' : ''}` : '—'}
                     </a>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <ProductAdminActions
                       productId={product.id}
                       isActive={product.isActive}

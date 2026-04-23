@@ -125,16 +125,16 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-background/40">
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Type</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Title</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Version</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Last Published</th>
-                <th className="text-left px-4 py-3 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Type</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Title</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Version</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Status</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Signed</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Last Published</th>
+                <th className="text-left px-3 py-1.5 text-xs uppercase text-muted-foreground font-semibold tracking-wide">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -142,16 +142,16 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                 const pct = totalCreators > 0 ? Math.round((t.signedCount / totalCreators) * 100) : 0
                 return (
                   <tr key={t.id} className="border-b border-border last:border-0 hover:bg-background/30 transition-colors">
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <span className="font-mono text-xs text-muted-foreground">{t.type}</span>
                     </td>
-                    <td className="py-3 px-4 text-foreground font-medium max-w-xs truncate">{t.title}</td>
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3 text-foreground font-medium max-w-xs truncate">{t.title}</td>
+                    <td className="py-1.5 px-3">
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-border text-muted-foreground">
                         v{t.version}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       {t.isActive ? (
                         <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">
                           Active
@@ -162,7 +162,7 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <div className="flex items-center gap-2 min-w-[140px]">
                         <span className="text-foreground text-xs whitespace-nowrap">
                           {t.signedCount}/{totalCreators} ({pct}%)
@@ -175,7 +175,7 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-muted-foreground text-xs">
+                    <td className="py-1.5 px-3 text-muted-foreground text-xs">
                       {t.publishedAt
                         ? new Date(t.publishedAt).toLocaleDateString('en-US', {
                             year: 'numeric',
@@ -184,7 +184,7 @@ export function AdminAgreementsClient({ templates, totalCreators }: Props) {
                           })
                         : '—'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-1.5 px-3">
                       <div className="flex items-center gap-2">
                         <Link
                           href={`/admin/agreements/${t.id}`}

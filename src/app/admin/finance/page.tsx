@@ -141,26 +141,26 @@ export default function AdminFinancePage() {
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="text-xs text-muted-foreground border-b border-border bg-muted/20">
-                  <th className="px-5 py-3 text-left font-medium">Currency</th>
-                  <th className="px-5 py-3 text-right font-medium">Available</th>
-                  <th className="px-5 py-3 text-right font-medium">Pending</th>
-                  <th className="px-5 py-3 text-right font-medium">Total</th>
+                  <th className="px-3 py-1.5 text-left font-medium">Currency</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Available</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Pending</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {airwallexBalances.map(b => (
                   <tr key={b.currency} className="border-b border-border last:border-0 hover:bg-muted/10">
-                    <td className="px-5 py-3 font-semibold text-foreground">{b.currency}</td>
-                    <td className="px-5 py-3 text-right text-green-400 font-medium">
+                    <td className="px-3 py-1.5 font-semibold text-foreground">{b.currency}</td>
+                    <td className="px-3 py-1.5 text-right text-green-400 font-medium">
                       {b.available_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="px-5 py-3 text-right text-yellow-400">
+                    <td className="px-3 py-1.5 text-right text-yellow-400">
                       {b.pending_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
-                    <td className="px-5 py-3 text-right text-foreground font-semibold">
+                    <td className="px-3 py-1.5 text-right text-foreground font-semibold">
                       {b.total_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -176,22 +176,22 @@ export default function AdminFinancePage() {
         <div>
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Monthly Revenue (Last 12 Months)</h2>
           <div className="rounded-xl border border-border bg-card overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
               <thead>
                 <tr className="text-xs text-muted-foreground border-b border-border bg-muted/20">
-                  <th className="px-5 py-3 text-left font-medium">Month</th>
-                  <th className="px-5 py-3 text-right font-medium">Gross</th>
-                  <th className="px-5 py-3 text-right font-medium">Platform Fees</th>
-                  <th className="px-5 py-3 text-right font-medium">Creator Net</th>
+                  <th className="px-3 py-1.5 text-left font-medium">Month</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Gross</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Platform Fees</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Creator Net</th>
                 </tr>
               </thead>
               <tbody>
                 {monthlyRevenue.map(m => (
                   <tr key={m.month} className="border-b border-border last:border-0 hover:bg-muted/10">
-                    <td className="px-5 py-3 text-muted-foreground">{m.month}</td>
-                    <td className="px-5 py-3 text-right text-foreground">{usd(m.gross)}</td>
-                    <td className="px-5 py-3 text-right text-green-400">{usd(m.fees)}</td>
-                    <td className="px-5 py-3 text-right text-primary">{usd(m.net)}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{m.month}</td>
+                    <td className="px-3 py-1.5 text-right text-foreground">{usd(m.gross)}</td>
+                    <td className="px-3 py-1.5 text-right text-green-400">{usd(m.fees)}</td>
+                    <td className="px-3 py-1.5 text-right text-primary">{usd(m.net)}</td>
                   </tr>
                 ))}
               </tbody>

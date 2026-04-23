@@ -34,15 +34,15 @@ export default async function StaffPermissionsPage() {
 
       <div className="bg-surface border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border bg-background/40">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Component</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Display Name</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Granted To</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Component</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Action</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Display Name</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Description</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Granted To</th>
+                <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -53,7 +53,7 @@ export default async function StaffPermissionsPage() {
                       key={perm.id}
                       className="border-b border-border last:border-0 hover:bg-background/30 transition-colors"
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         {i === 0 ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary">
                             {component}
@@ -62,13 +62,13 @@ export default async function StaffPermissionsPage() {
                           <span className="text-muted-foreground/30 text-xs">↳</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5">
                         <code className="text-xs font-mono text-foreground/80">{perm.action}</code>
                       </td>
-                      <td className="px-4 py-3 text-sm text-foreground">{perm.displayName}</td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground max-w-xs">{perm.description ?? '—'}</td>
-                      <td className="px-4 py-3 text-sm text-foreground font-medium">{perm._count.userGrants}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-1.5 text-sm text-foreground">{perm.displayName}</td>
+                      <td className="px-3 py-1.5 text-xs text-muted-foreground max-w-xs whitespace-normal">{perm.description ?? '—'}</td>
+                      <td className="px-3 py-1.5 text-sm text-foreground font-medium">{perm._count.userGrants}</td>
+                      <td className="px-3 py-1.5">
                         {perm.isActive ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-green-500/15 text-green-400">Active</span>
                         ) : (

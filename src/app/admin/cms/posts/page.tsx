@@ -70,35 +70,35 @@ export default async function AdminPostsPage({
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Title</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Author</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-right px-4 py-3 text-muted-foreground font-medium">Views</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Published</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Title</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Author</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-right px-3 py-1.5 text-muted-foreground font-medium">Views</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Published</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {posts.map((post) => (
                 <tr key={post.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <p className="text-foreground font-medium truncate max-w-xs">{post.title}</p>
                     <p className="text-xs text-muted-foreground font-mono">/blog/{post.slug}</p>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{post.author.name}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{post.author.name}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[post.status] ?? 'bg-border text-muted-foreground'}`}>
                       {post.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground text-xs">{post.viewCount}</td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                  <td className="px-3 py-1.5 text-right text-muted-foreground text-xs">{post.viewCount}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">
                     {post.publishedAt ? new Date(post.publishedAt).toLocaleDateString() : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <div className="flex items-center gap-3">
                       <Link href={`/admin/cms/posts/${post.id}/edit`} className="text-xs text-primary hover:opacity-70">
                         Edit

@@ -98,17 +98,17 @@ export default function ChargebacksPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="text-xs text-muted-foreground border-b border-border bg-muted/10">
-                <th className="px-4 py-3 text-left font-medium">Dispute ID</th>
-                <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Order / Product</th>
-                <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">Buyer</th>
-                <th className="px-4 py-3 text-right font-medium">Amount</th>
-                <th className="px-4 py-3 text-left font-medium">Reason</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-                <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Deadline</th>
-                <th className="px-4 py-3 font-medium"></th>
+                <th className="px-3 py-1.5 text-left font-medium">Dispute ID</th>
+                <th className="px-3 py-1.5 text-left font-medium hidden md:table-cell">Order / Product</th>
+                <th className="px-3 py-1.5 text-left font-medium hidden sm:table-cell">Buyer</th>
+                <th className="px-3 py-1.5 text-right font-medium">Amount</th>
+                <th className="px-3 py-1.5 text-left font-medium">Reason</th>
+                <th className="px-3 py-1.5 text-left font-medium">Status</th>
+                <th className="px-3 py-1.5 text-left font-medium hidden md:table-cell">Deadline</th>
+                <th className="px-3 py-1.5 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -116,29 +116,29 @@ export default function ChargebacksPage() {
                 const days = daysUntil(cb.evidenceDeadline)
                 return (
                   <tr key={cb.id} className="border-b border-border last:border-0 hover:bg-muted/10">
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{cb.airwallexDisputeId.slice(-10).toUpperCase()}</td>
-                    <td className="px-4 py-3 hidden md:table-cell">
+                    <td className="px-3 py-1.5 font-mono text-xs text-muted-foreground">{cb.airwallexDisputeId.slice(-10).toUpperCase()}</td>
+                    <td className="px-3 py-1.5 hidden md:table-cell">
                       <p className="text-foreground truncate max-w-[160px]">{cb.order.product?.title ?? '—'}</p>
                       <p className="text-xs text-muted-foreground">{cb.order.id.slice(-8).toUpperCase()}</p>
                     </td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
+                    <td className="px-3 py-1.5 hidden sm:table-cell text-muted-foreground text-xs">
                       {cb.order.buyer?.name ?? cb.order.buyer?.email ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-foreground">${(cb.amountUsd / 100).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{cb.reason.replace(/_/g, ' ')}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5 text-right font-semibold text-foreground">${(cb.amountUsd / 100).toFixed(2)}</td>
+                    <td className="px-3 py-1.5 text-xs text-muted-foreground">{cb.reason.replace(/_/g, ' ')}</td>
+                    <td className="px-3 py-1.5">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle[cb.status] ?? 'bg-muted text-muted-foreground'}`}>
                         {cb.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs">
+                    <td className="px-3 py-1.5 hidden md:table-cell text-xs">
                       {days !== null ? (
                         <span className={days <= 3 ? 'text-red-400 font-semibold' : days <= 7 ? 'text-yellow-400' : 'text-muted-foreground'}>
                           {days <= 0 ? 'Expired' : `${days}d left`}
                         </span>
                       ) : <span className="text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-1.5">
                       <button
                         onClick={() => { setSelected(cb); setNotes(cb.adminNotes ?? '') }}
                         className="text-xs text-primary hover:underline"

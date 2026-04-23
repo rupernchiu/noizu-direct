@@ -85,30 +85,30 @@ export default async function AdminOverviewPage() {
           <Link href="/admin/orders" className="text-xs text-primary hover:underline">View all</Link>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Order ID</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Buyer</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Product</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Amount</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Date</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Order ID</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Buyer</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Product</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Amount</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {recentOrders.map((order) => (
                 <tr key={order.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-2 text-muted-foreground font-mono text-xs">{order.id.slice(0, 8)}...</td>
-                  <td className="px-4 py-2 text-foreground">{order.buyer.name}</td>
-                  <td className="px-4 py-2 text-foreground">{order.product.title}</td>
-                  <td className="px-4 py-2 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-1.5 text-muted-foreground font-mono text-xs">{order.id.slice(0, 8)}...</td>
+                  <td className="px-3 py-1.5 text-foreground">{order.buyer.name}</td>
+                  <td className="px-3 py-1.5 text-foreground">{order.product.title}</td>
+                  <td className="px-3 py-1.5 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[order.status] ?? 'bg-border text-muted-foreground'}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
               {recentOrders.length === 0 && (
@@ -132,22 +132,22 @@ export default async function AdminOverviewPage() {
           <TrendingRecalcButton />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Rank</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Title</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Score</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Last Calculated</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Rank</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Title</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Score</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Last Calculated</th>
               </tr>
             </thead>
             <tbody>
               {topTrendingProducts.map((product, i) => (
                 <tr key={product.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-2 text-muted-foreground font-mono text-xs">#{i + 1}</td>
-                  <td className="px-4 py-2 text-foreground">{product.title}</td>
-                  <td className="px-4 py-2 text-foreground font-mono text-xs">{product.trendingScore.toFixed(2)}</td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">
+                  <td className="px-3 py-1.5 text-muted-foreground font-mono text-xs">#{i + 1}</td>
+                  <td className="px-3 py-1.5 text-foreground">{product.title}</td>
+                  <td className="px-3 py-1.5 text-foreground font-mono text-xs">{product.trendingScore.toFixed(2)}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">
                     {product.trendingScoreRecord?.calculatedAt
                       ? new Date(product.trendingScoreRecord.calculatedAt).toLocaleString()
                       : '—'}
@@ -174,24 +174,24 @@ export default async function AdminOverviewPage() {
           <RecommendationsRecomputeButton />
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Source</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Recommended</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Score</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Shared Buyers</th>
-                <th className="text-left px-4 py-2 text-muted-foreground font-medium">Computed</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Source</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Recommended</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Score</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Shared Buyers</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Computed</th>
               </tr>
             </thead>
             <tbody>
               {topRecPairs.map((pair, i) => (
                 <tr key={i} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-2 text-foreground text-xs truncate max-w-[160px]">{pair.sourceProduct.title}</td>
-                  <td className="px-4 py-2 text-foreground text-xs truncate max-w-[160px]">{pair.recommendedProduct.title}</td>
-                  <td className="px-4 py-2 text-foreground font-mono text-xs">{pair.score.toFixed(3)}</td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">{pair.sharedBuyers}</td>
-                  <td className="px-4 py-2 text-muted-foreground text-xs">
+                  <td className="px-3 py-1.5 text-foreground text-xs truncate max-w-[160px]">{pair.sourceProduct.title}</td>
+                  <td className="px-3 py-1.5 text-foreground text-xs truncate max-w-[160px]">{pair.recommendedProduct.title}</td>
+                  <td className="px-3 py-1.5 text-foreground font-mono text-xs">{pair.score.toFixed(3)}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{pair.sharedBuyers}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">
                     {new Date(pair.computedAt).toLocaleDateString()}
                   </td>
                 </tr>

@@ -44,34 +44,34 @@ export default async function AdminPagesPage({
       </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm [&_td]:whitespace-nowrap">
           <thead>
             <tr className="border-b border-border">
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Title</th>
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Slug</th>
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Footer</th>
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Updated</th>
-              <th className="text-left px-4 py-3 text-muted-foreground font-medium">Actions</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Title</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Slug</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Footer</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Updated</th>
+              <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {pages.map((p) => (
               <tr key={p.id} className="border-b border-border last:border-0 hover:bg-surface">
-                <td className="px-4 py-3 text-foreground font-medium">{p.title}</td>
-                <td className="px-4 py-3 text-muted-foreground font-mono text-xs">/{p.slug}</td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1.5 text-foreground font-medium">{p.title}</td>
+                <td className="px-3 py-1.5 text-muted-foreground font-mono text-xs">/{p.slug}</td>
+                <td className="px-3 py-1.5">
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[p.status] ?? 'bg-border text-muted-foreground'}`}>
                     {p.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-muted-foreground text-xs">
+                <td className="px-3 py-1.5 text-muted-foreground text-xs">
                   {p.showInFooter ? `${p.footerColumn ?? ''}` : '—'}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground text-xs">
+                <td className="px-3 py-1.5 text-muted-foreground text-xs">
                   {new Date(p.updatedAt).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-3 py-1.5">
                   <div className="flex items-center gap-3">
                     <Link href={`/admin/cms/pages/${p.id}/edit`} className="text-xs text-primary hover:opacity-70">
                       Edit

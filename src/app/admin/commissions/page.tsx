@@ -113,15 +113,15 @@ export default async function AdminCommissionsPage() {
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-3">Recent requests</h2>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-muted text-left">
               <tr>
-                <th className="p-3 text-muted-foreground font-medium">Title</th>
-                <th className="p-3 text-muted-foreground font-medium">Buyer</th>
-                <th className="p-3 text-muted-foreground font-medium">Creator</th>
-                <th className="p-3 text-muted-foreground font-medium">Status</th>
-                <th className="p-3 text-muted-foreground font-medium">Expires</th>
-                <th className="p-3"></th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Title</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Buyer</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Creator</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Expires</th>
+                <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -130,12 +130,12 @@ export default async function AdminCommissionsPage() {
               )}
               {recentRequests.map(r => (
                 <tr key={r.id} className="border-t border-border">
-                  <td className="p-3 text-foreground">{r.title}</td>
-                  <td className="p-3 text-muted-foreground">{r.buyer.name ?? r.buyer.email}</td>
-                  <td className="p-3 text-muted-foreground">{r.creator.user.name ?? r.creator.username}</td>
-                  <td className="p-3"><span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{r.status}</span></td>
-                  <td className="p-3 text-muted-foreground">{r.expiresAt.toISOString().slice(0, 10)}</td>
-                  <td className="p-3 text-right">
+                  <td className="px-3 py-1.5 text-foreground">{r.title}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{r.buyer.name ?? r.buyer.email}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{r.creator.user.name ?? r.creator.username}</td>
+                  <td className="px-3 py-1.5"><span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{r.status}</span></td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{r.expiresAt.toISOString().slice(0, 10)}</td>
+                  <td className="px-3 py-1.5 text-right">
                     <Link href={`/admin/commissions/requests/${r.id}`} className="text-primary hover:underline">View</Link>
                   </td>
                 </tr>
@@ -148,15 +148,15 @@ export default async function AdminCommissionsPage() {
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-3">Active quotes</h2>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-muted text-left">
               <tr>
-                <th className="p-3 text-muted-foreground font-medium">Title</th>
-                <th className="p-3 text-muted-foreground font-medium">Creator → Buyer</th>
-                <th className="p-3 text-muted-foreground font-medium">Amount</th>
-                <th className="p-3 text-muted-foreground font-medium">Type</th>
-                <th className="p-3 text-muted-foreground font-medium">Status</th>
-                <th className="p-3"></th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Title</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Creator → Buyer</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Amount</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Type</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -165,14 +165,14 @@ export default async function AdminCommissionsPage() {
               )}
               {activeQuotes.map(q => (
                 <tr key={q.id} className="border-t border-border">
-                  <td className="p-3 text-foreground">{q.title}</td>
-                  <td className="p-3 text-muted-foreground">
+                  <td className="px-3 py-1.5 text-foreground">{q.title}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">
                     {q.creator.user.name ?? q.creator.username} → {q.buyer.name ?? ''}
                   </td>
-                  <td className="p-3 text-foreground">{fmt(q.amountUsd)}</td>
-                  <td className="p-3 text-muted-foreground">{q.isMilestoneBased ? 'Milestone' : 'Single'}</td>
-                  <td className="p-3"><span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{q.status}</span></td>
-                  <td className="p-3 text-right">
+                  <td className="px-3 py-1.5 text-foreground">{fmt(q.amountUsd)}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground">{q.isMilestoneBased ? 'Milestone' : 'Single'}</td>
+                  <td className="px-3 py-1.5"><span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{q.status}</span></td>
+                  <td className="px-3 py-1.5 text-right">
                     {q.order ? (
                       <Link href={`/admin/orders/${q.order.id}`} className="text-primary hover:underline">Order</Link>
                     ) : (
@@ -189,14 +189,14 @@ export default async function AdminCommissionsPage() {
       <section>
         <h2 className="text-lg font-semibold text-foreground mb-3">Milestone-based orders in progress</h2>
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead className="bg-muted text-left">
               <tr>
-                <th className="p-3 text-muted-foreground font-medium">Order</th>
-                <th className="p-3 text-muted-foreground font-medium">Buyer → Creator</th>
-                <th className="p-3 text-muted-foreground font-medium">Amount</th>
-                <th className="p-3 text-muted-foreground font-medium">Progress</th>
-                <th className="p-3"></th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Order</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Buyer → Creator</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Amount</th>
+                <th className="px-3 py-1.5 text-muted-foreground font-medium">Progress</th>
+                <th className="px-3 py-1.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -207,13 +207,13 @@ export default async function AdminCommissionsPage() {
                 const released = o.milestones.filter(m => m.releasedAt).length
                 return (
                   <tr key={o.id} className="border-t border-border">
-                    <td className="p-3 text-foreground">#{o.id.slice(-8).toUpperCase()}</td>
-                    <td className="p-3 text-muted-foreground">{o.buyer.name ?? ''} → {o.creator.name ?? ''}</td>
-                    <td className="p-3 text-foreground">{fmt(o.amountUsd)}</td>
-                    <td className="p-3 text-muted-foreground">
+                    <td className="px-3 py-1.5 text-foreground">#{o.id.slice(-8).toUpperCase()}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">{o.buyer.name ?? ''} → {o.creator.name ?? ''}</td>
+                    <td className="px-3 py-1.5 text-foreground">{fmt(o.amountUsd)}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground">
                       {released} / {o.milestones.length} released
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="px-3 py-1.5 text-right">
                       <Link href={`/admin/orders/${o.id}`} className="text-primary hover:underline">View</Link>
                     </td>
                   </tr>

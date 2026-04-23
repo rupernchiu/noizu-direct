@@ -80,38 +80,38 @@ export default async function AdminOrdersPage({
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">ID</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Buyer</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Product</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Creator</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Amount</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-muted-foreground font-medium">Date</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">ID</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Buyer</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Product</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Creator</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Amount</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Date</th>
               </tr>
             </thead>
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id} className="border-b border-border last:border-0 hover:bg-surface">
-                  <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{order.id.slice(0, 8)}…</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-muted-foreground font-mono text-xs">{order.id.slice(0, 8)}…</td>
+                  <td className="px-3 py-1.5">
                     <div className="text-foreground">{order.buyer?.name ?? '—'}</div>
                     <div className="text-muted-foreground text-xs">{order.buyer?.email ?? '—'}</div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5">
                     <div className="text-foreground max-w-xs truncate">{order.product?.title ?? '—'}</div>
                     <div className="text-muted-foreground text-xs">{order.product?.type ?? '—'}</div>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{order.creator?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-1.5 text-muted-foreground">{order.creator?.name ?? '—'}</td>
+                  <td className="px-3 py-1.5 text-foreground">${(order.amountUsd / 100).toFixed(2)}</td>
+                  <td className="px-3 py-1.5">
                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[order.status] ?? 'bg-border text-muted-foreground'}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
+                  <td className="px-3 py-1.5 text-muted-foreground text-xs">{new Date(order.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
               {orders.length === 0 && (
