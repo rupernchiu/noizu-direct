@@ -1,6 +1,7 @@
 'use client'
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { X, ShoppingCart, Plus, Minus, Trash2, Package } from 'lucide-react'
 import { useCartStore } from '@/lib/cart-store'
 
@@ -10,6 +11,11 @@ function formatPrice(cents: number) {
 
 export function CartDrawer() {
   const { isOpen, closeCart, groups, subtotal, processingFee, total, itemCount, removeItem, updateQuantity, isLoading } = useCartStore()
+  const pathname = usePathname()
+
+  // Safety net: always close drawer on route change so a stray backdrop can't
+  // linger over the new page.
+  useEffect(() => { closeCart() }, [pathname, closeCart])
 
   // Close on Escape
   useEffect(() => {

@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import { Menu, LogOut, LayoutDashboard, Bell, ShoppingCart } from 'lucide-react'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
@@ -94,6 +96,15 @@ export default function Navbar() {
   const user = session?.user as SessionUser | undefined
   const isCreator = ['CREATOR', 'ADMIN'].includes(user?.role ?? '')
   const isAdmin = user?.role === 'ADMIN'
+
+  // Controlled mobile drawer — the Navbar stays mounted across route changes,
+  // so an uncontrolled Sheet can leave its backdrop rendered after a Link is
+  // clicked inside it, giving an unclickable full-screen shield. Close on
+  // pathname change and on any link/button click within the drawer.
+  const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  useEffect(() => { setMobileOpen(false) }, [pathname])
+  const closeMobile = () => setMobileOpen(false)
 
   async function handleSignOut() {
     try {
@@ -202,7 +213,7 @@ export default function Navbar() {
 
           {/* Mobile hamburger — auth only */}
           <div className="md:hidden">
-            <Sheet>
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger
                 className="inline-flex items-center justify-center rounded-lg p-2 hover:bg-border/60 transition-colors outline-none"
                 aria-label="Open menu"
@@ -212,7 +223,7 @@ export default function Navbar() {
               <SheetContent side="right" className="bg-surface border-border w-72">
                 <div className="flex flex-col gap-6 pt-8 px-4">
                   {/* Mobile logo */}
-                  <Link href="/" className="flex items-center">
+                  <Link href="/" onClick={closeMobile} className="flex items-center">
                     <Logo />
                   </Link>
                   {/* Currency selector */}
@@ -224,12 +235,14 @@ export default function Navbar() {
                   <div className="flex flex-col gap-1 border-t border-border pt-4">
                     <Link
                       href="/marketplace"
+                      onClick={closeMobile}
                       className="px-3 py-2.5 text-sm font-medium text-foreground hover:text-secondary hover:bg-border/40 rounded-lg transition-colors"
                     >
                       Marketplace
                     </Link>
                     <Link
                       href="/creators"
+                      onClick={closeMobile}
                       className="px-3 py-2.5 text-sm font-medium text-foreground hover:text-secondary hover:bg-border/40 rounded-lg transition-colors"
                     >
                       Creators
@@ -244,6 +257,7 @@ export default function Navbar() {
                         </span>
                         <Link
                           href={isAdmin ? '/admin' : isCreator ? '/dashboard' : '/account'}
+                          onClick={closeMobile}
                           className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                         >
                           <LayoutDashboard className="size-4" />
@@ -252,6 +266,7 @@ export default function Navbar() {
                         {!isAdmin && (
                           <Link
                             href="/account/notifications"
+                            onClick={closeMobile}
                             className="flex items-center gap-2 text-sm text-foreground hover:text-secondary py-2"
                           >
                             <Bell className="size-4" />
@@ -259,7 +274,7 @@ export default function Navbar() {
                           </Link>
                         )}
                         <button
-                          onClick={() => { void handleSignOut() }}
+                          onClick={() => { closeMobile(); void handleSignOut() }}
                           className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 py-2 text-left"
                         >
                           <LogOut className="size-4" />
@@ -271,13 +286,13 @@ export default function Navbar() {
                         <Button
                           variant="ghost"
                           className="justify-start"
-                          render={<Link href="/login" />}
+                          render={<Link href="/login" onClick={closeMobile} />}
                         >
                           Log In
                         </Button>
                         <Button
                           className="bg-primary hover:bg-primary/90 text-white"
-                          render={<Link href="/register" />}
+                          render={<Link href="/register" onClick={closeMobile} />}
                         >
                           Sign Up
                         </Button>
