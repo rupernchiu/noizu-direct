@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { User, Sliders, Video, Printer, Zap, Tag, ShieldCheck } from 'lucide-react'
+import { User, Sliders, Video, Printer, Zap, Tag, ShieldCheck, FileCheck2 } from 'lucide-react'
 
 export const metadata = { title: 'Settings | noizu.direct' }
 
@@ -13,6 +13,7 @@ const links = [
   { href: '/dashboard/popup',               label: 'Popup',            icon: Zap,         desc: 'Visitor popup & campaign CTA' },
   { href: '/dashboard/discount-codes',      label: 'Discount Codes',   icon: Tag,         desc: 'Promo codes for your store' },
   { href: '/dashboard/verification',        label: 'Verification',     icon: ShieldCheck, desc: 'Identity & payout verification' },
+  { href: '/dashboard/settings/kyc',         label: 'KYC Documents',    icon: FileCheck2,  desc: 'View or replace your identity documents (append-only)' },
 ]
 
 export default async function SettingsIndex() {

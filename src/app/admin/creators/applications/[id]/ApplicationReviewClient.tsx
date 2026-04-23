@@ -1,8 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AccessReasonModal } from '@/components/admin/AccessReasonModal'
+import { fetchPrivateBlobUrl } from '@/lib/private-file-fetch'
+import type { AccessReasonCode } from '@/lib/private-file-audit'
 
 interface ApplicationData {
   id: string
@@ -114,6 +117,54 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
   // Action states
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState('')
+
+  // Private-file viewer — captures access reason, fetches blob, shows it.
+  const [viewerDoc, setViewerDoc] = useState<null | {
+    label: string
+    viewerUrl: string
+  }>(null)
+  const [viewerBlobUrl, setViewerBlobUrl] = useState<string | null>(null)
+  const [viewerLoading, setViewerLoading] = useState(false)
+  const [viewerError, setViewerError] = useState('')
+  const previousBlobUrl = useRef<string | null>(null)
+
+  // Revoke blob URLs when the viewer closes or the component unmounts so we
+  // don't accumulate memory. We keep a ref because viewerBlobUrl is cleared
+  // before we actually call revoke (React may re-render first).
+  useEffect(() => {
+    return () => {
+      if (previousBlobUrl.current) {
+        URL.revokeObjectURL(previousBlobUrl.current)
+        previousBlobUrl.current = null
+      }
+    }
+  }, [])
+
+  function closeViewer() {
+    setViewerDoc(null)
+    setViewerError('')
+    if (viewerBlobUrl) {
+      URL.revokeObjectURL(viewerBlobUrl)
+      if (previousBlobUrl.current === viewerBlobUrl) previousBlobUrl.current = null
+    }
+    setViewerBlobUrl(null)
+  }
+
+  async function handleViewerConfirm(reasonCode: AccessReasonCode, reasonNote: string) {
+    if (!viewerDoc) return
+    setViewerLoading(true)
+    setViewerError('')
+    try {
+      const blobUrl = await fetchPrivateBlobUrl(viewerDoc.viewerUrl, reasonCode, reasonNote)
+      if (previousBlobUrl.current) URL.revokeObjectURL(previousBlobUrl.current)
+      previousBlobUrl.current = blobUrl
+      setViewerBlobUrl(blobUrl)
+    } catch (err) {
+      setViewerError((err as Error).message || 'Could not fetch file')
+    } finally {
+      setViewerLoading(false)
+    }
+  }
 
   // Rejection modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false)
@@ -409,41 +460,29 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
               <p className="text-sm text-muted-foreground">No documents uploaded.</p>
             ) : (
               <>
+                <p className="text-xs text-muted-foreground -mt-1">
+                  Each view is audited. Click a button below to confirm your reason before fetching the file.
+                </p>
                 {application.idFrontImage && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ID Front</p>
-                    <a href={application.idFrontImage} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={application.idFrontImage}
-                        alt="ID Front"
-                        className="w-full rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
-                      />
-                    </a>
-                  </div>
+                  <DocumentReveal
+                    label="ID Front"
+                    viewerUrl={application.idFrontImage}
+                    onOpen={(v) => setViewerDoc(v)}
+                  />
                 )}
                 {application.idBackImage && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">ID Back</p>
-                    <a href={application.idBackImage} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={application.idBackImage}
-                        alt="ID Back"
-                        className="w-full rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
-                      />
-                    </a>
-                  </div>
+                  <DocumentReveal
+                    label="ID Back"
+                    viewerUrl={application.idBackImage}
+                    onOpen={(v) => setViewerDoc(v)}
+                  />
                 )}
                 {application.selfieImage && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selfie with ID</p>
-                    <a href={application.selfieImage} target="_blank" rel="noopener noreferrer">
-                      <img
-                        src={application.selfieImage}
-                        alt="Selfie with ID"
-                        className="w-full rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
-                      />
-                    </a>
-                  </div>
+                  <DocumentReveal
+                    label="Selfie with ID"
+                    viewerUrl={application.selfieImage}
+                    onOpen={(v) => setViewerDoc(v)}
+                  />
                 )}
               </>
             )}
@@ -534,6 +573,74 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
         </div>
       </div>
 
+      {/* Access-reason modal — shown whenever an admin clicks a KYC file */}
+      <AccessReasonModal
+        open={viewerDoc !== null && viewerBlobUrl === null}
+        onClose={closeViewer}
+        onConfirm={handleViewerConfirm}
+        defaultReasonCode="KYC_REVIEW"
+        resourceLabel={viewerDoc?.label}
+      />
+
+      {/* Full-screen blob viewer — rendered after a successful fetch. */}
+      {viewerDoc && viewerBlobUrl && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-5xl flex items-center justify-between py-3 text-white">
+            <p className="text-sm font-semibold">{viewerDoc.label}</p>
+            <div className="flex items-center gap-3">
+              <a
+                href={viewerBlobUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-white/80 hover:text-white underline"
+              >
+                Open in new tab
+              </a>
+              <button
+                type="button"
+                onClick={closeViewer}
+                className="text-white/80 hover:text-white text-lg"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+          <div className="flex-1 w-full max-w-5xl overflow-auto flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={viewerBlobUrl}
+              alt={viewerDoc.label}
+              className="max-w-full max-h-full rounded-lg border border-white/10"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+      )}
+
+      {viewerError && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg bg-red-500 text-white text-sm shadow-lg max-w-sm">
+          {viewerError}
+          <button
+            type="button"
+            onClick={() => setViewerError('')}
+            className="ml-3 underline text-xs"
+          >
+            dismiss
+          </button>
+        </div>
+      )}
+
+      {viewerLoading && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg bg-background border border-border text-foreground text-sm shadow-lg">
+          Fetching file…
+        </div>
+      )}
+
       {/* Rejection Modal */}
       {rejectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -609,6 +716,34 @@ export function ApplicationReviewClient({ application, agreements, activeTemplat
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Per-document "click to view" button. Renders a placeholder so the reviewer
+// sees there's something to click; the actual bytes are only fetched via the
+// audited fetchPrivateBlobUrl flow in the parent.
+function DocumentReveal({
+  label,
+  viewerUrl,
+  onOpen,
+}: {
+  label: string
+  viewerUrl: string
+  onOpen: (doc: { label: string; viewerUrl: string }) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
+      <button
+        type="button"
+        onClick={() => onOpen({ label, viewerUrl })}
+        className="w-full rounded-lg border border-border bg-background px-4 py-6 flex items-center justify-center gap-2 text-sm text-foreground hover:border-primary/50 hover:bg-surface transition-colors"
+      >
+        <span aria-hidden="true">🔒</span>
+        <span className="font-medium">Click to view {label.toLowerCase()}</span>
+        <span className="text-xs text-muted-foreground">(audited)</span>
+      </button>
     </div>
   )
 }

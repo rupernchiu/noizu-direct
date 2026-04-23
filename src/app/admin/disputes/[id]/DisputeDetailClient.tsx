@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { AuthedFileViewButton } from '@/components/admin/AuthedFileViewButton'
 
 interface DisputeDetail {
   id: string; orderId: string; reason: string; description: string
@@ -19,12 +20,101 @@ interface DisputeDetail {
   raiser: { name: string; email: string }
 }
 
+export interface EvidenceDto {
+  id: string
+  disputeId: string
+  uploaderId: string
+  role: string // "RAISER" | "CREATOR"
+  r2Key: string
+  viewerUrl: string
+  mimeType: string | null
+  fileSize: number | null
+  note: string | null
+  uploadedAt: Date
+  supersededAt: Date | null
+  supersededBy: string | null
+  uploader: { id: string; name: string; email: string } | null
+}
+
 function fmt(d: Date | null) {
   if (!d) return '—'
   return new Date(d).toLocaleDateString('en-MY', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function DisputeDetailClient({ dispute }: { dispute: DisputeDetail }) {
+function fmtSize(bytes: number | null): string {
+  if (bytes == null) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+function EvidenceCard({ ev, superseded }: { ev: EvidenceDto; superseded: boolean }) {
+  return (
+    <div
+      className={`rounded-lg border p-3 flex gap-3 items-start ${
+        superseded
+          ? 'border-border/60 bg-background/20 opacity-60'
+          : 'border-border bg-background/40'
+      }`}
+    >
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${
+            ev.role === 'RAISER' ? 'bg-red-500/15 text-red-400' : 'bg-blue-500/15 text-blue-400'
+          }`}>
+            {ev.role}
+          </span>
+          {superseded && (
+            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-border text-muted-foreground">
+              Superseded
+            </span>
+          )}
+          {ev.mimeType && (
+            <span className="text-[10px] font-mono text-muted-foreground">{ev.mimeType}</span>
+          )}
+          <span className="text-[10px] text-muted-foreground">{fmtSize(ev.fileSize)}</span>
+        </div>
+        <div>
+          <p className="text-xs text-foreground">
+            {ev.uploader?.name || '—'}{' '}
+            <span className="text-muted-foreground">({ev.uploader?.email ?? 'unknown'})</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground">Uploaded {fmt(ev.uploadedAt)}</p>
+          {superseded && ev.supersededAt && (
+            <p className="text-[11px] text-muted-foreground">Superseded {fmt(ev.supersededAt)}</p>
+          )}
+        </div>
+        {ev.note && (
+          <p className="text-xs text-foreground italic border-l-2 border-border pl-2">
+            {ev.note}
+          </p>
+        )}
+        <p className="text-[10px] font-mono text-muted-foreground truncate" title={ev.r2Key}>
+          {ev.r2Key}
+        </p>
+      </div>
+      <div className="shrink-0">
+        <AuthedFileViewButton
+          src={ev.viewerUrl}
+          label="View"
+          defaultReason="DISPUTE_REVIEW"
+          resourceLabel={`${ev.role} evidence · ${ev.uploader?.email ?? 'unknown'}`}
+          title="Open dispute evidence"
+        />
+      </div>
+    </div>
+  )
+}
+
+export default function DisputeDetailClient({
+  dispute,
+  liveEvidence,
+  supersededEvidence,
+}: {
+  dispute: DisputeDetail
+  liveEvidence: EvidenceDto[]
+  supersededEvidence: EvidenceDto[]
+}) {
   const router = useRouter()
   const [adminNote, setAdminNote] = useState(dispute.adminNote ?? '')
   const [partialAmount, setPartialAmount] = useState('')
@@ -46,6 +136,10 @@ export default function DisputeDetailClient({ dispute }: { dispute: DisputeDetai
     setResolving(false)
     router.refresh()
   }
+
+  const raiserEvidence = liveEvidence.filter((e) => e.role === 'RAISER')
+  const creatorEvidence = liveEvidence.filter((e) => e.role === 'CREATOR')
+  const hasAnyEvidence = liveEvidence.length > 0 || supersededEvidence.length > 0
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -113,6 +207,58 @@ export default function DisputeDetailClient({ dispute }: { dispute: DisputeDetai
               <div className="p-3 rounded-lg bg-surface border border-border text-sm text-foreground">{dispute.creatorResponse}</div>
             </div>
           )}
+
+          {/* ── Evidence ─────────────────────────────────────────────────── */}
+          <div className="bg-card border border-border rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-foreground">Evidence</h3>
+              <span className="text-xs text-muted-foreground">
+                {liveEvidence.length} live{supersededEvidence.length > 0 && ` · ${supersededEvidence.length} superseded`}
+              </span>
+            </div>
+            {!hasAnyEvidence && (
+              <p className="text-xs text-muted-foreground">No evidence files attached to this dispute.</p>
+            )}
+
+            {raiserEvidence.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  Raiser evidence
+                </p>
+                <div className="flex flex-col gap-2">
+                  {raiserEvidence.map((ev) => (
+                    <EvidenceCard key={ev.id} ev={ev} superseded={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {creatorEvidence.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  Creator evidence
+                </p>
+                <div className="flex flex-col gap-2">
+                  {creatorEvidence.map((ev) => (
+                    <EvidenceCard key={ev.id} ev={ev} superseded={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {supersededEvidence.length > 0 && (
+              <div>
+                <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  Superseded (historical)
+                </p>
+                <div className="flex flex-col gap-2">
+                  {supersededEvidence.map((ev) => (
+                    <EvidenceCard key={ev.id} ev={ev} superseded={true} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {!isResolved && (
             <div className="bg-card border border-border rounded-xl p-5">

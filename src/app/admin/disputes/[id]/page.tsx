@@ -25,5 +25,56 @@ export default async function AdminDisputeDetailPage({ params }: { params: Promi
   })
   if (!dispute) notFound()
 
-  return <DisputeDetailClient dispute={dispute} />
+  // DisputeEvidence rows (new schema). Show live and superseded separately.
+  const [liveEvidence, supersededEvidence] = await Promise.all([
+    prisma.disputeEvidence.findMany({
+      where: { disputeId: id, supersededAt: null },
+      orderBy: { uploadedAt: 'asc' },
+    }),
+    prisma.disputeEvidence.findMany({
+      where: { disputeId: id, supersededAt: { not: null } },
+      orderBy: { uploadedAt: 'asc' },
+    }),
+  ])
+
+  const uploaderIds = Array.from(
+    new Set(
+      [...liveEvidence, ...supersededEvidence].map((e) => e.uploaderId).filter((id): id is string => !!id),
+    ),
+  )
+  const uploaders = uploaderIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: uploaderIds } },
+        select: { id: true, name: true, email: true },
+      })
+    : []
+  const uploaderById = Object.fromEntries(
+    uploaders.map((u) => [u.id, { id: u.id, name: u.name, email: u.email }]),
+  )
+
+  function toDto(ev: typeof liveEvidence[number]) {
+    return {
+      id: ev.id,
+      disputeId: ev.disputeId,
+      uploaderId: ev.uploaderId,
+      role: ev.role,
+      r2Key: ev.r2Key,
+      viewerUrl: ev.viewerUrl,
+      mimeType: ev.mimeType,
+      fileSize: ev.fileSize,
+      note: ev.note,
+      uploadedAt: ev.uploadedAt,
+      supersededAt: ev.supersededAt,
+      supersededBy: ev.supersededBy,
+      uploader: ev.uploaderId ? uploaderById[ev.uploaderId] ?? null : null,
+    }
+  }
+
+  return (
+    <DisputeDetailClient
+      dispute={dispute}
+      liveEvidence={liveEvidence.map(toDto)}
+      supersededEvidence={supersededEvidence.map(toDto)}
+    />
+  )
 }

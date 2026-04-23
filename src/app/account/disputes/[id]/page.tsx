@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { DisputeEvidenceSection, type EvidenceItem } from './DisputeEvidenceSection'
 
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(date))
@@ -78,12 +79,19 @@ export default async function DisputeDetailPage({
 }) {
   const session = await auth()
   if (!session) redirect('/login')
-  const userId = (session.user as any).id
+  const userId = (session.user as { id: string }).id
 
   const { id } = await params
 
+  // Buyer OR creator may view a dispute they are party to.
   const dispute = await prisma.dispute.findFirst({
-    where: { id, order: { buyerId: userId } },
+    where: {
+      id,
+      OR: [
+        { order: { buyerId: userId } },
+        { order: { creatorId: userId } },
+      ],
+    },
     include: {
       order: {
         include: {
@@ -97,13 +105,51 @@ export default async function DisputeDetailPage({
 
   if (!dispute) notFound()
 
-  let evidence: string[] = []
-  try {
-    const parsed = JSON.parse(dispute.evidence ?? '[]')
-    evidence = Array.isArray(parsed) ? parsed : []
-  } catch {
-    evidence = []
-  }
+  // Determine the current user's role in this dispute. The buyer is the
+  // RAISER; the store's creator (Order.creatorId) is the CREATOR side.
+  const isBuyer = dispute.order.buyerId === userId
+  const isCreator = dispute.order.creatorId === userId
+  const myRole: 'RAISER' | 'CREATOR' | null = isBuyer ? 'RAISER' : isCreator ? 'CREATOR' : null
+  if (!myRole) notFound()
+
+  // Fetch live (non-superseded) evidence rows, ordered oldest-first so the
+  // conversation reads chronologically.
+  const evidenceRows = await prisma.disputeEvidence.findMany({
+    where: { disputeId: id, supersededAt: null },
+    orderBy: { uploadedAt: 'asc' },
+    select: {
+      id: true,
+      role: true,
+      uploaderId: true,
+      viewerUrl: true,
+      mimeType: true,
+      fileSize: true,
+      note: true,
+      uploadedAt: true,
+    },
+  })
+
+  // Resolve uploader display names in a single query. Raw User lookup by id set.
+  const uploaderIds = Array.from(new Set(evidenceRows.map((e) => e.uploaderId)))
+  const uploaders = uploaderIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: uploaderIds } },
+        select: { id: true, name: true },
+      })
+    : []
+  const nameById = new Map(uploaders.map((u) => [u.id, u.name]))
+
+  const evidence: EvidenceItem[] = evidenceRows.map((e) => ({
+    id: e.id,
+    role: (e.role === 'RAISER' ? 'RAISER' : 'CREATOR') as 'RAISER' | 'CREATOR',
+    uploaderName: nameById.get(e.uploaderId) ?? null,
+    isMine: e.uploaderId === userId,
+    viewerUrl: e.viewerUrl,
+    mimeType: e.mimeType,
+    fileSize: e.fileSize,
+    note: e.note,
+    uploadedAt: e.uploadedAt.toISOString(),
+  }))
 
   let thumbnailUrl: string | null = null
   try {
@@ -122,8 +168,14 @@ export default async function DisputeDetailPage({
     dispute.status === 'RESOLVED_RELEASE' ||
     dispute.status === 'CLOSED'
 
+  // Dispute is closed → evidence becomes read-only (no new uploads, no replace).
+  const canUpload = !isResolved
+
   return (
     <div className="space-y-6">
+      {/* H5 — strip Referer so signed private-file viewer URLs don't leak. */}
+      <meta name="referrer" content="no-referrer" />
+
       {/* Back nav */}
       <div>
         <Link
@@ -189,7 +241,11 @@ export default async function DisputeDetailPage({
             </p>
             <div className="flex items-center gap-3 mt-1">
               <Link
-                href={`/account/orders/${dispute.orderId}`}
+                href={
+                  myRole === 'CREATOR'
+                    ? `/dashboard/orders/${dispute.orderId}`
+                    : `/account/orders/${dispute.orderId}`
+                }
                 className="text-xs text-primary hover:underline font-mono"
               >
                 Order #{dispute.orderId.slice(-8).toUpperCase()}
@@ -205,44 +261,20 @@ export default async function DisputeDetailPage({
       {/* Dispute description */}
       <div className="bg-surface rounded-xl border border-border p-6">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-          Your Complaint
+          {myRole === 'RAISER' ? 'Your Complaint' : "Buyer's Complaint"}
         </h2>
         <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
           {dispute.description}
         </p>
       </div>
 
-      {/* Evidence */}
-      {evidence.length > 0 && (
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-            Your Evidence
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-            {evidence.map((url, i) => (
-              <a
-                key={i}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group relative block rounded-lg overflow-hidden border border-border"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={url}
-                  alt={`Evidence ${i + 1}`}
-                  className="w-full h-24 object-cover group-hover:opacity-80 transition-opacity"
-                />
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Evidence — partitioned into "yours" and "counter-party" */}
+      <DisputeEvidenceSection
+        disputeId={dispute.id}
+        myRole={myRole}
+        items={evidence}
+        canUpload={canUpload}
+      />
 
       {/* Creator response */}
       {dispute.creatorResponse ? (
@@ -359,7 +391,11 @@ export default async function DisputeDetailPage({
           Back to Disputes
         </Link>
         <Link
-          href={`/account/orders/${dispute.orderId}`}
+          href={
+            myRole === 'CREATOR'
+              ? `/dashboard/orders/${dispute.orderId}`
+              : `/account/orders/${dispute.orderId}`
+          }
           className="bg-primary hover:bg-primary/90 text-white rounded-lg px-4 py-2 text-sm font-medium"
         >
           View Order

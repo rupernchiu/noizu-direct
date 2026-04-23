@@ -61,6 +61,7 @@ model User {
   following            CreatorFollow[]
   cartItems            CartItem[]
   creatorApplication   CreatorApplication?
+  kycUploads           KycUpload[]
   creatorAgreements    CreatorAgreement[]
   reviews              ProductReview[]
   guestbookEntries     CreatorGuestbook[]
@@ -422,6 +423,8 @@ model Dispute {
   order    Order @relation(fields: [orderId], references: [id])
   raiser   User  @relation("DisputeRaisedBy", fields: [raisedBy], references: [id])
   resolver User? @relation("DisputeResolvedBy", fields: [resolvedBy], references: [id])
+
+  evidenceFiles DisputeEvidence[]
 }
 
 // ── Escrow Transaction ────────────────────────────────────────────────────────
@@ -1094,16 +1097,24 @@ model CreatorAgreement {
 // Without this, any user with another user's /api/files/identity/… URL can
 // submit it as their own ID.
 model KycUpload {
-  id        String   @id @default(cuid())
-  userId    String
-  category  String   // id_front | id_back | selfie
-  r2Key     String
-  viewerUrl String
-  mimeType  String?
-  fileSize  Int?
-  createdAt DateTime @default(now())
+  id           String    @id @default(cuid())
+  userId       String
+  category     String // id_front | id_back | selfie
+  r2Key        String
+  viewerUrl    String
+  mimeType     String?
+  fileSize     Int?
+  createdAt    DateTime  @default(now())
+  // Append-only semantics. When a creator re-uploads a replacement before submit,
+  // the old row is marked superseded (never deleted). Admin housekeeping is the
+  // only code path allowed to delete from R2 + remove rows.
+  supersededBy String?   @unique
+  supersededAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
 
   @@index([userId, category, createdAt])
+  @@index([supersededAt])
 }
 
 model CreatorApplication {
@@ -1139,10 +1150,94 @@ model CreatorApplication {
   submittedAt        DateTime?
   reviewedAt         DateTime?
   reviewedBy         String?
+  // Orphan housekeeping: day-5 reminder, day-7 purge for DRAFT applications inactive 7+ days.
+  kycReminderSentAt  DateTime?
+  orphanedAt         DateTime?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([status, updatedAt])
+  @@index([orphanedAt])
+}
+
+// ── Dispute Evidence (append-only) ────────────────────────────────────────────
+//
+// Every image attached to a dispute (by raiser or creator) is tracked in this
+// table — both when first uploaded and when the uploader wants to correct a
+// previous upload. Users never delete; the superseded row is kept so the
+// admin can always see the full history (prevents "change of argument" abuse).
+// The only code path that removes rows + R2 objects is admin housekeeping.
+model DisputeEvidence {
+  id           String    @id @default(cuid())
+  disputeId    String
+  uploaderId   String // User.id — raiser or creator (whoever attached the file)
+  role         String // "RAISER" | "CREATOR"
+  r2Key        String
+  viewerUrl    String
+  mimeType     String?
+  fileSize     Int?
+  note         String? // free-text caption shown with the evidence
+  uploadedAt   DateTime  @default(now())
+  supersededBy String?   @unique
+  supersededAt DateTime?
+
+  dispute Dispute @relation(fields: [disputeId], references: [id])
+
+  @@index([disputeId, uploadedAt])
+  @@index([uploaderId])
+  @@index([supersededAt])
+}
+
+// ── Private File Access Audit ─────────────────────────────────────────────────
+//
+// Every admin read of a private bucket file (KYC image, dispute evidence,
+// message attachment) writes one row. Required for compliance: "who looked
+// at whose ID, when, and why". Reason codes are enumerated client-side so
+// we can report on them. Admins must supply a reason via X-Access-Reason
+// header; the streaming endpoint rejects requests without one.
+model PrivateFileAccess {
+  id           String   @id @default(cuid())
+  actorType    String // STAFF | OWNER | SYSTEM
+  actorId      String? // StaffUser.id (STAFF) or User.id (OWNER) or cron slug (SYSTEM, nullable)
+  actorName    String // denormalized actor name/email snapshot (survives renames)
+  targetUserId String? // User.id the file belongs to
+  category     String // identity | dispute-evidence | message-attachment | kyc
+  r2Key        String
+  reasonCode   String // KYC_REVIEW | DISPUTE_REVIEW | COMPLIANCE_AUDIT | CS_TICKET | OWNER_SELF_VIEW | LEGAL_REQUEST | OTHER
+  reasonNote   String? // free-text justification (required when reasonCode = OTHER)
+  ipAddress    String?
+  userAgent    String?
+  accessedAt   DateTime @default(now())
+
+  @@index([targetUserId, accessedAt])
+  @@index([actorId, accessedAt])
+  @@index([category, accessedAt])
+}
+
+// ── Private File Deletion Audit ───────────────────────────────────────────────
+//
+// Admin-only deletion log. Every call to deleteFromR2 for a private-prefix
+// object must write a row here first. The admin UI enforces a reason code
+// and policy tag. No row → no deletion (enforced in housekeeping code path).
+model PrivateFileDeletion {
+  id            String   @id @default(cuid())
+  actorType     String // STAFF | SYSTEM
+  actorId       String? // StaffUser.id for STAFF, cron slug for SYSTEM
+  actorName     String
+  targetUserId  String? // owner of the file at deletion time
+  category      String // identity | dispute-evidence | message-attachment | kyc
+  r2Key         String
+  reasonCode    String // ORPHAN_PURGE | KYC_RETENTION_EXPIRED | DISPUTE_RETENTION_EXPIRED | LEGAL_REQUEST | GDPR_ERASURE | DUPLICATE | TEST_DATA | OTHER
+  reasonNote    String?
+  policyApplied String? // e.g. "KYC_REJECTED_90D" or "DISPUTE_CLOSED_540D"
+  ipAddress     String?
+  deletedAt     DateTime @default(now())
+
+  @@index([targetUserId, deletedAt])
+  @@index([actorId, deletedAt])
+  @@index([category, deletedAt])
 }
 
 // ── Staff System ──────────────────────────────────────────────────────────────
@@ -1260,10 +1355,10 @@ model ChargebackDispute {
 // (same body + signature) is a no-op. Populated on every successful dispatch.
 // See src/app/api/airwallex/webhook/route.ts.
 model ProcessedWebhookEvent {
-  id                String   @id @default(cuid())
-  airwallexEventId  String   @unique
-  eventName         String?
-  processedAt       DateTime @default(now())
+  id               String   @id @default(cuid())
+  airwallexEventId String   @unique
+  eventName        String?
+  processedAt      DateTime @default(now())
 
   @@index([processedAt])
 }

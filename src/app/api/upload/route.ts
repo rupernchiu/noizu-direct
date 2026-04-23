@@ -219,13 +219,18 @@ export async function POST(req: Request) {
   // The subcategory of the identity upload (id_front/id_back/selfie) is passed
   // as formData["kycCategory"]. We write a KycUpload row and surface its id to
   // the client, which then submits the id (not the URL) to /api/creator/apply.
+  //
+  // Append-only semantics: if a live (non-superseded) row already exists for
+  // the same (userId, kycCategory), we mark it as supersededBy=<new.id> +
+  // supersededAt=now(). The old R2 object is kept for audit — only the admin
+  // housekeeping UI ever deletes private bucket objects.
   let uploadId: string | null = null
   if (category === 'identity') {
     const kycCategoryRaw = (formData.get('kycCategory') as string | null) ?? ''
     const kycCategory = KYC_CATEGORY_MAP[kycCategoryRaw]
     if (kycCategory) {
       try {
-        const row = await prisma.kycUpload.create({
+        const newRow = await prisma.kycUpload.create({
           data: {
             userId,
             category: kycCategory,
@@ -235,11 +240,94 @@ export async function POST(req: Request) {
             fileSize: finalBuffer.length,
           },
         })
-        uploadId = row.id
+        uploadId = newRow.id
+
+        // Mark any previous live row for the same category as superseded.
+        // Keep it in the table so admin audit + housekeeping can still see
+        // the replacement chain. We only update rows that aren't already
+        // superseded to prevent re-pointing existing chains.
+        await prisma.kycUpload.updateMany({
+          where: {
+            userId,
+            category: kycCategory,
+            supersededAt: null,
+            id: { not: newRow.id },
+          },
+          data: {
+            supersededBy: newRow.id,
+            supersededAt: new Date(),
+          },
+        })
       } catch (err) {
-        // Migration may not have been applied yet on the target DB; the
-        // apply route has a regex fallback so this isn't fatal.
-        console.warn('[upload] kycUpload.create failed (migration pending?)', {
+        console.warn('[upload] kycUpload.create failed', {
+          userId,
+          err: (err as Error).message,
+        })
+      }
+    }
+  }
+
+  // ── Dispute evidence: write an append-only DisputeEvidence row ────────────
+  // Caller passes formData.disputeId + optional formData.note. We look up the
+  // dispute, confirm the user is a party (raiser or order creator), write a
+  // row tagged with their role, and (if formData.supersedesEvidenceId is set)
+  // mark an earlier evidence row as superseded.
+  let evidenceId: string | null = null
+  if (category === 'dispute_evidence') {
+    const disputeId = (formData.get('disputeId') as string | null) ?? ''
+    const note = (formData.get('note') as string | null) ?? null
+    const supersedesId = (formData.get('supersedesEvidenceId') as string | null) ?? null
+    if (disputeId) {
+      try {
+        const dispute = await prisma.dispute.findUnique({
+          where: { id: disputeId },
+          select: { id: true, raisedBy: true, order: { select: { creatorId: true } } },
+        })
+        if (dispute) {
+          const creatorUserId = dispute.order?.creatorId
+          let role: 'RAISER' | 'CREATOR' | null = null
+          if (dispute.raisedBy === userId) role = 'RAISER'
+          else if (creatorUserId === userId) role = 'CREATOR'
+
+          if (role) {
+            const newEv = await prisma.disputeEvidence.create({
+              data: {
+                disputeId,
+                uploaderId: userId,
+                role,
+                r2Key,
+                viewerUrl: publicUrl,
+                mimeType,
+                fileSize: finalBuffer.length,
+                note: note?.slice(0, 1000) ?? null,
+              },
+            })
+            evidenceId = newEv.id
+
+            if (supersedesId) {
+              // Only let the same user supersede their own prior evidence.
+              await prisma.disputeEvidence.updateMany({
+                where: {
+                  id: supersedesId,
+                  disputeId,
+                  uploaderId: userId,
+                  supersededAt: null,
+                },
+                data: {
+                  supersededBy: newEv.id,
+                  supersededAt: new Date(),
+                },
+              })
+            }
+          } else {
+            console.warn('[upload] dispute_evidence caller is not a party', {
+              userId,
+              disputeId,
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[upload] disputeEvidence.create failed', {
           userId,
           err: (err as Error).message,
         })
@@ -254,5 +342,6 @@ export async function POST(req: Request) {
     fileSize:  finalBuffer.length,
     isPrivate,
     ...(uploadId ? { uploadId } : {}),
+    ...(evidenceId ? { evidenceId } : {}),
   })
 }

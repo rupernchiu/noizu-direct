@@ -1,0 +1,7 @@
+{
+  "crons": [
+    { "path": "/api/cron/kyc-orphan-cleanup", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/private-file-retention-flag", "schedule": "0 4 * * 0" },
+    { "path": "/api/cron/private-bucket-reconcile", "schedule": "0 5 * * 0" }
+  ]
+}
