@@ -220,6 +220,21 @@ export default function Navbar() {
                     <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Select Currency</span>
                     <CurrencySelector />
                   </div>
+                  {/* Mobile nav links */}
+                  <div className="flex flex-col gap-1 border-t border-border pt-4">
+                    <Link
+                      href="/marketplace"
+                      className="px-3 py-2.5 text-sm font-medium text-foreground hover:text-secondary hover:bg-border/40 rounded-lg transition-colors"
+                    >
+                      Marketplace
+                    </Link>
+                    <Link
+                      href="/creators"
+                      className="px-3 py-2.5 text-sm font-medium text-foreground hover:text-secondary hover:bg-border/40 rounded-lg transition-colors"
+                    >
+                      Creators
+                    </Link>
+                  </div>
                   {/* Mobile auth */}
                   <div className="flex flex-col gap-2">
                     {session ? (
