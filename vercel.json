@@ -17,10 +17,6 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/escrow-processor",
-      "schedule": "15 * * * *"
-    },
-    {
       "path": "/api/cron/fulfillment-reminders",
       "schedule": "0 8 * * *"
     }
