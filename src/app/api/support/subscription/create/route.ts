@@ -74,7 +74,9 @@ export async function POST(req: Request) {
     amountUsd = body.amountUsd
   }
 
-  // Prevent double-subscribe to the same thing
+  // Block only real active subscriptions. PENDING rows are restartable — they
+  // just mean a prior DropIn session never completed (tab closed, card
+  // declined, CSP block, etc.). The existing row gets reused below.
   const existing = await prisma.supportSubscription.findFirst({
     where: {
       supporterId: userId,
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
       ...(tierId ? { tierId } : { type: 'MONTHLY_GIFT' }),
     },
   })
-  if (existing) {
+  if (existing && (existing.status === 'ACTIVE' || existing.status === 'PAST_DUE')) {
     return NextResponse.json({ error: 'You already have an active subscription here' }, { status: 400 })
   }
 
@@ -94,19 +96,34 @@ export async function POST(req: Request) {
   const grossUsd = amountUsd + processingFee
   const displayAmount = await convertToDisplayCurrency(grossUsd, currency)
 
-  // Create the subscription in PENDING state; becomes ACTIVE when webhook confirms first charge
-  const sub = await prisma.supportSubscription.create({
-    data: {
-      supporterId: userId,
-      creatorId: creator.id,
-      tierId,
-      type: body.kind,
-      amountUsd,
-      currency,
-      status: 'PENDING',
-      airwallexCustomerId: customerId,
-    },
-  })
+  // Reuse the PENDING row if one exists; otherwise create fresh. Amount/currency
+  // may differ on retry (tier price changed, user picked a different currency),
+  // so update those fields along with clearing stale intent id.
+  const sub = existing
+    ? await prisma.supportSubscription.update({
+        where: { id: existing.id },
+        data: {
+          tierId,
+          type: body.kind,
+          amountUsd,
+          currency,
+          status: 'PENDING',
+          airwallexCustomerId: customerId,
+          airwallexInitialIntentId: null,
+        },
+      })
+    : await prisma.supportSubscription.create({
+        data: {
+          supporterId: userId,
+          creatorId: creator.id,
+          tierId,
+          type: body.kind,
+          amountUsd,
+          currency,
+          status: 'PENDING',
+          airwallexCustomerId: customerId,
+        },
+      })
 
   const intent = await createPaymentIntent({
     amount: displayAmount,
