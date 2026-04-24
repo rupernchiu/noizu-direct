@@ -1,7 +1,4 @@
 {
-  "_comments": {
-    "kyc-crons": "To activate at launch, merge entries from vercel.json.launch-additions into crons[]. Dormant until go-pro launch — see project_presets_prelaunch memory."
-  },
   "crons": [
     {
       "path": "/api/cron/trending",
