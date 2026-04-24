@@ -25,11 +25,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
   }
 
-  // Block duplicate subscriptions
+  // Block duplicate subscriptions. PENDING is restartable — it just means a
+  // prior attempt opened a PaymentIntent that never completed (tab closed,
+  // card declined, DropIn blocked by CSP, etc.). The existing update branch
+  // below reuses the row with a fresh intent.
   const existing = await prisma.storageSubscription.findUnique({
     where: { userId },
   })
-  if (existing && ['PENDING', 'ACTIVE', 'PAST_DUE'].includes(existing.status)) {
+  if (existing && ['ACTIVE', 'PAST_DUE'].includes(existing.status)) {
     return NextResponse.json({ error: 'You already have an active storage subscription' }, { status: 400 })
   }
 
