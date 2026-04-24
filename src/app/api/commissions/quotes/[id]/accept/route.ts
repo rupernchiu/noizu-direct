@@ -117,6 +117,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         data: { status: 'ACCEPTED' },
       })
     }
+
+    // Promote the linked ticket to ORDER (prefer quote's ticket, then request's).
+    const linkedTicket =
+      (await tx.ticket.findUnique({ where: { commissionQuoteId: quote.id }, select: { id: true, orderId: true } })) ??
+      (quote.requestId
+        ? await tx.ticket.findUnique({
+            where: { commissionRequestId: quote.requestId },
+            select: { id: true, orderId: true },
+          })
+        : null)
+    if (linkedTicket && !linkedTicket.orderId) {
+      await tx.ticket.update({
+        where: { id: linkedTicket.id },
+        data: {
+          orderId: o.id,
+          commissionQuoteId: quote.id,
+          kind: 'ORDER',
+          lastMessageAt: now,
+        },
+      })
+      await tx.ticketMessage.create({
+        data: {
+          ticketId: linkedTicket.id,
+          senderId: userId,
+          body: 'Quote accepted — order created.',
+          systemKind: 'OPENED',
+          createdAt: now,
+        },
+      })
+    }
+
     return o
   })
 

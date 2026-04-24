@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
 import { listPaymentConsents } from '@/lib/airwallex'
+import { openOrAttachTicket, TicketBlockedError } from '@/lib/tickets'
 import { Resend } from 'resend'
 import crypto from 'crypto'
 
@@ -108,6 +109,24 @@ async function handlePaymentSucceeded(intentId: string) {
         status: isCommission ? 'ESCROW' : 'COMPLETED',
       },
     })
+
+    // Auto-open (or reuse) a ticket linked to this order. Idempotent via orderId
+    // unique constraint — commission orders already have a ticket from quote/accept.
+    try {
+      await openOrAttachTicket({
+        kind: 'ORDER',
+        buyerId: order.buyerId,
+        creatorId: order.creatorId,
+        subject: `Order: ${order.product.title}`,
+        openedById: order.buyerId,
+        openedAutoSource: 'ORDER',
+        link: { orderId: order.id },
+      })
+    } catch (err) {
+      if (!(err instanceof TicketBlockedError)) {
+        console.error('[airwallex/webhook] ticket open failed', { orderId: order.id, err })
+      }
+    }
 
     // Notify creator
     await prisma.notification.create({

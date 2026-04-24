@@ -48,9 +48,9 @@ export async function GET() {
     prisma.storagePricingConfig.findUnique({ where: { id: 'config' } }),
   ])
 
-  const messages = await prisma.message.findMany({
-    where: { senderId: userId },
-    select: { attachments: true, imageUrl: true },
+  const ticketAttachments = await prisma.ticketAttachment.findMany({
+    where: { uploaderId: userId },
+    select: { viewerUrl: true },
   })
 
   // Build reference maps
@@ -79,12 +79,8 @@ export async function GET() {
   if (creatorProfile?.logoImage)   profileUrls.add(creatorProfile.logoImage)
 
   const messageUrls = new Set<string>()
-  for (const m of messages) {
-    if (m.imageUrl) messageUrls.add(m.imageUrl)
-    try {
-      const atts = JSON.parse(m.attachments) as Array<{ url: string }>
-      atts.forEach(a => { if (a.url) messageUrls.add(a.url) })
-    } catch {}
+  for (const a of ticketAttachments) {
+    if (a.viewerUrl) messageUrls.add(a.viewerUrl)
   }
 
   const files: StorageFile[] = mediaFiles.map(f => {
@@ -104,7 +100,7 @@ export async function GET() {
       attachedTo = 'Profile'
     } else if (messageUrls.has(f.url)) {
       category = isPdf ? 'pdf' : 'message'
-      attachedTo = 'Message attachment'
+      attachedTo = 'Ticket attachment'
     }
 
     return {

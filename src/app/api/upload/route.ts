@@ -23,6 +23,10 @@ const QUOTA_COUNTED_CATEGORIES = new Set([
   'profile_logo', 'blog_cover', 'media', 'other',
 ])
 
+// broadcast_image is intentionally NOT quota-counted — broadcast hero images
+// are ephemeral (30-day retention cron) and shouldn't eat into a creator's
+// durable plan allocation.
+
 const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment'])
 
 // H6 — map upload `category` to the KycUpload.category enum string we store.
@@ -43,6 +47,7 @@ const SIZE_LIMITS: Record<string, number> = {
   profile_banner:       5 * 1024 * 1024,
   profile_logo:         2 * 1024 * 1024,
   blog_cover:           5 * 1024 * 1024,
+  broadcast_image:      2 * 1024 * 1024,
   media:                5 * 1024 * 1024,
   other:                5 * 1024 * 1024,
 }
@@ -337,6 +342,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     url:       publicUrl,
+    key:       r2Key, // callers that need to delete or store-by-key (e.g. broadcasts) use this
     filename,
     mimeType,
     fileSize:  finalBuffer.length,

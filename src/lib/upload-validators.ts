@@ -13,6 +13,7 @@ export const UPLOAD_FOLDER_ALLOWLIST = new Set<string>([
   'profile-banner',
   'profile-logo',
   'blog-cover',
+  'broadcast-image',
   'media',
   'library',
   'hero',

@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { Inbox, FileText, Plus } from 'lucide-react'
+import { Inbox, FileText, Plus, Sparkles, ArrowRight } from 'lucide-react'
 
 const quoteStatusStyles: Record<string, string> = {
   DRAFT:     'bg-muted-foreground/20 text-muted-foreground',
@@ -61,6 +61,8 @@ export default async function CommissionsInboxPage() {
     }),
   ])
 
+  const isFirstTime = requests.length === 0 && quotes.length === 0
+
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -75,6 +77,30 @@ export default async function CommissionsInboxPage() {
           New quote
         </Link>
       </div>
+
+      {isFirstTime && (
+        <div className="bg-gradient-to-br from-primary/10 via-card to-card border border-primary/20 rounded-2xl p-6 flex flex-col sm:flex-row gap-4 sm:items-center justify-between">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-primary/15">
+              <Sparkles className="size-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-bold text-foreground">New to commissions on noizu.direct?</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-lg">
+                Walk through how a commission moves from request to payout — scope, pricing,
+                escrow, delivery, and the timings that protect you.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/dashboard/commissions/how-it-works"
+            className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 shrink-0"
+          >
+            See how it works
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
+      )}
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">

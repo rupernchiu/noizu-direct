@@ -24,9 +24,9 @@ export default async function StoragePage() {
     getUserQuota(userId),
   ])
 
-  const messages = await prisma.message.findMany({
-    where: { senderId: userId },
-    select: { attachments: true, imageUrl: true },
+  const ticketAttachments = await prisma.ticketAttachment.findMany({
+    where: { uploaderId: userId },
+    select: { viewerUrl: true },
   })
 
   const productImageMap = new Map<string, string>()
@@ -46,9 +46,8 @@ export default async function StoragePage() {
   if (creatorProfile?.logoImage)   profileUrls.add(creatorProfile.logoImage)
 
   const messageUrls = new Set<string>()
-  for (const m of messages) {
-    if (m.imageUrl) messageUrls.add(m.imageUrl)
-    try { (JSON.parse(m.attachments) as Array<{ url: string }>).forEach(a => { if (a.url) messageUrls.add(a.url) }) } catch {}
+  for (const a of ticketAttachments) {
+    if (a.viewerUrl) messageUrls.add(a.viewerUrl)
   }
 
   const files: StorageFile[] = mediaFiles.map(f => {
@@ -58,7 +57,7 @@ export default async function StoragePage() {
     if (productImageMap.has(f.url))  { category = isPdf ? 'pdf' : 'product_image'; attachedTo = productImageMap.get(f.url)! }
     else if (portfolioUrls.has(f.url)) { category = isPdf ? 'pdf' : 'portfolio'; attachedTo = 'Portfolio' }
     else if (profileUrls.has(f.url))   { category = 'profile'; attachedTo = 'Profile' }
-    else if (messageUrls.has(f.url))   { category = isPdf ? 'pdf' : 'message'; attachedTo = 'Message attachment' }
+    else if (messageUrls.has(f.url))   { category = isPdf ? 'pdf' : 'message'; attachedTo = 'Ticket attachment' }
     return { id: f.id, filename: f.filename, url: f.url, fileSize: f.fileSize ?? 0, mimeType: f.mimeType, createdAt: f.createdAt.toISOString(), category, attachedTo }
   })
 

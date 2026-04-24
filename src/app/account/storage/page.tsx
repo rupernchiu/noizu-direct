@@ -25,10 +25,15 @@ type Attachment = {
 }
 
 type FileEntry = {
-  messageId: string
-  receiverId: string
+  attachmentId: string
+  ticketId: string
   createdAt: Date
   attachment: Attachment
+}
+
+function fileNameFromR2Key(r2Key: string): string {
+  const tail = r2Key.split('/').pop()
+  return tail && tail.length > 0 ? tail : r2Key
 }
 
 export default async function StoragePage() {
@@ -36,39 +41,31 @@ export default async function StoragePage() {
   if (!session) redirect('/login')
   const userId = (session.user as any).id
 
-  const messages = await prisma.message.findMany({
-    where: { senderId: userId },
-    select: { id: true, attachments: true, createdAt: true, receiverId: true },
+  const attachments = await prisma.ticketAttachment.findMany({
+    where: { uploaderId: userId, supersededAt: null },
+    select: {
+      id: true,
+      ticketId: true,
+      createdAt: true,
+      viewerUrl: true,
+      r2Key: true,
+      mimeType: true,
+      fileSize: true,
+    },
+    orderBy: { createdAt: 'desc' },
   })
 
-  const files: FileEntry[] = []
-
-  for (const msg of messages) {
-    if (!msg.attachments) continue
-    let attachments: Attachment[] = []
-    try {
-      const parsed = JSON.parse(msg.attachments)
-      attachments = Array.isArray(parsed) ? parsed : []
-    } catch {
-      continue
-    }
-
-    for (const att of attachments) {
-      if (att && typeof att === 'object' && att.url) {
-        files.push({
-          messageId: msg.id,
-          receiverId: msg.receiverId,
-          createdAt: msg.createdAt,
-          attachment: {
-            url: att.url ?? '',
-            type: att.type ?? 'unknown',
-            name: att.name ?? 'Unnamed file',
-            size: typeof att.size === 'number' ? att.size : 0,
-          },
-        })
-      }
-    }
-  }
+  const files: FileEntry[] = attachments.map(a => ({
+    attachmentId: a.id,
+    ticketId: a.ticketId,
+    createdAt: a.createdAt,
+    attachment: {
+      url: a.viewerUrl,
+      type: a.mimeType ?? 'unknown',
+      name: fileNameFromR2Key(a.r2Key),
+      size: a.fileSize ?? 0,
+    },
+  }))
 
   const totalBytes = files.reduce((sum, f) => sum + f.attachment.size, 0)
   const imageFiles = files.filter(f => f.attachment.type?.startsWith('image/') || f.attachment.type === 'image')
@@ -90,7 +87,7 @@ export default async function StoragePage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Storage</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your message attachment storage
+          Manage your ticket attachment storage
         </p>
       </div>
 
@@ -134,7 +131,7 @@ export default async function StoragePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <p className="text-xs text-orange-400">
-              You&apos;re using over 80% of your storage. Consider asking recipients to delete old conversations
+              You&apos;re using over 80% of your storage. Consider asking creators to close old tickets
               to free up space.
             </p>
           </div>
@@ -243,7 +240,7 @@ export default async function StoragePage() {
                 <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden sm:table-cell">Type</th>
                 <th className="text-right px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Size</th>
                 <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide hidden md:table-cell">Date</th>
-                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Conversation</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">Ticket</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -294,10 +291,10 @@ export default async function StoragePage() {
                     </td>
                     <td className="px-6 py-3">
                       <Link
-                        href={`/account/messages?conversation=${file.receiverId}`}
+                        href={`/account/tickets/${file.ticketId}`}
                         className="text-primary hover:underline text-xs"
                       >
-                        View conversation
+                        View ticket
                       </Link>
                     </td>
                   </tr>
@@ -311,7 +308,7 @@ export default async function StoragePage() {
       {/* Info note */}
       <div className="bg-surface rounded-xl border border-border p-4">
         <p className="text-xs text-muted-foreground">
-          <span className="text-foreground font-medium">Note:</span> Storage is used for message
+          <span className="text-foreground font-medium">Note:</span> Storage is used for ticket
           attachments only. Downloads and purchased digital files do not count toward your storage
           limit.
         </p>

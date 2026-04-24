@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { getNewCreatorExtraDays } from '@/lib/creator-trust'
+import { BODY_MAX, hasAngleBrackets } from '@/lib/tickets'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
@@ -38,16 +39,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     },
   })
 
-  // Post delivery message to order thread if provided
+  // Post delivery message into the order's ticket. The ticket is expected to
+  // exist — it is auto-opened at payment time — so missing ticket is logged
+  // but not fatal (order flow must continue).
   if (message) {
-    await prisma.message.create({
-      data: {
-        senderId: session.user.id,
-        receiverId: order.buyerId,
-        orderId: id,
-        content: message,
-      },
-    })
+    const trimmed = String(message).trim()
+    if (trimmed) {
+      if (trimmed.length > BODY_MAX) {
+        return NextResponse.json({ error: 'Message too long' }, { status: 400 })
+      }
+      if (hasAngleBrackets(trimmed)) {
+        return NextResponse.json({ error: 'Angle brackets are not allowed in messages' }, { status: 400 })
+      }
+      const ticket = await prisma.ticket.findUnique({ where: { orderId: id }, select: { id: true, status: true } })
+      if (ticket && ticket.status === 'OPEN') {
+        await prisma.ticketMessage.create({
+          data: { ticketId: ticket.id, senderId: session.user.id, body: trimmed, createdAt: now },
+        })
+        await prisma.ticket.update({
+          where: { id: ticket.id },
+          data: { lastMessageAt: now, lastCreatorMessageAt: now },
+        })
+      } else {
+        console.warn(`[deliver] order ${id} has no open ticket — delivery note not recorded`)
+      }
+    }
   }
 
   await createNotification(

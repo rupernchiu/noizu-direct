@@ -203,7 +203,7 @@ export async function PATCH(
       html: approvedEmailHtml(application.user.name ?? 'Creator'),
     })
 
-    // In-app notification + system message (best-effort — do not fail the approval)
+    // In-app notification (best-effort — do not fail the approval)
     try {
       await prisma.notification.create({
         data: {
@@ -215,26 +215,8 @@ export async function PATCH(
           isRead: false,
         },
       })
-
-      const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
-      if (adminUser) {
-        const conversation = await prisma.conversation.upsert({
-          where: { buyerId_creatorId: { buyerId: application.userId, creatorId: adminUser.id } },
-          create: { buyerId: application.userId, creatorId: adminUser.id, lastMessageAt: new Date() },
-          update: { lastMessageAt: new Date() },
-        })
-        await prisma.message.create({
-          data: {
-            senderId: adminUser.id,
-            receiverId: application.userId,
-            content: `🎉 Welcome to noizu.direct, ${application.displayName}!\n\nYour creator application has been approved. Here is everything you need to get started:\n\n✅ Your store URL: noizu.direct/creator/${application.username}\n✅ Your username: @${application.username}\n\nGETTING STARTED:\n1. Go to your Creator Dashboard\n2. Complete your store profile (add banner, bio, social links)\n3. List your first product\n4. Share your store link with your community\n\nIMPORTANT REMINDERS:\n- You must add tracking numbers within 7 days of receiving physical/POD orders\n- Your first payout requires verified account status\n- Keep your storage under 500MB (free plan)\n\nWe are excited to have you as part of the noizu.direct creator community!\n\nThe noizu.direct Team\nhello@noizu.direct`,
-            isRead: false,
-          },
-        })
-        void conversation // suppress unused warning
-      }
     } catch (notifErr) {
-      console.error('[approve] notification/message error (non-fatal):', notifErr)
+      console.error('[approve] notification error (non-fatal):', notifErr)
     }
 
     return NextResponse.json({ ok: true })
@@ -269,7 +251,7 @@ export async function PATCH(
     html: rejectedEmailHtml(application.user.name ?? 'Applicant', rejectionReason),
   })
 
-  // In-app notification + system message (best-effort — do not fail the rejection)
+  // In-app notification (best-effort — do not fail the rejection)
   try {
     await prisma.notification.create({
       data: {
@@ -281,26 +263,8 @@ export async function PATCH(
         isRead: false,
       },
     })
-
-    const adminUser = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
-    if (adminUser) {
-      const conversation = await prisma.conversation.upsert({
-        where: { buyerId_creatorId: { buyerId: application.userId, creatorId: adminUser.id } },
-        create: { buyerId: application.userId, creatorId: adminUser.id, lastMessageAt: new Date() },
-        update: { lastMessageAt: new Date() },
-      })
-      await prisma.message.create({
-        data: {
-          senderId: adminUser.id,
-          receiverId: application.userId,
-          content: `Hi ${application.displayName || application.legalFullName},\n\nThank you for applying to become a noizu.direct creator.\n\nUnfortunately we were unable to approve your application at this time.\n\nREASON:\n${rejectionReason}\n\nWHAT TO DO NEXT:\n- Address the issues mentioned above\n- Prepare any required documents\n- Visit noizu.direct/start-selling to reapply\n\nYou are welcome to reapply at any time after addressing the feedback above.\n\nIf you have questions about this decision please reply to this message and our team will assist you.\n\nThe noizu.direct Team\nhello@noizu.direct`,
-          isRead: false,
-        },
-      })
-      void conversation // suppress unused warning
-    }
   } catch (notifErr) {
-    console.error('[reject] notification/message error (non-fatal):', notifErr)
+    console.error('[reject] notification error (non-fatal):', notifErr)
   }
 
   return NextResponse.json({ ok: true })

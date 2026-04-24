@@ -5,8 +5,9 @@ import { usePathname } from 'next/navigation'
 import { Palette } from 'lucide-react'
 
 const TABS = [
-  { href: '/dashboard/commissions',          label: 'Inbox' },
-  { href: '/dashboard/commissions/settings', label: 'Settings' },
+  { href: '/dashboard/commissions',               label: 'Inbox' },
+  { href: '/dashboard/commissions/settings',      label: 'Settings' },
+  { href: '/dashboard/commissions/how-it-works',  label: 'How it works' },
 ] as const
 
 export default function CommissionsLayout({ children }: { children: React.ReactNode }) {

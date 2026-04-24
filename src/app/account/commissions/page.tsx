@@ -77,11 +77,20 @@ export default async function BuyerCommissionsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Commissions</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Custom work requested from creators and quotes offered to you.
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Commissions</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Custom work requested from creators and quotes offered to you.
+          </p>
+        </div>
+        <Link
+          href="/account/commissions/how-it-works"
+          className="text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1"
+        >
+          How commissions work
+          <ArrowRight className="size-3" />
+        </Link>
       </div>
 
       <section>
@@ -96,15 +105,23 @@ export default async function BuyerCommissionsPage() {
             </div>
             <h3 className="mb-2 text-lg font-semibold text-foreground">No commission requests yet</h3>
             <p className="mb-6 text-sm text-muted-foreground max-w-sm mx-auto">
-              Browse creators and start one.
+              Ask a creator for something custom — your money stays in escrow until you approve the delivery.
             </p>
-            <Link
-              href="/creators"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
-            >
-              Browse creators
-              <ArrowRight className="size-4" />
-            </Link>
+            <div className="flex gap-2 justify-center flex-wrap">
+              <Link
+                href="/account/commissions/how-it-works"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-semibold text-foreground hover:border-primary/40 transition-colors"
+              >
+                How it works
+              </Link>
+              <Link
+                href="/creators"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+              >
+                Browse creators
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">

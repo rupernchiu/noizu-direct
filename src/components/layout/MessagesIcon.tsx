@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { MessageCircle } from 'lucide-react'
+import { Ticket as TicketIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 
 export function MessagesIcon() {
@@ -13,7 +13,7 @@ export function MessagesIcon() {
     if (!session?.user) return
     const load = async () => {
       try {
-        const res = await fetch('/api/messages/unread-count')
+        const res = await fetch('/api/tickets/unread-count')
         if (res.ok) {
           const data = await res.json() as { count: number }
           setUnread(data.count)
@@ -27,9 +27,16 @@ export function MessagesIcon() {
 
   if (!session?.user) return null
 
+  const role = (session.user as { role?: string }).role
+  const href = role === 'CREATOR' ? '/dashboard/tickets' : '/account/tickets'
+
   return (
-    <Link href="/account/messages" className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors">
-      <MessageCircle className="size-5" />
+    <Link
+      href={href}
+      aria-label="Tickets"
+      className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+    >
+      <TicketIcon className="size-5" />
       {unread > 0 && (
         <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center px-0.5">
           {unread > 99 ? '99+' : unread}

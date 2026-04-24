@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Trash2, Plus } from 'lucide-react'
+import { BuyerPicker, type BuyerOption } from './BuyerPicker'
 
 type Milestone = { title: string; description: string; amountDollars: string }
 
@@ -40,6 +41,7 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
     { title: '', description: '', amountDollars: '' },
     { title: '', description: '', amountDollars: '' },
   ])
+  const [selectedBuyer, setSelectedBuyer] = useState<BuyerOption | null>(null)
   const [buyerEmail, setBuyerEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -65,9 +67,26 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
 
   async function save(send: boolean) {
     setBusy(true); setError(null)
+
+    // Buyer identity is required unless this is an edit or a quote-against-request
+    if (!editing && !props.requestId && !selectedBuyer && !buyerEmail.trim()) {
+      setError('Pick a buyer or enter an email first.')
+      setBusy(false)
+      return
+    }
+
+    const buyerPayload =
+      props.requestId || editing
+        ? {}
+        : selectedBuyer
+          ? { buyerId: selectedBuyer.id }
+          : buyerEmail.trim()
+            ? { buyerEmail: buyerEmail.trim() }
+            : {}
+
     const payload = {
       requestId: props.requestId ?? undefined,
-      ...(props.requestId ? {} : buyerEmail ? { buyerEmail } : {}),
+      ...buyerPayload,
       title: title.trim(),
       description: description.trim(),
       amountUsd: amountCents,
@@ -114,12 +133,12 @@ export function QuoteBuilder(props: QuoteBuilderProps) {
   return (
     <div className="space-y-6">
       {!props.requestId && !editing && (
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Buyer email</label>
-          <input type="email" value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder="buyer@example.com"
-            className="w-full text-base sm:text-sm p-3 rounded-lg bg-card border border-border text-foreground" />
-          <p className="text-xs text-muted-foreground mt-1">The email address the buyer uses on noizu.direct. They&apos;ll be notified when you send the quote.</p>
-        </div>
+        <BuyerPicker
+          value={selectedBuyer}
+          onChange={setSelectedBuyer}
+          emailFallback={buyerEmail}
+          onEmailFallback={setBuyerEmail}
+        />
       )}
 
       <div>

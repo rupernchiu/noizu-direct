@@ -8,7 +8,7 @@
 // Authorization matrix:
 //   identity           → StaffUser with kyc.review perm  OR  owner (userId in path)
 //   dispute-evidence   → StaffUser with disputes.review  OR  dispute party (raiser/creator)
-//   message-attachment → Message sender/receiver         OR  StaffUser w/ disputes.review
+//   message-attachment → Ticket buyer or creator          OR  StaffUser w/ disputes.review
 //
 // H5 — we stream bytes through Next; NEVER 307-redirect to a presigned R2 URL
 // (signed URLs leak via browser history, Referer, and R2 access logs).
@@ -346,20 +346,22 @@ async function decide(args: {
   }
 
   if (category === 'message-attachment') {
-    const message = await prisma.message.findFirst({
-      where: {
-        OR: [{ imageUrl: viewerUrl }, { attachments: { contains: viewerUrl } }],
+    const attachment = await prisma.ticketAttachment.findFirst({
+      where: { viewerUrl },
+      select: {
+        uploaderId: true,
+        ticket: { select: { buyerId: true, creatorId: true } },
       },
-      select: { senderId: true, receiverId: true },
     })
-    if (!message) return { allow: false, status: 404, reason: 'Not Found' }
-    if (message.senderId !== userId && message.receiverId !== userId) {
+    if (!attachment) return { allow: false, status: 404, reason: 'Not Found' }
+    const { buyerId, creatorId } = attachment.ticket
+    if (buyerId !== userId && creatorId !== userId) {
       return { allow: false, status: 403, reason: 'Forbidden' }
     }
     return {
       allow: true,
       actor: { type: 'OWNER', id: userId, name: userName },
-      targetUserId: userId,
+      targetUserId: attachment.uploaderId,
     }
   }
 
@@ -391,11 +393,11 @@ async function inferTargetUserId(
       return ev?.uploaderId ?? null
     }
     if (category === 'message-attachment') {
-      const m = await prisma.message.findFirst({
-        where: { OR: [{ imageUrl: viewerUrl }, { attachments: { contains: viewerUrl } }] },
-        select: { senderId: true },
+      const att = await prisma.ticketAttachment.findFirst({
+        where: { viewerUrl },
+        select: { uploaderId: true },
       })
-      return m?.senderId ?? null
+      return att?.uploaderId ?? null
     }
   } catch {
     return null

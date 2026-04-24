@@ -42,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   await createNotification(
     milestone.orderRef.creatorId,
-    'NEW_MESSAGE',
+    'TICKET_REPLY',
     'Revision requested',
     `Buyer requested a revision on "${milestone.title}". ${milestone.revisionsAllowed - milestone.revisionsUsed - 1} revision(s) remaining.`,
     milestone.orderRef.id,

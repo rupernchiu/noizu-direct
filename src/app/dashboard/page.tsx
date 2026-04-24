@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Plus, ShoppingBag, DollarSign, MessageCircle } from 'lucide-react'
+import { Plus, ShoppingBag, DollarSign, Ticket } from 'lucide-react'
 import { STATUS_LABELS } from '@/lib/labels'
 import { OnboardingChecklistWrapper } from '@/components/ui/OnboardingChecklistWrapper'
 
@@ -64,6 +64,7 @@ export default async function DashboardPage() {
     }
   }
 
+  const { computeUnreadTicketCount } = await import('@/lib/tickets')
   const [totalRevenue, pendingOrders, activeListings, unreadMessages] = await Promise.all([
     prisma.transaction.aggregate({
       where: { creatorId: userId, status: 'COMPLETED' },
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
     }),
     prisma.order.count({ where: { creatorId: userId, status: 'PENDING' } }),
     prisma.product.count({ where: { creatorId: profile.id, isActive: true } }),
-    prisma.message.count({ where: { receiverId: userId, isRead: false } }),
+    computeUnreadTicketCount(userId),
   ])
 
   const recentOrders = await prisma.order.findMany({
@@ -142,7 +143,7 @@ export default async function DashboardPage() {
           { label: 'Add Product', href: '/dashboard/listings/new', icon: Plus, color: 'bg-primary text-white' },
           { label: 'View Orders', href: '/dashboard/orders', icon: ShoppingBag, color: 'bg-card text-foreground border border-border hover:border-primary/30' },
           { label: 'Earnings', href: '/dashboard/earnings', icon: DollarSign, color: 'bg-card text-foreground border border-border hover:border-primary/30' },
-          { label: 'Messages', href: '/dashboard/messages', icon: MessageCircle, color: 'bg-card text-foreground border border-border hover:border-primary/30' },
+          { label: 'Tickets', href: '/dashboard/tickets', icon: Ticket, color: 'bg-card text-foreground border border-border hover:border-primary/30' },
         ].map(action => {
           const Icon = action.icon
           return (

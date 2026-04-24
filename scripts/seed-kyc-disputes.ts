@@ -128,12 +128,13 @@ async function cleanup() {
     }
     if (disputes.length > 0) console.log(`  Deleted ${disputes.length} dispute(s) + evidence`)
 
-    // 3. Order-attached rows (Transactions, EscrowTransactions, Messages),
+    // 3. Order-attached rows (Transactions, EscrowTransactions, Tickets),
     //    then the Orders themselves.
     if (orderIds.length > 0) {
       await prisma.transaction.deleteMany({ where: { orderId: { in: orderIds } } })
       await prisma.escrowTransaction.deleteMany({ where: { orderId: { in: orderIds } } })
-      await prisma.message.deleteMany({ where: { orderId: { in: orderIds } } })
+      // Ticket has a unique FK to orderId; cascade removes TicketMessage/TicketAttachment rows.
+      await prisma.ticket.deleteMany({ where: { orderId: { in: orderIds } } })
       await prisma.invoice.deleteMany({ where: { orderId: { in: orderIds } } })
       await prisma.order.deleteMany({ where: { id: { in: orderIds } } })
       console.log(`  Deleted ${orderIds.length} order(s) + attached rows`)

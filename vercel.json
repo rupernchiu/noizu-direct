@@ -22,6 +22,14 @@
     {
       "path": "/api/cron/fulfillment-reminders",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/ticket-retention",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/broadcast-retention",
+      "schedule": "0 6 * * *"
     }
   ]
 }

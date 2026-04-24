@@ -699,124 +699,10 @@ async function main() {
   const totalPayouts = await prisma.payout.count();
   console.log(`✅ Payouts: ${totalPayouts} total`);
 
-  // ─── CONVERSATIONS + MESSAGES ──────────────────────────────────────────────
-
-  const existingMsgCount = await prisma.message.count();
-  if (existingMsgCount < 30) {
-    const allBuyersForMsg = await prisma.user.findMany({ where: { role: 'BUYER' }, select: { id: true } });
-    const allCreatorsForMsg = await prisma.user.findMany({ where: { role: 'CREATOR' }, select: { id: true } });
-
-    const messageThreads = [
-      { buyerIdx: 0, creatorIdx: 0, msgs: [
-        { from: 'buyer', content: 'Hi! Are your commission slots still open? I\'d love to get an OC portrait done.', daysBack: 15 },
-        { from: 'creator', content: 'Hi! Yes, I have 2 slots left for this month. Could you share a reference image?', daysBack: 14 },
-        { from: 'buyer', content: 'Amazing! Sending over the reference now. It\'s an original character, fantasy elf design.', daysBack: 14 },
-        { from: 'creator', content: 'Looks great! I can start next week. Please go ahead and purchase the commission slot on my page.', daysBack: 13 },
-      ]},
-      { buyerIdx: 1, creatorIdx: 1, msgs: [
-        { from: 'buyer', content: 'Just ordered your doujin PDF — downloaded perfectly! Love the Penang setting.', daysBack: 20 },
-        { from: 'creator', content: 'Thank you so much! Vol.2 is coming to Animangaki in July if you want a physical copy!', daysBack: 19 },
-      ]},
-      { buyerIdx: 2, creatorIdx: 2, msgs: [
-        { from: 'buyer', content: 'I ordered the print set but haven\'t received a shipping notification yet?', daysBack: 10 },
-        { from: 'creator', content: 'Hi! Your order ships tomorrow via SingPost. Tracking number will be updated by end of day.', daysBack: 9 },
-        { from: 'buyer', content: 'Got it, thank you! Really excited for the prints.', daysBack: 9 },
-      ]},
-      { buyerIdx: 3, creatorIdx: 3, msgs: [
-        { from: 'buyer', content: 'Can you make a custom Buster Sword with LED effects? For an event in KL.', daysBack: 25 },
-        { from: 'creator', content: 'Absolutely! LED Buster Sword is doable. What colour LEDs and what\'s your timeline?', daysBack: 24 },
-        { from: 'buyer', content: 'Blue/purple edge lighting, for an event in 3 months.', daysBack: 24 },
-        { from: 'creator', content: '3 months is tight but doable. Price would be around RM400-450 with LEDs. Interested?', daysBack: 23 },
-        { from: 'buyer', content: 'That works for me! How do I proceed?', daysBack: 23 },
-      ]},
-      { buyerIdx: 4, creatorIdx: 4, msgs: [
-        { from: 'buyer', content: 'Love your tarot card designs! Can I commission the full 78-card Major + Minor Arcana?', daysBack: 30 },
-        { from: 'creator', content: 'Full 78-card deck would be a large project! Timeline would be 4–5 months. Price would be around $600-700.', daysBack: 29 },
-        { from: 'buyer', content: 'That\'s very reasonable! Can we do a payment plan?', daysBack: 29 },
-      ]},
-      { buyerIdx: 5, creatorIdx: 0, msgs: [
-        { from: 'buyer', content: 'Quick question — do your digital stickers work in WhatsApp and Telegram?', daysBack: 7 },
-        { from: 'creator', content: 'They\'re PNG files so you\'d need to import them. For Telegram, yes via custom sticker pack!', daysBack: 7 },
-        { from: 'buyer', content: 'Perfect, I\'ll get the sticker pack then!', daysBack: 6 },
-      ]},
-      { buyerIdx: 6, creatorIdx: 5, msgs: [
-        { from: 'buyer', content: 'Hi, is the holographic sticker set available for wholesale (100 packs)?', daysBack: 12 },
-        { from: 'creator', content: 'Yes! Wholesale pricing starts at 50 packs. DM me with your quantity and I\'ll quote you.', daysBack: 11 },
-        { from: 'buyer', content: 'I need 100 packs by end of month for a convention booth.', daysBack: 11 },
-        { from: 'creator', content: 'That\'s very doable! I\'ll email you a wholesale quote within 24 hours.', daysBack: 10 },
-      ]},
-      { buyerIdx: 7, creatorIdx: 6, msgs: [
-        { from: 'buyer', content: 'Received my FF XVI bracer yesterday — the quality is incredible!', daysBack: 5 },
-        { from: 'creator', content: 'So glad it arrived safely! Let me know if anything needs touch-up!', daysBack: 4 },
-      ]},
-      { buyerIdx: 8, creatorIdx: 7, msgs: [
-        { from: 'buyer', content: 'Do you do group cosplay photo sessions? We have 8 people all doing Genshin.', daysBack: 18 },
-        { from: 'creator', content: 'Yes! Group rate for 8+ people is SGD 200 for 2 hours at Gardens by the Bay.', daysBack: 17 },
-        { from: 'buyer', content: 'That\'s amazing. Are you free in November?', daysBack: 17 },
-      ]},
-      { buyerIdx: 9, creatorIdx: 8, msgs: [
-        { from: 'buyer', content: 'Just got my Demon Slayer print set — the ukiyo-e style is absolutely beautiful!', daysBack: 3 },
-        { from: 'creator', content: 'Thank you so much! I\'m doing a JJK ukiyo-e series next — follow me for the drop!', daysBack: 2 },
-      ]},
-      { buyerIdx: 10, creatorIdx: 2, msgs: [
-        { from: 'buyer', content: 'Is the chibi Paimon plush still available? Couldn\'t find it on your page.', daysBack: 8 },
-        { from: 'creator', content: 'Sorry! That batch sold out. Next run will be in December — join my mailing list!', daysBack: 7 },
-      ]},
-      { buyerIdx: 11, creatorIdx: 1, msgs: [
-        { from: 'buyer', content: 'Can I get Bayou Blues Vol.1 signed with a dedication?', daysBack: 22 },
-        { from: 'creator', content: 'Of course! Just put the name you want in the order notes.', daysBack: 21 },
-        { from: 'buyer', content: 'To: Aditya, "From one storyteller to another" please!', daysBack: 21 },
-      ]},
-      { buyerIdx: 12, creatorIdx: 9, msgs: [
-        { from: 'buyer', content: 'Interested in a full armour commission for World Cosplay Summit Philippines qualifier.', daysBack: 35 },
-        { from: 'creator', content: 'WCS PH qualifier? That\'s exciting! What character are you planning?', daysBack: 34 },
-        { from: 'buyer', content: 'Raiden Shogun from Genshin. Full armour including the electro effect elements.', daysBack: 34 },
-        { from: 'creator', content: 'Raiden is one of my favourites to build. I have a slot opening in Q3. Want to schedule a consultation call?', daysBack: 33 },
-        { from: 'buyer', content: 'Yes please! I\'m available weekends. When works for you?', daysBack: 33 },
-      ]},
-      { buyerIdx: 0, creatorIdx: 10, msgs: [
-        { from: 'buyer', content: 'Your neon artpack is stunning. How do you get those glitch effects?', daysBack: 16 },
-        { from: 'creator', content: 'Thanks! It\'s a combination of scanline overlays and chromatic aberration in Photoshop.', daysBack: 15 },
-        { from: 'buyer', content: 'Would you ever do a tutorial on that technique?', daysBack: 15 },
-        { from: 'creator', content: 'Actually planning a tutorial pack! Watch for the drop next month.', daysBack: 14 },
-      ]},
-      { buyerIdx: 1, creatorIdx: 11, msgs: [
-        { from: 'buyer', content: 'I purchased your sticker pack but the download link isn\'t working?', daysBack: 2 },
-        { from: 'creator', content: 'Sorry about that! I\'ve re-sent the download link to your email. Should work now!', daysBack: 1 },
-        { from: 'buyer', content: 'Got it, working perfectly now. Thank you!', daysBack: 1 },
-      ]},
-    ];
-
-    for (const thread of messageThreads) {
-      const buyer = allBuyersForMsg[thread.buyerIdx % allBuyersForMsg.length];
-      const creator = allCreatorsForMsg[thread.creatorIdx % allCreatorsForMsg.length];
-      if (!buyer || !creator) continue;
-
-      const convo = await prisma.conversation.upsert({
-        where: { buyerId_creatorId: { buyerId: buyer.id, creatorId: creator.id } },
-        update: { lastMessageAt: daysAgo(thread.msgs[thread.msgs.length - 1].daysBack) },
-        create: { buyerId: buyer.id, creatorId: creator.id, lastMessageAt: daysAgo(thread.msgs[0].daysBack) },
-      });
-
-      for (const msg of thread.msgs) {
-        const senderId = msg.from === 'buyer' ? buyer.id : creator.id;
-        const receiverId = msg.from === 'buyer' ? creator.id : buyer.id;
-        await prisma.message.create({
-          data: {
-            senderId,
-            receiverId,
-            content: msg.content,
-            isRead: msg.daysBack > 3,
-            createdAt: daysAgo(msg.daysBack),
-          },
-        });
-      }
-    }
-  }
-
-  const totalMessages = await prisma.message.count();
-  const totalConvos = await prisma.conversation.count();
-  console.log(`✅ Messages: ${totalMessages}, Conversations: ${totalConvos}`);
+  // ─── TICKETS ───────────────────────────────────────────────────────────────
+  // Ticket seed data lives in its own script (scripts/seed-tickets.ts). The
+  // legacy Conversation/Message seed that lived here was removed when we
+  // migrated to the ticket-only model.
 
   // ─── MEDIA LIBRARY ─────────────────────────────────────────────────────────
 
@@ -869,14 +755,14 @@ async function main() {
 
   // ─── FINAL COUNTS ──────────────────────────────────────────────────────────
 
-  const [creators, products, buyers, orders, transactions, payouts, messages] = await Promise.all([
+  const [creators, products, buyers, orders, transactions, payouts, tickets] = await Promise.all([
     prisma.creatorProfile.count(),
     prisma.product.count(),
     prisma.user.count({ where: { role: 'BUYER' } }),
     prisma.order.count(),
     prisma.transaction.count(),
     prisma.payout.count(),
-    prisma.message.count(),
+    prisma.ticket.count(),
   ]);
 
   console.log('\n🎉 Extra seed complete!');
@@ -886,7 +772,7 @@ async function main() {
   console.log(`   Orders:       ${orders}`);
   console.log(`   Transactions: ${transactions}`);
   console.log(`   Payouts:      ${payouts}`);
-  console.log(`   Messages:     ${messages}`);
+  console.log(`   Tickets:      ${tickets}`);
 }
 
 main()

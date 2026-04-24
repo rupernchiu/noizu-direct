@@ -54,6 +54,7 @@ export async function PATCH(
       notifyNewProduct?: boolean
       notifyCommissionOpen?: boolean
       notifyNewPost?: boolean
+      notifyBroadcast?: boolean
     }
 
     const item = await prisma.creatorFollow.update({
@@ -62,6 +63,7 @@ export async function PATCH(
         ...(body.notifyNewProduct !== undefined && { notifyNewProduct: body.notifyNewProduct }),
         ...(body.notifyCommissionOpen !== undefined && { notifyCommissionOpen: body.notifyCommissionOpen }),
         ...(body.notifyNewPost !== undefined && { notifyNewPost: body.notifyNewPost }),
+        ...(body.notifyBroadcast !== undefined && { notifyBroadcast: body.notifyBroadcast }),
       },
     })
     return NextResponse.json(item)

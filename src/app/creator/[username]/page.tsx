@@ -526,10 +526,10 @@ export default async function CreatorPage({ params }: PageProps) {
               creatorUsername={creator.username}
             />
             <Link
-              href={isLoggedIn ? `/account/messages?to=${creator.username}` : `/login?callbackUrl=/creator/${creator.username}`}
+              href={isLoggedIn ? `/account/tickets/new?creator=${creator.username}` : `/login?callbackUrl=/creator/${creator.username}`}
               className="mb-2 rounded-xl border border-primary px-4 py-2 text-sm font-semibold text-primary transition-all hover:bg-primary/10 sm:px-5 sm:py-2.5"
             >
-              Message
+              Open ticket
             </Link>
           </div>
         </div>

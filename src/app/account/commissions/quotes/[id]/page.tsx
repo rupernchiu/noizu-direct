@@ -132,6 +132,11 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
                     . The creator can&apos;t release funds themselves — you&apos;re protected by noizu.direct until then.
                   </p>
                 )}
+                <p className="pt-1">
+                  <Link href="/account/commissions/how-it-works" className="text-primary hover:underline">
+                    How commissions work →
+                  </Link>
+                </p>
               </div>
             </div>
           </div>

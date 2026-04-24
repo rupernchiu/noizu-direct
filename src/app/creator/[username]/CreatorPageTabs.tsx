@@ -497,17 +497,21 @@ export function CreatorPageTabs({
 
   async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault()
-    if (!msgText.trim()) return
+    const trimmed = msgText.trim()
+    if (!trimmed) return
     setMsgSending(true)
     setMsgError(null)
     try {
-      const res = await fetch(`/api/creator/${creatorUsername}/message`, {
+      // First sentence / first line is the subject; fall back to a truncation.
+      const firstLine = trimmed.split(/\r?\n/)[0].trim()
+      const subject = (firstLine.length > 0 ? firstLine : trimmed).slice(0, 140) || 'Message'
+      const res = await fetch('/api/tickets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: msgText.trim() }),
+        body: JSON.stringify({ creatorUsername, subject, body: trimmed }),
       })
       if (!res.ok) {
-        const data = await res.json()
+        const data = await res.json().catch(() => ({}))
         setMsgError(data.error ?? 'Failed to send message')
       } else {
         setMsgSent(true)
@@ -844,10 +848,10 @@ export function CreatorPageTabs({
                 Interested in working with {displayName}?
               </p>
               <Link
-                href={`/account/messages?to=${creatorUsername}`}
+                href={`/account/tickets/new?creator=${creatorUsername}`}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 hover:shadow-primary/40 active:scale-95"
               >
-                Send a Message
+                Open a Ticket
               </Link>
             </div>
 
@@ -1029,10 +1033,10 @@ export function CreatorPageTabs({
                   </Link>
                 )}
                 <Link
-                  href={`/account/messages?to=${creatorUsername}`}
+                  href={`/account/tickets/new?creator=${creatorUsername}`}
                   className="text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
-                  or message {displayName} first
+                  or open a ticket with {displayName} first
                 </Link>
               </div>
             </div>
@@ -1566,16 +1570,16 @@ export function CreatorPageTabs({
       </div>
 
 
-      {/* ── Leave a Private Message ───────────────────────────────────────── */}
+      {/* ── Open a Ticket ─────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 mt-6 mb-16">
-        <h2 className="text-lg font-bold text-foreground mb-4">Leave a Message</h2>
+        <h2 className="text-lg font-bold text-foreground mb-4">Open a Ticket</h2>
         {sessionUserId === creatorUserId ? null : (userRole === 'ADMIN' || userRole === 'CREATOR') ? (
           <div className="rounded-xl border border-border bg-card p-5 text-center">
-            <p className="text-sm text-muted-foreground">Only members can send messages to creators</p>
+            <p className="text-sm text-muted-foreground">Only buyers can open tickets with creators</p>
           </div>
         ) : !userRole ? (
           <div className="rounded-xl border border-border bg-card p-5 text-center">
-            <p className="text-sm text-muted-foreground mb-3">Sign in to send a message</p>
+            <p className="text-sm text-muted-foreground mb-3">Sign in to open a ticket</p>
             <Link
               href="/login"
               className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
@@ -1585,7 +1589,13 @@ export function CreatorPageTabs({
           </div>
         ) : msgSent ? (
           <div className="rounded-xl border border-border bg-card p-5 text-center">
-            <p className="text-sm font-medium text-success">Message sent! The creator will reply in your Messages inbox.</p>
+            <p className="text-sm font-medium text-success mb-3">Ticket opened! The creator will reply in your Tickets inbox.</p>
+            <Link
+              href="/account/tickets"
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 transition-colors"
+            >
+              View my tickets
+            </Link>
           </div>
         ) : (
           <form onSubmit={handleSendMessage} className="rounded-xl border border-border bg-card p-5 space-y-4">
@@ -1596,7 +1606,7 @@ export function CreatorPageTabs({
               maxLength={1000}
               required
               className="w-full resize-none rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              placeholder={`Send a private message to ${displayName}…`}
+              placeholder={`Open a ticket with ${displayName}…`}
             />
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">{msgText.length}/1000</span>
@@ -1606,7 +1616,7 @@ export function CreatorPageTabs({
                 disabled={msgSending || !msgText.trim()}
                 className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {msgSending ? 'Sending…' : 'Send Message'}
+                {msgSending ? 'Opening…' : 'Open Ticket'}
               </button>
             </div>
           </form>

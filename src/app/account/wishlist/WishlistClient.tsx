@@ -207,10 +207,10 @@ export function WishlistClient({ items: initialItems, ownedProductIds }: Props) 
                   Buy Now
                 </Link>
                 <Link
-                  href={`/account/messages?to=${product.creator.username}`}
+                  href={`/account/tickets/new?creator=${product.creator.username}`}
                   className="bg-background hover:bg-border border border-border text-foreground rounded-lg px-4 py-2 text-sm font-medium text-center"
                 >
-                  Message Creator
+                  Open Ticket
                 </Link>
               </div>
             </div>

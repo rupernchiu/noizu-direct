@@ -4,18 +4,29 @@ import { prisma } from '@/lib/prisma'
 
 const LIMIT_BYTES = 100 * 1024 * 1024
 
+function fileNameFromR2Key(r2Key: string): string {
+  const tail = r2Key.split('/').pop()
+  return tail && tail.length > 0 ? tail : r2Key
+}
+
 export async function GET() {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const userId = (session.user as any).id as string
 
   try {
-    const messages = await prisma.message.findMany({
-      where: {
-        senderId: userId,
-        NOT: { attachments: '[]' },
+    const attachments = await prisma.ticketAttachment.findMany({
+      where: { uploaderId: userId, supersededAt: null },
+      select: {
+        id: true,
+        ticketId: true,
+        viewerUrl: true,
+        r2Key: true,
+        mimeType: true,
+        fileSize: true,
+        createdAt: true,
       },
-      select: { id: true, attachments: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
     })
 
     let imageFiles = 0
@@ -28,44 +39,40 @@ export async function GET() {
       size: number
       type: string
       date: string
-      messageId: string
+      ticketId: string
+      attachmentId: string
     }> = []
 
-    for (const msg of messages) {
-      let attachments: Array<{ url: string; name: string; size: number; type: string }> = []
-      try {
-        attachments = JSON.parse(msg.attachments)
-      } catch {
-        continue
-      }
-      for (const att of attachments) {
-        const isImage = att.type === 'image' || /\.(jpe?g|png|gif|webp|avif)$/i.test(att.name ?? '')
-        const isPdf = att.type === 'pdf' || /\.pdf$/i.test(att.name ?? '')
-        const size = att.size ?? 0
+    for (const att of attachments) {
+      const name = fileNameFromR2Key(att.r2Key)
+      const mime = att.mimeType ?? ''
+      const isImage = mime.startsWith('image/') || /\.(jpe?g|png|gif|webp|avif)$/i.test(name)
+      const isPdf = mime === 'application/pdf' || /\.pdf$/i.test(name)
+      const size = att.fileSize ?? 0
 
-        if (isImage) {
-          imageFiles++
-          imageBytes += size
-        } else if (isPdf) {
-          pdfFiles++
-          pdfBytes += size
-        }
-
-        files.push({
-          url: att.url,
-          name: att.name,
-          size,
-          type: isImage ? 'image' : isPdf ? 'pdf' : 'other',
-          date: msg.createdAt.toISOString(),
-          messageId: msg.id,
-        })
+      if (isImage) {
+        imageFiles++
+        imageBytes += size
+      } else if (isPdf) {
+        pdfFiles++
+        pdfBytes += size
       }
+
+      files.push({
+        url: att.viewerUrl,
+        name,
+        size,
+        type: isImage ? 'image' : isPdf ? 'pdf' : 'other',
+        date: att.createdAt.toISOString(),
+        ticketId: att.ticketId,
+        attachmentId: att.id,
+      })
     }
 
     const used = imageBytes + pdfBytes
     const breakdown = [
-      { category: 'Message images', files: imageFiles, bytes: imageBytes },
-      { category: 'Message PDFs', files: pdfFiles, bytes: pdfBytes },
+      { category: 'Ticket images', files: imageFiles, bytes: imageBytes },
+      { category: 'Ticket PDFs', files: pdfFiles, bytes: pdfBytes },
     ]
 
     return NextResponse.json({

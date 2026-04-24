@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { COMMISSION_REQUEST_TTL_DAYS } from '@/lib/commissions'
+import { openOrAttachTicket, TicketBlockedError } from '@/lib/tickets'
 
 // POST /api/commissions/requests — buyer creates a new request targeted at a creator
 export async function POST(req: NextRequest) {
@@ -43,30 +44,56 @@ export async function POST(req: NextRequest) {
 
   const expiresAt = new Date(Date.now() + COMMISSION_REQUEST_TTL_DAYS * 24 * 60 * 60 * 1000)
 
-  const request = await prisma.commissionRequest.create({
-    data: {
-      buyerId,
-      creatorId: creatorProfile.id,
-      title: body.title.trim(),
-      briefText: body.briefText.trim(),
-      referenceImages: JSON.stringify(body.referenceImages ?? []),
-      budgetMinUsd: body.budgetMinUsd ?? null,
-      budgetMaxUsd: body.budgetMaxUsd ?? null,
-      deadlineAt: body.deadlineAt ? new Date(body.deadlineAt) : null,
-      expiresAt,
-    },
-  })
+  let requestId: string
+  try {
+    requestId = await prisma.$transaction(async (tx) => {
+      const request = await tx.commissionRequest.create({
+        data: {
+          buyerId,
+          creatorId: creatorProfile.id,
+          title: body.title.trim(),
+          briefText: body.briefText.trim(),
+          referenceImages: JSON.stringify(body.referenceImages ?? []),
+          budgetMinUsd: body.budgetMinUsd ?? null,
+          budgetMaxUsd: body.budgetMaxUsd ?? null,
+          deadlineAt: body.deadlineAt ? new Date(body.deadlineAt) : null,
+          expiresAt,
+        },
+      })
+
+      await openOrAttachTicket(
+        {
+          kind: 'COMMISSION',
+          buyerId,
+          creatorId: creatorProfile.userId,
+          subject: `Commission: ${request.title}`,
+          openedById: buyerId,
+          openedAutoSource: 'REQUEST',
+          link: { commissionRequestId: request.id },
+          seedBody: body.briefText.trim(),
+        },
+        tx,
+      )
+
+      return request.id
+    })
+  } catch (err) {
+    if (err instanceof TicketBlockedError) {
+      return NextResponse.json({ error: err.message }, { status: 403 })
+    }
+    throw err
+  }
 
   await createNotification(
     creatorProfile.userId,
     'NEW_ORDER',
     'New commission request',
-    `You have a new commission request: "${request.title}". Respond within ${COMMISSION_REQUEST_TTL_DAYS} days.`,
+    `You have a new commission request: "${body.title.trim()}". Respond within ${COMMISSION_REQUEST_TTL_DAYS} days.`,
     undefined,
-    `/dashboard/commissions/requests/${request.id}`,
+    `/dashboard/commissions/requests/${requestId}`,
   )
 
-  return NextResponse.json({ ok: true, requestId: request.id })
+  return NextResponse.json({ ok: true, requestId })
 }
 
 // GET /api/commissions/requests — list requests (role-aware)

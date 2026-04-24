@@ -4,7 +4,7 @@ import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
 import { MobileNavDrawer } from '@/components/ui/MobileNavDrawer'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Settings, Palette } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, Ticket, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Settings, Palette, Megaphone } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -81,13 +81,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavLink href="/dashboard/listings"><Package className="size-4" />Listings</NavLink>
       <NavLink href="/dashboard/commissions"><Palette className="size-4" />Commissions</NavLink>
       <NavLink href="/dashboard/orders"><ShoppingBag className="size-4" />Orders</NavLink>
-      <NavLink href="/dashboard/messages"><MessageCircle className="size-4" />Messages</NavLink>
+      <NavLink href="/dashboard/tickets"><Ticket className="size-4" />Tickets</NavLink>
       <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
       <NavLink href="/dashboard/statement"><FileText className="size-4" />Statement</NavLink>
       <NavLink href="/dashboard/fans"><Users className="size-4" />Fans</NavLink>
       <div className="my-2 h-px bg-border" />
       <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>
       <NavLink href="/dashboard/subscribers"><Users className="size-4" />Subscribers</NavLink>
+      <NavLink href="/dashboard/broadcasts"><Megaphone className="size-4" />Broadcasts</NavLink>
       <div className="my-2 h-px bg-border" />
       <p className="px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>
         Reviews
@@ -128,7 +129,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavLink href="/account/following"><Users className="size-4" />Following</NavLink>
       <NavLink href="/account/statements"><FileText className="size-4" />My Statements</NavLink>
       <NavLink href="/account/disputes"><Scale className="size-4" />Disputes</NavLink>
-      <NavLink href="/account/messages"><MessageCircle className="size-4" />Messages</NavLink>
+      <NavLink href="/account/tickets"><Ticket className="size-4" />Tickets</NavLink>
     </>
   )
 

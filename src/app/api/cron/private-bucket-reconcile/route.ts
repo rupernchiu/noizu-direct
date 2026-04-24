@@ -2,7 +2,7 @@
 //
 // Lists every R2 key under the `private/` prefix (capped at 20k) and compares
 // against the full set of DB rows that should own those keys (KycUpload,
-// DisputeEvidence, private Message attachments). Purely diagnostic — NO
+// DisputeEvidence, TicketAttachment). Purely diagnostic — NO
 // deletions, NO uploads. The output is:
 //   • inR2OnlyButNotDb  — orphan R2 objects with no owning DB row
 //   • inDbOnlyButNotR2  — DB rows pointing at a missing R2 object
@@ -28,7 +28,7 @@ const SAMPLE_SIZE = 20
 const EMAIL_SAMPLE_THRESHOLD = 500
 
 // Which R2 prefixes this cron considers "private and owned by the DB".
-// Message attachments are only tracked if they use one of the private prefixes.
+// Ticket attachments are only tracked if they use one of the private prefixes.
 const PRIVATE_PREFIXES = [
   'private/',
   'identity/',
@@ -90,35 +90,15 @@ async function collectDbKeys(): Promise<Set<string>> {
   const disputes = await prisma.disputeEvidence.findMany({ select: { r2Key: true } })
   for (const r of disputes) dbKeys.add(r.r2Key)
 
-  // Message attachments — the attachments field is stored as a JSON array of
-  // { url, type, name, size }. We only count ones whose url path starts with
-  // one of the PRIVATE_PREFIXES. Rows with no attachments are skipped cheaply.
-  const messages = await prisma.message.findMany({
-    where: { NOT: { attachments: '[]' } },
-    select: { attachments: true },
+  // Ticket attachments — TicketAttachment.r2Key is canonical. We only count
+  // keys that fall under one of the PRIVATE_PREFIXES.
+  const ticketAttachments = await prisma.ticketAttachment.findMany({
+    select: { r2Key: true },
   })
-  for (const m of messages) {
-    if (!m.attachments || m.attachments === '[]') continue
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(m.attachments)
-    } catch {
-      continue
-    }
-    if (!Array.isArray(parsed)) continue
-    for (const att of parsed as Array<{ url?: unknown; key?: unknown }>) {
-      const raw =
-        typeof att?.url === 'string'
-          ? att.url
-          : typeof att?.key === 'string'
-            ? att.key
-            : null
-      if (!raw) continue
-      // Strip any protocol/host so we end up with the key path only.
-      const keyPath = raw.replace(/^https?:\/\/[^/]+\//, '')
-      if (PRIVATE_PREFIXES.some((p) => keyPath.startsWith(p))) {
-        dbKeys.add(keyPath)
-      }
+  for (const a of ticketAttachments) {
+    if (!a.r2Key) continue
+    if (PRIVATE_PREFIXES.some((p) => a.r2Key.startsWith(p))) {
+      dbKeys.add(a.r2Key)
     }
   }
 

@@ -45,15 +45,19 @@ model User {
   supportTransactions  SupportTransaction[]  @relation("SupporterUser")
   buyerOrders          Order[]               @relation("BuyerOrders")
   creatorOrders        Order[]               @relation("CreatorOrders")
-  sentMessages         Message[]             @relation("SentMessages")
-  receivedMessages     Message[]             @relation("ReceivedMessages")
-  buyerConvos          Conversation[]        @relation("BuyerConvos")
-  creatorConvos        Conversation[]        @relation("CreatorConvos")
+  ticketsAsBuyer       Ticket[]              @relation("BuyerTickets")
+  ticketsAsCreator     Ticket[]              @relation("CreatorTickets")
+  ticketsClosed        Ticket[]              @relation("TicketClosedBy")
+  ticketMessages       TicketMessage[]
+  ticketReadMarkers    TicketReadMarker[]
+  blocksIssued         UserBlock[]           @relation("UserBlocksIssued")
+  blocksReceived       UserBlock[]           @relation("UserBlocksReceived")
   payouts              Payout[]
   invoices             Invoice[]
   media                Media[]
   posts                Post[]                @relation("PostAuthor")
   notifications        Notification[]
+  broadcastNotifications BroadcastNotification[]
   raisedDisputes       Dispute[]             @relation("DisputeRaisedBy")
   resolvedDisputes     Dispute[]             @relation("DisputeResolvedBy")
   escrowTransactions   EscrowTransaction[]
@@ -146,6 +150,7 @@ model CreatorProfile {
   supportSubscriptions SupportSubscription[]
   podProviders         CreatorPodProvider[]
   followers            CreatorFollow[]
+  broadcasts           Broadcast[]
   guestbookEntries     CreatorGuestbook[]
   discountCodes        DiscountCode[]
   commissionRequests   CommissionRequest[]
@@ -383,8 +388,8 @@ model Order {
   creator            User                  @relation("CreatorOrders", fields: [creatorId], references: [id])
   product            Product               @relation(fields: [productId], references: [id])
   transactions       Transaction[]
-  messages           Message[]
   invoices           Invoice[]
+  ticket             Ticket?
   dispute            Dispute?
   escrowTransactions EscrowTransaction[]
   review             ProductReview?
@@ -449,7 +454,7 @@ model EscrowTransaction {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String // NEW_ORDER|FULFILLMENT_REMINDER|FULFILLMENT_WARNING|FULFILLMENT_FINAL_WARNING|ORDER_CANCELLED|ESCROW_RELEASED|NEW_MESSAGE|DISPUTE_RAISED|DISPUTE_RESOLVED|PAYOUT_PROCESSED|ORDER_CONFIRMED|ORDER_SHIPPED|DOWNLOAD_READY|REFUND_ISSUED
+  type      String // NEW_ORDER|FULFILLMENT_REMINDER|FULFILLMENT_WARNING|FULFILLMENT_FINAL_WARNING|ORDER_CANCELLED|ESCROW_RELEASED|TICKET_OPENED|TICKET_REPLY|TICKET_CLOSED|DISPUTE_RAISED|DISPUTE_RESOLVED|PAYOUT_PROCESSED|ORDER_CONFIRMED|ORDER_SHIPPED|DOWNLOAD_READY|REFUND_ISSUED
   title     String
   message   String
   orderId   String?
@@ -525,37 +530,134 @@ model Invoice {
   order    Order? @relation(fields: [orderId], references: [id])
 }
 
-model Message {
-  id           String   @id @default(cuid())
-  senderId     String
-  receiverId   String
-  orderId      String?
-  content      String
-  imageUrl     String?
-  attachments  String   @default("[]") // JSON: [{url, type, name, size}]
-  isRead       Boolean  @default(false)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
+// ── Tickets (replaces Conversation/Message) ──────────────────────────────────
+//
+// Service-ticket model. Every buyer↔creator thread is a ticket with a subject,
+// kind, and close lifecycle. Only buyers open tickets; only creators close them.
+// New inquiries = new tickets. Linked to the commission/order that spawned them
+// (or standalone GENERAL tickets for free-form questions).
+//
+// Retention: hard-delete 90 days after close; pauses during active disputes.
+// Auto-close: 30 days of two-sided silence (unless linked order/milestone/dispute
+// is still active).
+model Ticket {
+  id                  String    @id @default(cuid())
+  subject             String // required, <= 140 chars
+  kind                String // GENERAL | QUOTE | COMMISSION | ORDER
+  status              String    @default("OPEN") // OPEN | CLOSED
+  buyerId             String
+  creatorId           String // User.id of the creator (NOT CreatorProfile.id)
+  openedById          String // User.id who fired the open event (buyer, or creator for auto-opened quote)
+  openedAutoSource    String? // REQUEST | QUOTE | ORDER | null when manually opened
 
-  sender   User   @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User   @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  order    Order? @relation(fields: [orderId], references: [id])
+  // At most one link is set; determines `kind` + auto-close blockers
+  commissionRequestId String?   @unique
+  commissionQuoteId   String?   @unique
+  orderId             String?   @unique
+
+  // Lifecycle timestamps
+  lastBuyerMessageAt   DateTime?
+  lastCreatorMessageAt DateTime?
+  lastMessageAt        DateTime  @default(now())
+  closedAt             DateTime?
+  closedById           String?
+  closeReason          String? // CREATOR_CLOSED | AUTO_INACTIVITY | ADMIN
+  purgeAt              DateTime? // closedAt + 90d (paused during active dispute)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  buyer    User  @relation("BuyerTickets", fields: [buyerId], references: [id])
+  creator  User  @relation("CreatorTickets", fields: [creatorId], references: [id])
+  closedBy User? @relation("TicketClosedBy", fields: [closedById], references: [id])
+
+  commissionRequest CommissionRequest? @relation(fields: [commissionRequestId], references: [id])
+  commissionQuote   CommissionQuote?   @relation(fields: [commissionQuoteId], references: [id])
+  order             Order?             @relation(fields: [orderId], references: [id])
+
+  messages    TicketMessage[]
+  attachments TicketAttachment[]
+  readMarkers TicketReadMarker[]
+
+  @@index([buyerId, status, lastMessageAt])
+  @@index([creatorId, status, lastMessageAt])
+  @@index([status, lastMessageAt])
+  @@index([purgeAt])
+  @@index([kind, status])
 }
 
-model Conversation {
-  id            String   @id @default(cuid())
-  buyerId       String
-  creatorId     String
-  lastMessageAt DateTime @default(now())
-  createdAt     DateTime @default(now())
+model TicketMessage {
+  id           String    @id @default(cuid())
+  ticketId     String
+  senderId     String
+  body         String // text content, trimmed, <= 5000
+  systemKind   String? // null for user msg; "OPENED" | "CLOSED" | "AUTO_CLOSED" | "REOPENED" | "BLOCKED"
+  reportedAt   DateTime?
+  reportedById String?
+  isDeleted    Boolean   @default(false) // admin/GDPR soft-delete; row kept for thread continuity
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
 
-  buyer   User @relation("BuyerConvos", fields: [buyerId], references: [id])
-  creator User @relation("CreatorConvos", fields: [creatorId], references: [id])
+  ticket      Ticket             @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender      User               @relation(fields: [senderId], references: [id])
+  attachments TicketAttachment[]
 
-  @@unique([buyerId, creatorId])
-  @@index([lastMessageAt])
-  @@index([buyerId, lastMessageAt])
-  @@index([creatorId, lastMessageAt])
+  @@index([ticketId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([reportedAt])
+}
+
+// Append-only attachment log. Mirrors DisputeEvidence/KycUpload pattern — once
+// uploaded, images are never edited; replacements mark the old row superseded.
+// R2 delete only runs through the admin housekeeping cron path.
+model TicketAttachment {
+  id           String    @id @default(cuid())
+  ticketId     String
+  messageId    String? // null only if upload succeeded but message create failed
+  uploaderId   String
+  r2Key        String
+  viewerUrl    String
+  mimeType     String?
+  fileSize     Int?
+  supersededBy String?   @unique
+  supersededAt DateTime?
+  createdAt    DateTime  @default(now())
+
+  ticket  Ticket         @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  message TicketMessage? @relation(fields: [messageId], references: [id])
+
+  @@index([ticketId, createdAt])
+  @@index([uploaderId])
+}
+
+// Per-user last-read cursor on a ticket. Drives unread badges without N+1 scans.
+model TicketReadMarker {
+  id         String   @id @default(cuid())
+  ticketId   String
+  userId     String
+  lastReadAt DateTime @default(now())
+
+  ticket Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([ticketId, userId])
+  @@index([userId, lastReadAt])
+}
+
+// User-level blocks. Creators block buyers — buyer can't open new tickets
+// against this creator, and existing tickets flip read-only.
+model UserBlock {
+  id        String   @id @default(cuid())
+  blockerId String // creator User.id
+  blockedId String // buyer User.id
+  reason    String?
+  createdAt DateTime @default(now())
+
+  blocker User @relation("UserBlocksIssued", fields: [blockerId], references: [id])
+  blocked User @relation("UserBlocksReceived", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 model Page {
@@ -866,12 +968,69 @@ model CreatorFollow {
   notifyNewProduct     Boolean  @default(true)
   notifyCommissionOpen Boolean  @default(true)
   notifyNewPost        Boolean  @default(false)
+  notifyBroadcast      Boolean  @default(true)
   followedAt           DateTime @default(now())
 
   buyer   User           @relation(fields: [buyerId], references: [id])
   creator CreatorProfile @relation(fields: [creatorId], references: [id])
 
   @@unique([buyerId, creatorId])
+  @@index([creatorId, notifyBroadcast])
+}
+
+// ── Creator Broadcasts ───────────────────────────────────────────────────────
+// One-to-many announcements from creators to their followers. Distinct from
+// Tickets (1-to-1, replies) and Posts (durable blog content). Retention is 30
+// days hard delete; cap is 500 per-recipient FIFO. See plan file:
+// docs/superpowers/plans/2026-04-24-in-app-broadcasts.md
+
+enum BroadcastTemplate {
+  NEW_DROP
+  FLASH_SALE
+  BEHIND_SCENES
+  EVENT
+  THANK_YOU
+  MILESTONE
+}
+
+enum BroadcastAudience {
+  ALL_FOLLOWERS
+  SUBSCRIBERS_ONLY
+}
+
+model Broadcast {
+  id        String            @id @default(cuid())
+  creatorId String // → CreatorProfile.id (matches CreatorFollow.creatorId)
+  title     String // max 60 chars, enforced app-side
+  body      String // max 500 chars, enforced app-side
+  imageKey  String? // R2 object key for hero image, null if no image
+  ctaText   String? // max 30 chars
+  ctaUrl    String? // validated to noizu.direct or allow-listed creator domain
+  template  BroadcastTemplate
+  audience  BroadcastAudience
+  createdAt DateTime          @default(now())
+
+  creator       CreatorProfile          @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  notifications BroadcastNotification[]
+
+  @@index([creatorId, createdAt])
+  @@index([createdAt]) // retention sweep
+}
+
+model BroadcastNotification {
+  id          String    @id @default(cuid())
+  broadcastId String
+  recipientId String // → User.id (buyer)
+  readAt      DateTime?
+  deletedAt   DateTime? // buyer hid their own copy — soft delete, per-user
+  createdAt   DateTime  @default(now())
+
+  broadcast Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  recipient User      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@unique([broadcastId, recipientId])
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
 }
 
 // ── Email Log ─────────────────────────────────────────────────────────────────
@@ -983,6 +1142,7 @@ model CommissionRequest {
   buyer   User              @relation("BuyerCommissionRequests", fields: [buyerId], references: [id])
   creator CreatorProfile    @relation(fields: [creatorId], references: [id])
   quotes  CommissionQuote[]
+  ticket  Ticket?
 
   @@index([buyerId, status])
   @@index([creatorId, status])
@@ -1016,6 +1176,7 @@ model CommissionQuote {
   buyer      User                  @relation("BuyerCommissionQuotes", fields: [buyerId], references: [id])
   milestones CommissionMilestone[]
   order      Order? // set when buyer accepts + pays
+  ticket     Ticket?
 
   @@index([creatorId, status])
   @@index([buyerId, status])
