@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
-import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield, Gavel, FolderLock, FileSearch } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
 import { AdminMobileNav } from './AdminMobileNav'
 
@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       { href: '/admin/payouts',              label: 'Payouts',          group: 'Main' },
       { href: '/admin/finance',              label: 'Finance',          group: 'Main' },
       { href: '/admin/chargebacks',          label: 'Chargebacks',      group: 'Main' },
+      { href: '/admin/disputes',             label: 'Disputes',         group: 'Main' },
       { href: '/admin/fraud',                label: 'Fraud',            group: 'Main' },
       { href: '/admin/emails',               label: 'Emails',           group: 'Main' },
       { href: '/admin/cms',                  label: 'CMS',              group: 'Main' },
@@ -42,15 +43,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       { href: '/admin/storage/pricing',      label: 'Storage Pricing',  group: 'Storage' },
       { href: '/admin/agreements',           label: 'Agreements',       group: 'Platform' },
       { href: '/admin/creators/applications', label: 'Applications',    group: 'Platform' },
+      { href: '/admin/private-files/housekeeping', label: 'KYC Housekeeping', group: 'Platform' },
       { href: '/admin/reviews',              label: 'Reviews',          group: 'Platform' },
     )
   }
   if (showStaffSection) {
     mobileNavItems.push(
-      { href: '/admin/staff',             label: 'Staff Users',  group: 'Staff' },
-      { href: '/admin/staff/roles',       label: 'Roles',        group: 'Staff' },
-      { href: '/admin/staff/permissions', label: 'Permissions',  group: 'Staff' },
-      { href: '/admin/staff/audit',       label: 'Audit Log',    group: 'Staff' },
+      { href: '/admin/staff',                  label: 'Staff Users',  group: 'Staff' },
+      { href: '/admin/staff/roles',            label: 'Roles',        group: 'Staff' },
+      { href: '/admin/staff/permissions',      label: 'Permissions',  group: 'Staff' },
+      { href: '/admin/staff/audit',            label: 'Audit Log',    group: 'Staff' },
+      { href: '/admin/staff/audit/file-access', label: 'Dispute Audit',  group: 'Staff' },
     )
   }
 
@@ -75,6 +78,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <NavLink href="/admin/payouts"><DollarSign className="size-4" />Payouts</NavLink>
                   <NavLink href="/admin/finance"><TrendingUp className="size-4" />Finance</NavLink>
                   <NavLink href="/admin/chargebacks"><AlertTriangle className="size-4" />Chargebacks</NavLink>
+                  <NavLink href="/admin/disputes"><Gavel className="size-4" />Disputes</NavLink>
                   <NavLink href="/admin/fraud"><Shield className="size-4" />Fraud</NavLink>
                   <NavLink href="/admin/emails"><Mail className="size-4" />Emails</NavLink>
                   <NavLink href="/admin/cms"><FileText className="size-4" />CMS</NavLink>
@@ -90,6 +94,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>Platform</p>
                   <NavLink href="/admin/agreements"><ScrollText className="size-4" />Agreements</NavLink>
                   <NavLink href="/admin/creators/applications"><ClipboardList className="size-4" />Applications</NavLink>
+                  <NavLink href="/admin/private-files/housekeeping"><FolderLock className="size-4" />KYC Housekeeping</NavLink>
                   <NavLink href="/admin/reviews"><Star className="size-4" />Reviews</NavLink>
                 </>
               )}
@@ -101,6 +106,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <NavLink href="/admin/staff/roles"><Tags className="size-4" />Roles</NavLink>
                   <NavLink href="/admin/staff/permissions"><ShieldCheck className="size-4" />Permissions</NavLink>
                   <NavLink href="/admin/staff/audit"><ListChecks className="size-4" />Audit Log</NavLink>
+                  <NavLink href="/admin/staff/audit/file-access"><FileSearch className="size-4" />Dispute Audit</NavLink>
                 </>
               )}
             </nav>

@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { safeExternalHref, safeInternalHref } from '@/lib/safe-url'
 
 interface Announcement {
@@ -13,23 +14,22 @@ interface Announcement {
 
 interface Props {
   announcements: Announcement[]
+  initialIndex: number
 }
 
-export function AnnouncementBarClient({ announcements }: Props) {
-  const [index, setIndex] = useState(0)
-  const [visible, setVisible] = useState(true)
+export function AnnouncementBarClient({ announcements, initialIndex }: Props) {
+  const pathname = usePathname()
+  const [index, setIndex] = useState(initialIndex)
+  const firstRender = useRef(true)
 
   useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
     if (announcements.length <= 1) return
-    const interval = setInterval(() => {
-      setVisible(false)
-      setTimeout(() => {
-        setIndex((i) => (i + 1) % announcements.length)
-        setVisible(true)
-      }, 300)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [announcements.length])
+    setIndex(prev => (prev + 1) % announcements.length)
+  }, [pathname, announcements.length])
 
   const announcement = announcements[index]
   if (!announcement) return null
@@ -44,11 +44,7 @@ export function AnnouncementBarClient({ announcements }: Props) {
   const content = (
     <div
       className="w-full py-2 px-4 text-center text-sm font-medium text-white"
-      style={{
-        backgroundColor: announcement.color,
-        opacity: visible ? 1 : 0,
-        transition: 'opacity 0.3s ease-in-out',
-      }}
+      style={{ backgroundColor: announcement.color }}
     >
       {announcement.text}
       {safeLink && (

@@ -16,7 +16,7 @@ import {
   ACCESS_REASON_CODES,
   ACCESS_REASON_LABELS,
   type AccessReasonCode,
-} from '@/lib/private-file-audit'
+} from '@/lib/private-file-audit-types'
 
 const SELECTABLE_CODES: AccessReasonCode[] = (ACCESS_REASON_CODES as readonly AccessReasonCode[])
   .filter((c) => c !== 'OWNER_SELF_VIEW')

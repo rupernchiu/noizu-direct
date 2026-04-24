@@ -248,6 +248,7 @@ export function AdminCreatorTable({ creators, total, page, perPage, healthTab }:
                           isTopCreator={creator.isTopCreator}
                           isSuspended={creator.isSuspended}
                           username={creator.username}
+                          userEmail={creator.user.email}
                           badges={parsedBadges}
                           legalFullName={creator.user.legalFullName}
                           boostMultiplier={creator.boostMultiplier ?? 1}

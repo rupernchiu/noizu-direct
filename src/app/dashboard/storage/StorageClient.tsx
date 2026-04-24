@@ -316,7 +316,7 @@ export function StorageClient({ initialFiles, breakdown, totalBytes, quotaBytes,
           </p>
         )}
         <p className="text-xs text-muted-foreground">
-          Soft overage up to {config.overageGracePercent}% above your plan ({fmtCents(config.overageCentsPerGb)}/GB over) — new uploads beyond the hard limit are blocked.
+          Soft overage up to {config.overageGracePercent}% above your plan — new uploads beyond the hard limit are blocked.
         </p>
       </div>
 

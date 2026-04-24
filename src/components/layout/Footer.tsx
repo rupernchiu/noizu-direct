@@ -37,7 +37,6 @@ const FALLBACK: Record<typeof COLUMNS[number], { label: string; href: string }[]
   Creators: [
     { label: 'Start Selling', href: '/start-selling' },
     { label: 'Creator Handbook', href: '/creator-handbook' },
-    { label: 'Fees & Payouts', href: '/fees-payouts' },
     { label: 'Articles', href: '/blog' },
   ],
   Support: [

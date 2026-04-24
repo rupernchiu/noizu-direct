@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
-import { requireStaffActor } from '@/lib/staffPolicy'
+import { requireAdminOrStaffActor } from '@/lib/staffPolicy'
 import {
   auditedDeletePrivate,
   categoryFromPath,
@@ -41,7 +41,7 @@ export interface PurgeDraftResult {
 export async function purgeOrphanDraftAction(
   applicationId: string,
 ): Promise<PurgeDraftResult> {
-  const actor = await requireStaffActor('files.housekeeping')
+  const actor = await requireAdminOrStaffActor('files.housekeeping')
 
   const app = await prisma.creatorApplication.findUnique({
     where: { id: applicationId },
@@ -106,7 +106,7 @@ export interface DeleteKycRetentionResult {
 export async function deleteKycRetentionAction(
   input: DeleteKycRetentionInput,
 ): Promise<DeleteKycRetentionResult> {
-  const actor = await requireStaffActor('files.housekeeping')
+  const actor = await requireAdminOrStaffActor('files.housekeeping')
 
   if (!isDeletionReasonCode(input.reasonCode)) {
     return { ok: false, error: 'Invalid reason code.' }
@@ -169,7 +169,7 @@ export interface DeleteDisputeEvidenceResult {
 export async function deleteDisputeEvidenceAction(
   input: DeleteDisputeEvidenceInput,
 ): Promise<DeleteDisputeEvidenceResult> {
-  const actor = await requireStaffActor('files.housekeeping')
+  const actor = await requireAdminOrStaffActor('files.housekeeping')
 
   if (!isDeletionReasonCode(input.reasonCode)) {
     return { ok: false, error: 'Invalid reason code.' }

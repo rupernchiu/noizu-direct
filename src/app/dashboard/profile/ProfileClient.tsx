@@ -106,7 +106,7 @@ export function ProfileClient({ data }: { data: PageData }) {
           <NotificationsSection profile={{ notifPrefs: null }} />
         )}
         {activeSection === 'danger' && (
-          <DangerSection userEmail={data.user.email} />
+          <DangerSection />
         )}
       </div>
     </div>

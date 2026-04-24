@@ -15,5 +15,9 @@ export default async function AnnouncementBar() {
 
   if (announcements.length === 0) return null;
 
-  return <AnnouncementBarClient announcements={announcements} />;
+  // Pick a random starting announcement per request so full page refreshes
+  // rotate through them. Client advances on each pathname change.
+  const initialIndex = Math.floor(Math.random() * announcements.length);
+
+  return <AnnouncementBarClient announcements={announcements} initialIndex={initialIndex} />;
 }

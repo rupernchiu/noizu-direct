@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AuthedFileViewButton } from '@/components/admin/AuthedFileViewButton'
+import { AccessReasonModal } from '@/components/admin/AccessReasonModal'
+import { AuthedThumbnail, type RevealState } from '@/components/admin/AuthedThumbnail'
 
 interface DisputeDetail {
   id: string; orderId: string; reason: string; description: string
@@ -48,7 +49,15 @@ function fmtSize(bytes: number | null): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
-function EvidenceCard({ ev, superseded }: { ev: EvidenceDto; superseded: boolean }) {
+function EvidenceCard({
+  ev,
+  superseded,
+  reveal,
+}: {
+  ev: EvidenceDto
+  superseded: boolean
+  reveal: RevealState | null
+}) {
   return (
     <div
       className={`rounded-lg border p-3 flex gap-3 items-start ${
@@ -57,6 +66,15 @@ function EvidenceCard({ ev, superseded }: { ev: EvidenceDto; superseded: boolean
           : 'border-border bg-background/40'
       }`}
     >
+      <div className="shrink-0">
+        <AuthedThumbnail
+          viewerUrl={ev.viewerUrl}
+          reveal={reveal}
+          label={`${ev.role} evidence · ${ev.uploader?.email ?? 'unknown'}`}
+          mimeType={ev.mimeType}
+          dense
+        />
+      </div>
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center gap-2 flex-wrap">
           <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-medium ${
@@ -93,15 +111,6 @@ function EvidenceCard({ ev, superseded }: { ev: EvidenceDto; superseded: boolean
           {ev.r2Key}
         </p>
       </div>
-      <div className="shrink-0">
-        <AuthedFileViewButton
-          src={ev.viewerUrl}
-          label="View"
-          defaultReason="DISPUTE_REVIEW"
-          resourceLabel={`${ev.role} evidence · ${ev.uploader?.email ?? 'unknown'}`}
-          title="Open dispute evidence"
-        />
-      </div>
     </div>
   )
 }
@@ -120,6 +129,12 @@ export default function DisputeDetailClient({
   const [partialAmount, setPartialAmount] = useState('')
   const [resolving, setResolving] = useState(false)
   const [confirm, setConfirm] = useState<'FULL_REFUND' | 'PARTIAL_REFUND' | 'RELEASE' | null>(null)
+
+  // Evidence reveal gate — admin picks a reason once, every thumbnail on the
+  // page then fetches through /api/files with that reason, writing one audit
+  // row per file.
+  const [reveal, setReveal] = useState<RevealState | null>(null)
+  const [reasonOpen, setReasonOpen] = useState(false)
 
   const isResolved = !['OPEN', 'UNDER_REVIEW'].includes(dispute.status)
 
@@ -220,6 +235,21 @@ export default function DisputeDetailClient({
               <p className="text-xs text-muted-foreground">No evidence files attached to this dispute.</p>
             )}
 
+            {hasAnyEvidence && !reveal && (
+              <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 dark:bg-amber-500/5 p-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-amber-900 dark:text-amber-200">
+                  Evidence files are audited. Confirm your reason to load thumbnails.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setReasonOpen(true)}
+                  className="shrink-0 px-3 py-1.5 rounded-md text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                >
+                  🔒 Reveal evidence
+                </button>
+              </div>
+            )}
+
             {raiserEvidence.length > 0 && (
               <div className="mb-3">
                 <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-2">
@@ -227,7 +257,7 @@ export default function DisputeDetailClient({
                 </p>
                 <div className="flex flex-col gap-2">
                   {raiserEvidence.map((ev) => (
-                    <EvidenceCard key={ev.id} ev={ev} superseded={false} />
+                    <EvidenceCard key={ev.id} ev={ev} superseded={false} reveal={reveal} />
                   ))}
                 </div>
               </div>
@@ -240,7 +270,7 @@ export default function DisputeDetailClient({
                 </p>
                 <div className="flex flex-col gap-2">
                   {creatorEvidence.map((ev) => (
-                    <EvidenceCard key={ev.id} ev={ev} superseded={false} />
+                    <EvidenceCard key={ev.id} ev={ev} superseded={false} reveal={reveal} />
                   ))}
                 </div>
               </div>
@@ -253,12 +283,26 @@ export default function DisputeDetailClient({
                 </p>
                 <div className="flex flex-col gap-2">
                   {supersededEvidence.map((ev) => (
-                    <EvidenceCard key={ev.id} ev={ev} superseded={true} />
+                    <EvidenceCard key={ev.id} ev={ev} superseded={true} reveal={reveal} />
                   ))}
                 </div>
               </div>
             )}
           </div>
+
+          <AccessReasonModal
+            open={reasonOpen}
+            onClose={() => setReasonOpen(false)}
+            onConfirm={(code, note) => {
+              setReveal({ code, note })
+              setReasonOpen(false)
+            }}
+            defaultReasonCode="DISPUTE_REVIEW"
+            resourceLabel="All evidence for this dispute"
+            title="Reveal dispute evidence"
+            submitLabel="Reveal all"
+          />
+
 
           {!isResolved && (
             <div className="bg-card border border-border rounded-xl p-5">

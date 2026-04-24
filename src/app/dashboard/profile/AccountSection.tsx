@@ -209,12 +209,19 @@ export function AccountSection({ user }: Props) {
                 {name[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
-              {uploading ? 'Uploading...' : 'Change'}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium text-center px-2 leading-tight">
+              {uploading ? (
+                <span>Uploading...</span>
+              ) : (
+                <>
+                  <span>Change</span>
+                  <span className="text-[9px] font-normal text-white/80 mt-0.5">400×400 · 2 MB</span>
+                </>
+              )}
             </div>
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-          <div className="text-sm text-muted-foreground">Click the avatar to upload a new photo. Square image recommended.</div>
+          <div className="text-sm text-muted-foreground">Click the avatar to upload a new photo.<br /><span className="text-xs">Recommended: square image, 400×400 px, JPG or PNG, under 2&nbsp;MB.</span></div>
         </div>
       </div>
 

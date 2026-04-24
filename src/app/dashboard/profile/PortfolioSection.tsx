@@ -271,6 +271,7 @@ export function PortfolioSection({ profile }: Props) {
 
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1">Image</label>
+            <p className="text-xs text-muted-foreground/80 mb-2">Recommended: 1200×1200 px or larger, JPG or PNG, under 5&nbsp;MB.</p>
             {newImageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={newImageUrl} alt="Preview" className="w-24 h-24 rounded-lg object-cover mb-2 border border-border" />

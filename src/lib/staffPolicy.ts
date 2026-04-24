@@ -6,6 +6,7 @@
 
 import { redirect } from 'next/navigation'
 import { prisma } from './prisma'
+import { auth } from './auth'
 import { getStaffSession, type StaffSessionData } from './staffAuth'
 
 export interface StaffActor extends StaffSessionData {
@@ -77,5 +78,38 @@ export async function requireSuperAdmin(): Promise<StaffActor> {
   const actor = await loadStaffActor()
   if (!actor) redirect('/staff/login')
   if (!actor.isSuperAdmin) redirect('/admin/staff')
+  return actor
+}
+
+/**
+ * Load an actor that is either the main admin (NextAuth User.role='ADMIN')
+ * or a StaffUser session. Main admin is treated as implicitly super-admin
+ * for the StaffUser permission system so the owner never hits a dead-end
+ * because they haven't been granted a shortcode.
+ */
+export async function loadAdminOrStaffActor(): Promise<StaffActor | null> {
+  const session = await auth()
+  const user = session?.user as { id?: string; name?: string | null; email?: string | null; role?: string } | undefined
+  if (user?.role === 'ADMIN' && user.id) {
+    return {
+      id: user.id,
+      name: user.name ?? user.email ?? 'Main Admin',
+      email: user.email ?? '',
+      staffUserId: user.id,
+      isSuperAdmin: true,
+      permissions: new Set<string>(),
+    }
+  }
+  return loadStaffActor()
+}
+
+/**
+ * Require a main-admin or staff session, optionally with a specific permission.
+ * Main admin passes any permission check (implicit super-admin).
+ */
+export async function requireAdminOrStaffActor(shortcode?: string): Promise<StaffActor> {
+  const actor = await loadAdminOrStaffActor()
+  if (!actor) redirect('/staff/login')
+  if (shortcode && !can(actor, shortcode)) redirect('/staff/login')
   return actor
 }

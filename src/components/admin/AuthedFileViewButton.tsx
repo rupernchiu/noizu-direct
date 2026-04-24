@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AccessReasonModal } from './AccessReasonModal'
 import { fetchPrivateBlobUrl } from '@/lib/private-file-fetch'
-import type { AccessReasonCode } from '@/lib/private-file-audit'
+import type { AccessReasonCode } from '@/lib/private-file-audit-types'
 
 interface Props {
   /** Path to the authenticated stream endpoint, e.g. /api/files/dispute-evidence/… */

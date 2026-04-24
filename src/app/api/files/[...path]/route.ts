@@ -29,7 +29,14 @@ import {
 // NextAuth's `auth()` is overloaded (middleware + handler + zero-arg); the
 // zero-arg call returns `Session | null`. TypeScript's ReturnType picks the
 // middleware overload, so we narrow manually.
-type AuthSession = { user?: { id?: string; name?: string | null; email?: string | null } } | null
+type AuthSession = {
+  user?: {
+    id?: string
+    name?: string | null
+    email?: string | null
+    role?: 'BUYER' | 'CREATOR' | 'ADMIN'
+  }
+} | null
 
 const STREAMED_PRIVATE_CATEGORIES = new Set<PrivateFileCategory>([
   'identity',
@@ -206,6 +213,49 @@ async function decide(args: {
         type: 'STAFF',
         id: staffActor.id,
         name: `${staffActor.name} <${staffActor.email}>`,
+        reasonCode,
+        reasonNote,
+      },
+      targetUserId,
+    }
+  }
+
+  // ── Main-admin (User.role === 'ADMIN') bypass ─────────────────────────────
+  // The primary admin account isn't a StaffUser row but still needs access
+  // for review flows. Treat them like a super-admin staff actor: reason
+  // header required per STAFF_REASON_REQUIRED, audit row written as STAFF.
+  if (userSession?.user?.role === 'ADMIN' && userSession.user.id) {
+    let reasonCode: AccessReasonCode | null = null
+    let reasonNote: string | null = null
+
+    const rawReason = request.headers.get('x-access-reason')
+    const rawNote = request.headers.get('x-access-reason-note')
+
+    if (rawReason && isAccessReasonCode(rawReason)) {
+      reasonCode = rawReason
+      reasonNote = rawNote && rawNote.trim() ? rawNote.slice(0, 1000) : null
+      if (reasonCode === 'OTHER' && !reasonNote) {
+        return { allow: false, status: 403, reason: 'Reason note required when reasonCode=OTHER' }
+      }
+    } else if (STAFF_REASON_REQUIRED[category]) {
+      return { allow: false, status: 403, reason: 'X-Access-Reason header required' }
+    } else {
+      reasonCode = 'CS_TICKET'
+    }
+
+    const targetUserId = await inferTargetUserId(category, segments, viewerUrl)
+    const adminName =
+      userSession.user.name ??
+      userSession.user.email ??
+      userSession.user.id
+    const adminEmail = userSession.user.email ?? ''
+
+    return {
+      allow: true,
+      actor: {
+        type: 'STAFF',
+        id: userSession.user.id,
+        name: adminEmail ? `${adminName} <${adminEmail}>` : adminName,
         reasonCode,
         reasonNote,
       },

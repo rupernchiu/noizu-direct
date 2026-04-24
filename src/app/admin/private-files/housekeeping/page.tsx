@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { requireStaffActor } from '@/lib/staffPolicy'
+import { requireAdminOrStaffActor } from '@/lib/staffPolicy'
 import { OrphanPurgeButton } from './OrphanPurgeButton'
 import { DeleteWithReasonButton } from './DeleteWithReasonButton'
 
@@ -33,7 +33,7 @@ function truncateKey(key: string): string {
 }
 
 export default async function PrivateFilesHousekeepingPage() {
-  await requireStaffActor('files.housekeeping')
+  await requireAdminOrStaffActor('files.housekeeping')
 
   const now = Date.now()
   const orphanCutoff = new Date(now - ORPHAN_CUTOFF_DAYS * DAYS)

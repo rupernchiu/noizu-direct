@@ -231,14 +231,18 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
       {/* Banner & Avatar */}
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">Banner Image</label>
+          <label className="block text-sm font-medium text-foreground mb-1.5">Banner Image</label>
+          <p className="text-xs text-muted-foreground mb-2">Recommended: 1500×500 px (3:1), JPG or PNG, under 5&nbsp;MB.</p>
           <div className="relative h-28 w-full rounded-xl overflow-hidden bg-gradient-to-r from-primary/30 to-secondary/30 border border-border">
             {bannerImage && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={bannerImage} alt="Banner" className="w-full h-full object-cover" />
             )}
-            <label className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/30 hover:bg-black/40 transition-colors text-white text-xs font-medium">
-              {uploading ? 'Uploading...' : 'Change Banner'}
+            <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer bg-black/30 hover:bg-black/40 transition-colors text-white text-xs font-medium text-center px-3">
+              <span>{uploading ? 'Uploading...' : 'Change Banner'}</span>
+              {!uploading && (
+                <span className="mt-0.5 text-[10px] font-normal text-white/80">1500×500 px · JPG/PNG · up to 5 MB</span>
+              )}
               <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
             </label>
           </div>
@@ -254,18 +258,19 @@ function AppearanceTab({ profile }: { profile: CreatorProfile }) {
                 {displayName[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <label className="absolute inset-0 flex items-center justify-center cursor-pointer bg-black/40 opacity-0 hover:opacity-100 transition-opacity text-white text-[10px] font-medium text-center px-1">
-              Change
+            <label className="absolute inset-0 flex flex-col items-center justify-center cursor-pointer bg-black/60 opacity-0 hover:opacity-100 transition-opacity text-white text-[10px] font-medium text-center px-1 leading-tight">
+              <span>Change</span>
+              <span className="text-[8px] font-normal text-white/80 mt-0.5">400×400 · 2 MB</span>
               <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </label>
           </div>
-          <div className="text-sm text-muted-foreground">Click to upload a new avatar (square image recommended)</div>
+          <div className="text-xs text-muted-foreground">Click the avatar to upload. Recommended: square image, 400×400 px, JPG or PNG, under 2&nbsp;MB.</div>
         </div>
 
         {/* Creator Logo */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1.5">Creator Logo</label>
-          <p className="text-xs text-muted-foreground mb-2">Shown on your About tab. Square image, min 200×200px recommended.</p>
+          <p className="text-xs text-muted-foreground mb-2">Shown on your About tab. Recommended: square image, 400×400 px (min 200×200), JPG or PNG, under 2&nbsp;MB.</p>
           <div className="flex items-center gap-4">
             <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-card border-2 border-border shrink-0">
               {logoImage ? (

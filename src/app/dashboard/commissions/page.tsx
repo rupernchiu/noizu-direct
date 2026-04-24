@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { Inbox, FileText, Plus, Sliders } from 'lucide-react'
+import { Inbox, FileText, Plus } from 'lucide-react'
 
 const quoteStatusStyles: Record<string, string> = {
   DRAFT:     'bg-muted-foreground/20 text-muted-foreground',
@@ -42,11 +42,8 @@ export default async function CommissionsInboxPage() {
 
   if (!profile) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-foreground">Commissions</h1>
-        <div className="bg-surface rounded-xl border border-border px-5 py-12 text-center">
-          <p className="text-sm text-muted-foreground">You need a creator profile to receive commissions.</p>
-        </div>
+      <div className="bg-surface rounded-xl border border-border px-5 py-12 text-center">
+        <p className="text-sm text-muted-foreground">You need a creator profile to receive commissions.</p>
       </div>
     )
   }
@@ -67,28 +64,16 @@ export default async function CommissionsInboxPage() {
   return (
     <div className="space-y-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Commissions</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage incoming custom work requests and the quotes you issue.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/settings/commissions"
-            className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-          >
-            <Sliders className="size-4" />
-            Settings
-          </Link>
-          <Link
-            href="/dashboard/commissions/quotes/new"
-            className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90"
-          >
-            <Plus className="size-4" />
-            New quote
-          </Link>
-        </div>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Manage incoming custom work requests and the quotes you issue.
+        </p>
+        <Link
+          href="/dashboard/commissions/quotes/new"
+          className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90"
+        >
+          <Plus className="size-4" />
+          New quote
+        </Link>
       </div>
 
       <section className="space-y-3">

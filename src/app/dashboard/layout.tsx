@@ -4,7 +4,7 @@ import { NavLink } from '@/components/ui/NavLink'
 import { NotificationBell } from '@/components/ui/NotificationBell'
 import { AgreementWall } from '@/components/ui/AgreementWall'
 import { MobileNavDrawer } from '@/components/ui/MobileNavDrawer'
-import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Sliders, Settings, Palette } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingBag, MessageCircle, DollarSign, Users, User, Video, Heart, Zap, Printer, HardDrive, Download, FileText, Scale, Star, Tag, ShieldCheck, Settings, Palette } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { Suspense } from 'react'
 import Link from 'next/link'
@@ -100,7 +100,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </p>
       <NavLink href="/dashboard/settings"><Settings className="size-4" />Overview</NavLink>
       <NavLink href="/dashboard/profile"><User className="size-4" />Profile</NavLink>
-      <NavLink href="/dashboard/settings/commissions"><Sliders className="size-4" />Commissions</NavLink>
       <NavLink href="/dashboard/videos"><Video className="size-4" />Videos</NavLink>
       <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
       <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>

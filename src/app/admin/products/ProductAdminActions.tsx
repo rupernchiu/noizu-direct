@@ -56,7 +56,7 @@ export function ProductAdminActions({ productId, isActive, manualBoost, isTrendi
   }
 
   return (
-    <div className="relative flex items-center gap-2 flex-wrap">
+    <div className="relative flex items-center gap-1.5">
       <button
         onClick={toggleActive}
         disabled={loading}

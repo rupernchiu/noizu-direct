@@ -1,13 +1,12 @@
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { User, Sliders, Video, Printer, Zap, Tag, ShieldCheck, FileCheck2 } from 'lucide-react'
+import { User, Video, Printer, Zap, Tag, ShieldCheck, FileCheck2 } from 'lucide-react'
 
 export const metadata = { title: 'Settings | noizu.direct' }
 
 const links = [
   { href: '/dashboard/profile',             label: 'Profile',          icon: User,        desc: 'Public store info, socials, avatars, banner' },
-  { href: '/dashboard/settings/commissions', label: 'Commissions',      icon: Sliders,     desc: 'Status, slots, pricing tiers, n-stage milestone templates' },
   { href: '/dashboard/videos',              label: 'Videos',           icon: Video,       desc: 'Upload & manage creator videos' },
   { href: '/dashboard/pod-settings',        label: 'POD Settings',     icon: Printer,     desc: 'Print-on-demand providers & shipping times' },
   { href: '/dashboard/popup',               label: 'Popup',            icon: Zap,         desc: 'Visitor popup & campaign CTA' },

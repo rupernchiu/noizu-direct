@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import { Tag, Save, Check } from 'lucide-react'
 
 interface Config {
-  freePlanMb: number; proPlanGb: number; proPlanPriceCents: number
-  studioPlanGb: number; studioPlanPriceCents: number
-  topup1gbCents: number; topup5gbCents: number; topup10gbCents: number
+  freePlanMb: number
+  creatorPlanGb: number; creatorPlanPriceCents: number
+  proPlanGb: number; proPlanPriceCents: number
+  overageCentsPerGb: number; overageGracePercent: number
   warningThreshold1: number; warningThreshold2: number
   gracePeriodDays: number; orphanAgeDays: number; deleteWarningHours: number
   feeGraceDays: number; feePayoutBlockDays: number; feeSuspendDays: number
@@ -14,9 +15,10 @@ interface Config {
 }
 
 const DEFAULT_CONFIG: Config = {
-  freePlanMb: 500, proPlanGb: 5, proPlanPriceCents: 999,
-  studioPlanGb: 20, studioPlanPriceCents: 1999,
-  topup1gbCents: 299, topup5gbCents: 999, topup10gbCents: 1799,
+  freePlanMb: 2048,
+  creatorPlanGb: 25, creatorPlanPriceCents: 690,
+  proPlanGb: 100, proPlanPriceCents: 1490,
+  overageCentsPerGb: 8, overageGracePercent: 10,
   warningThreshold1: 80, warningThreshold2: 95,
   gracePeriodDays: 7, orphanAgeDays: 30, deleteWarningHours: 48,
   feeGraceDays: 7, feePayoutBlockDays: 14, feeSuspendDays: 30,
@@ -40,7 +42,7 @@ function NumberField({ label, value, onChange, min, max, suffix }: {
           onChange={e => onChange(Number(e.target.value))}
           className="w-24 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-sm text-right focus-visible:border-primary outline-none"
         />
-        {suffix && <span className="text-xs text-muted-foreground w-12">{suffix}</span>}
+        {suffix && <span className="text-xs text-muted-foreground w-20">{suffix}</span>}
       </div>
     </div>
   )
@@ -51,25 +53,31 @@ const EMAIL_TEMPLATES = [
     key: '80pct',
     tab: '80% Warning',
     subject: 'Storage at 80% — noizu.direct',
-    body: `Hi [Creator Name],\n\nYour noizu.direct storage is now at 80% of your [500MB] free quota.\n\nYou've used [400MB] of [500MB].\n\nConsider upgrading to Pro (5GB, USD 9.99/month) or deleting unused files.\n\nManage your storage: https://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+    body: `Hi [Creator Name],\n\nYour noizu.direct storage is now at 80% of your plan quota.\n\nUsed: [1.6 GB] of [2 GB]\n\nConsider upgrading to Creator (25 GB, USD 6.90/month) or Pro (100 GB, USD 14.90/month), or remove unused files.\n\nManage your storage: https://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
   {
     key: '95pct',
     tab: '95% Warning',
     subject: 'Storage almost full — noizu.direct',
-    body: `Hi [Creator Name],\n\nYour storage is now at 95%. New uploads will be blocked when you reach 100%.\n\nUsed: [475MB] of [500MB]\n\nUpgrade now or free up space to keep uploading.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+    body: `Hi [Creator Name],\n\nYour storage is now at 95%. On the Free plan, new uploads will be blocked at 100%. On paid plans, overage begins at $0.08/GB/month above your quota.\n\nUsed: [1.9 GB] of [2 GB]\n\nUpgrade or free up space:\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
   {
     key: 'full',
-    tab: 'Full',
+    tab: 'Full (Free plan only)',
     subject: 'Storage full — uploads blocked',
-    body: `Hi [Creator Name],\n\nYour storage is full. New uploads are now blocked.\n\nDelete files or upgrade your plan to continue uploading.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+    body: `Hi [Creator Name],\n\nYou've reached the 2 GB limit of the Free plan. New uploads are now blocked.\n\nUpgrade to keep uploading:\n- Creator: 25 GB, USD 6.90/month\n- Pro: 100 GB, USD 14.90/month\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+  },
+  {
+    key: 'overage',
+    tab: 'Overage Started (paid)',
+    subject: 'Storage overage started — noizu.direct',
+    body: `Hi [Creator Name],\n\nYou've exceeded your plan quota. Overage at $0.08/GB/month is now accruing and will be billed with your next renewal.\n\nUsed: [27 GB] of [25 GB]\nEstimated overage this month: [USD 0.16]\n\nConsider upgrading to Pro (100 GB, USD 14.90/month) if you expect to stay above quota.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
   {
     key: 'grace',
     tab: 'Grace Started',
     subject: '7-day storage grace period started',
-    body: `Hi [Creator Name],\n\nYour storage has been over quota for 24 hours. A 7-day grace period has started.\n\nAfter 7 days, orphaned files may be auto-deleted after a 48-hour final warning.\n\nYour active product images and portfolio are never auto-deleted.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+    body: `Hi [Creator Name],\n\nYour storage has been over the hard limit for 24 hours. A 7-day grace period has started.\n\nAfter 7 days, orphaned files may be auto-deleted after a 48-hour final warning.\n\nYour active product images, portfolio, and profile assets are never auto-deleted.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
   {
     key: 'delete_warn',
@@ -84,10 +92,10 @@ const EMAIL_TEMPLATES = [
     body: `Hi [Creator Name],\n\n[N] orphaned files ([X MB]) have been automatically deleted from your account to free up space.\n\nYour active product images, portfolio, and profile assets were not affected.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
   {
-    key: 'purchase',
-    tab: 'Purchase Confirmed',
-    subject: 'Storage upgrade confirmed — noizu.direct',
-    body: `Hi [Creator Name],\n\nYour storage upgrade is confirmed!\n\nPlan: [Plan Name]\nNew quota: [X GB]\nAmount: USD [X.XX]\n\nYour upgraded storage is now active.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
+    key: 'subscribed',
+    tab: 'Subscription Confirmed',
+    subject: 'Storage plan activated — noizu.direct',
+    body: `Hi [Creator Name],\n\nYour storage plan is active.\n\nPlan: [Creator / Pro]\nQuota: [25 GB / 100 GB]\nMonthly: USD [6.90 / 14.90]\nRenews: [Date]\n\nOverage (if any) is billed at $0.08/GB/month with your next renewal.\n\nhttps://noizu.direct/dashboard/storage\n\nnoizu.direct`,
   },
 ]
 
@@ -137,7 +145,10 @@ export default function AdminStoragePricingPage() {
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Tag className="size-6" /> Storage Pricing & Plans
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Configure storage plans, top-up pricing, and enforcement policies.</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configure the three-tier storage policy (Free / Creator / Pro) and enforcement thresholds.
+          Overage is billed monthly; flat-pack top-ups are not offered.
+        </p>
       </div>
 
       {/* Plan pricing */}
@@ -152,6 +163,17 @@ export default function AdminStoragePricingPage() {
               <span className="text-sm text-muted-foreground">Price</span>
               <span className="text-sm text-muted-foreground">USD 0 (always free)</span>
             </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-sm text-muted-foreground">Overage</span>
+              <span className="text-sm text-muted-foreground">Hard block at 100%</span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl border border-border space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Creator Plan</p>
+            <NumberField label="Storage" value={config.creatorPlanGb} onChange={v => set('creatorPlanGb', v)} min={1} suffix="GB" />
+            <NumberField label="Monthly price" value={config.creatorPlanPriceCents} onChange={v => set('creatorPlanPriceCents', v)} min={0} suffix="USD cents" />
+            <p className="text-xs text-muted-foreground">= USD {(config.creatorPlanPriceCents / 100).toFixed(2)}/month</p>
           </div>
 
           <div className="p-4 rounded-xl border border-border space-y-3">
@@ -160,39 +182,40 @@ export default function AdminStoragePricingPage() {
             <NumberField label="Monthly price" value={config.proPlanPriceCents} onChange={v => set('proPlanPriceCents', v)} min={0} suffix="USD cents" />
             <p className="text-xs text-muted-foreground">= USD {(config.proPlanPriceCents / 100).toFixed(2)}/month</p>
           </div>
-
-          <div className="p-4 rounded-xl border border-border space-y-3">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Studio Plan</p>
-            <NumberField label="Storage" value={config.studioPlanGb} onChange={v => set('studioPlanGb', v)} min={1} suffix="GB" />
-            <NumberField label="Monthly price" value={config.studioPlanPriceCents} onChange={v => set('studioPlanPriceCents', v)} min={0} suffix="USD cents" />
-            <p className="text-xs text-muted-foreground">= USD {(config.studioPlanPriceCents / 100).toFixed(2)}/month</p>
-          </div>
         </div>
 
         <p className="text-xs text-muted-foreground">Price changes apply to new subscriptions only.</p>
       </div>
 
-      {/* Top-up pricing */}
+      {/* Overage policy */}
       <div className="rounded-2xl border border-border bg-card p-6 space-y-5">
-        <h3 className="text-base font-semibold text-foreground">Top-up Pricing</h3>
-        <div className="space-y-3">
-          {[
-            { label: '+1 GB',  key: 'topup1gbCents'  as keyof Config },
-            { label: '+5 GB',  key: 'topup5gbCents'  as keyof Config },
-            { label: '+10 GB', key: 'topup10gbCents' as keyof Config },
-          ].map(({ label, key }) => (
-            <div key={key} className="flex items-center gap-4">
-              <span className="text-sm text-foreground w-16 font-medium">{label}</span>
-              <input
-                type="number"
-                value={config[key] as number}
-                min={0}
-                onChange={e => set(key, Number(e.target.value) as Config[typeof key])}
-                className="w-24 px-3 py-1.5 rounded-lg bg-background border border-border text-foreground text-sm text-right focus-visible:border-primary outline-none"
-              />
-              <span className="text-xs text-muted-foreground">USD cents = USD {((config[key] as number) / 100).toFixed(2)}</span>
-            </div>
-          ))}
+        <h3 className="text-base font-semibold text-foreground">Overage Policy (paid plans)</h3>
+        <p className="text-xs text-muted-foreground">
+          Creator and Pro subscribers may exceed their quota and are billed monthly for the excess.
+          A soft grace band prevents nuisance charges for small spillovers. The Free plan is hard-blocked at 100%.
+        </p>
+        <div className="space-y-4">
+          <NumberField
+            label="Overage rate"
+            value={config.overageCentsPerGb}
+            onChange={v => set('overageCentsPerGb', v)}
+            min={0}
+            suffix="USD cents / GB"
+          />
+          <p className="text-xs text-muted-foreground">
+            = USD {(config.overageCentsPerGb / 100).toFixed(2)}/GB/month above quota
+          </p>
+          <NumberField
+            label="Soft grace band"
+            value={config.overageGracePercent}
+            onChange={v => set('overageGracePercent', v)}
+            min={0}
+            max={100}
+            suffix="%"
+          />
+          <p className="text-xs text-muted-foreground">
+            Usage up to {config.overageGracePercent}% over quota is free; above that, overage accrues.
+          </p>
         </div>
       </div>
 
@@ -205,7 +228,7 @@ export default function AdminStoragePricingPage() {
           <NumberField label="First warning at" value={config.warningThreshold1} onChange={v => set('warningThreshold1', v)} min={1} max={99} suffix="%" />
           <NumberField label="Second warning at" value={config.warningThreshold2} onChange={v => set('warningThreshold2', v)} min={1} max={99} suffix="%" />
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm text-muted-foreground">Upload blocked at</span>
+            <span className="text-sm text-muted-foreground">Free plan blocked at</span>
             <span className="text-sm text-muted-foreground">100% (fixed)</span>
           </div>
         </div>

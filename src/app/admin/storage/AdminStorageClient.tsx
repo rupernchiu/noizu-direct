@@ -23,9 +23,12 @@ const STATUS_CONFIG: Record<StatusKey, { label: string; color: string; icon: str
   full:    { label: 'Full',     color: 'text-red-500',    icon: '🔴' },
 }
 
+type PlanKey = 'FREE' | 'CREATOR' | 'PRO'
+
 interface CreatorRow {
   id: string; name: string; email: string
-  usedBytes: number; quotaBytes: number; pct: number
+  plan: PlanKey
+  usedBytes: number; quotaBytes: number; bonusBytes: number; pct: number
   status: StatusKey
 }
 
@@ -34,13 +37,17 @@ interface Props {
   totalUsed: number
   totalAllocated: number
   overQuota: number
-  quotaBytes: number
-  freePlanMb: number
+}
+
+const PLAN_BADGE: Record<PlanKey, string> = {
+  FREE:    'border-border text-muted-foreground',
+  CREATOR: 'border-primary/40 bg-primary/10 text-primary',
+  PRO:     'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300',
 }
 
 type FilterKey = 'all' | 'over_quota' | 'high' | 'warning' | 'healthy'
 
-export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, overQuota, quotaBytes, freePlanMb }: Props) {
+export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, overQuota }: Props) {
   const router      = useRouter()
   const pathname    = usePathname()
   const searchParams = useSearchParams()
@@ -189,7 +196,7 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-5 pt-5 pb-3 flex items-center justify-between flex-wrap gap-3">
           <h3 className="text-base font-semibold text-foreground">Creator Storage</h3>
-          <div className="text-xs text-muted-foreground">Quota: {freePlanMb} MB per creator (FREE plan)</div>
+          <div className="text-xs text-muted-foreground">Quota per creator reflects their current plan (Free / Creator / Pro) plus any admin bonus.</div>
         </div>
 
         {/* Filters */}
@@ -251,9 +258,16 @@ export function AdminStorageClient({ creatorRows, totalUsed, totalAllocated, ove
                         <div className="font-medium text-foreground">{row.name}</div>
                         <div className="text-xs text-muted-foreground">{row.email}</div>
                       </td>
-                      <td className="px-3 py-1.5"><span className="text-xs px-2 py-1 rounded-full border border-border text-muted-foreground">FREE</span></td>
+                      <td className="px-3 py-1.5">
+                        <span className={`text-xs px-2 py-1 rounded-full border ${PLAN_BADGE[row.plan]}`}>{row.plan}</span>
+                      </td>
                       <td className="px-3 py-1.5 text-muted-foreground">{fmtBytes(row.usedBytes)}</td>
-                      <td className="px-3 py-1.5 text-muted-foreground">{fmtBytes(row.quotaBytes)}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground">
+                        {fmtBytes(row.quotaBytes)}
+                        {row.bonusBytes > 0 && (
+                          <span className="ml-1 text-[10px] text-primary">(+{fmtBytes(row.bonusBytes)})</span>
+                        )}
+                      </td>
                       <td className="px-3 py-1.5 w-36">
                         <div className="flex items-center gap-2">
                           <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">

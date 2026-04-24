@@ -2,8 +2,10 @@ import { auth } from '@/lib/auth'
 import { redirect, notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { Lock } from 'lucide-react'
 import { QuoteAcceptActions } from './QuoteAcceptActions'
 import { MilestoneBuyerActions } from './MilestoneBuyerActions'
+import { getProcessingFeePercent, feeOnSubtotal } from '@/lib/platform-fees'
 
 function fmtUsd(cents: number) { return '$' + (cents / 100).toFixed(2) }
 
@@ -26,6 +28,10 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
 
   const creatorName = quote.creator.user.name ?? quote.creator.username
   const deposit = Math.round(quote.amountUsd * (quote.depositPercent / 100))
+
+  const feePercent   = await getProcessingFeePercent()
+  const processingFee = feeOnSubtotal(quote.amountUsd, feePercent / 100)
+  const totalDue     = quote.amountUsd + processingFee
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -92,7 +98,45 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
       )}
 
       {quote.status === 'SENT' && (
-        <QuoteAcceptActions quoteId={quote.id} />
+        <>
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">You&apos;re paying</p>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground truncate">{quote.title}</span>
+                  <span className="text-foreground shrink-0">{fmtUsd(quote.amountUsd)}</span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-muted-foreground">Processing fee ({feePercent}%)</span>
+                  <span className="text-foreground shrink-0">{fmtUsd(processingFee)}</span>
+                </div>
+                <div className="flex justify-between gap-4 pt-2 border-t border-border">
+                  <span className="font-semibold text-foreground">Total (USD)</span>
+                  <span className="font-semibold text-foreground shrink-0">{fmtUsd(totalDue)}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-start gap-2 pt-3 border-t border-border">
+              <Lock className="size-4 text-primary shrink-0 mt-0.5" />
+              <div className="text-xs text-muted-foreground leading-relaxed space-y-1">
+                <p className="text-foreground font-medium">You pay the full amount now — it sits in escrow, not with the creator.</p>
+                {quote.isMilestoneBased ? (
+                  <p>
+                    noizu.direct releases funds to the creator milestone by milestone — <span className="text-foreground">only when you approve each deliverable</span> (or after 14 days of no response from you). The creator can&apos;t release funds themselves.
+                  </p>
+                ) : (
+                  <p>
+                    Of that total, {quote.depositPercent}% releases to the creator 48 hours after they accept your order
+                    {quote.depositPercent < 100 ? <> (so they can start work), and the remaining {100 - quote.depositPercent}% releases 30 days after delivery — <span className="text-foreground">sooner if you approve early</span></> : null}
+                    . The creator can&apos;t release funds themselves — you&apos;re protected by noizu.direct until then.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+          <QuoteAcceptActions quoteId={quote.id} />
+        </>
       )}
       {quote.status === 'ACCEPTED' && quote.order && (
         <Link href={`/account/orders/${quote.order.id}`} className="inline-block text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90">

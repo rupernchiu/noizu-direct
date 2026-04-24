@@ -12,12 +12,10 @@ export async function PATCH(req: Request) {
   const userId = (session.user as any).id as string
 
   const body = await req.json() as {
-    action: 'change_password' | 'change_slug' | 'delete_account' | 'deactivate_store'
+    action: 'change_password' | 'change_slug' | 'deactivate_store'
     currentPassword?: string
     newPassword?: string
     slug?: string
-    confirmEmail?: string
-    confirmText?: string
   }
 
   if (body.action === 'change_password') {
@@ -72,30 +70,6 @@ export async function PATCH(req: Request) {
       data: { isSuspended: true },
     })
     return NextResponse.json({ deactivated: true })
-  }
-
-  if (body.action === 'delete_account') {
-    const { confirmText } = body
-    if (!confirmText || confirmText !== 'DELETE') {
-      return NextResponse.json({ error: 'You must type DELETE to confirm' }, { status: 400 })
-    }
-
-    // Soft-delete: mark user role as DELETED and suspend creator profile.
-    // C4: bump tokenVersion so the deleted user's live JWT is invalidated
-    // on next request. Previously the user kept full CREATOR access until
-    // their 30-day JWT expired — they could still upload, list, and
-    // request payouts despite being "deleted".
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: 'DELETED', accountStatus: 'CLOSED' },
-    })
-    await prisma.creatorProfile.updateMany({
-      where: { userId },
-      data: { isSuspended: true },
-    })
-    await bumpTokenVersion(userId)
-
-    return NextResponse.json({ deleted: true })
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 })

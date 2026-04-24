@@ -221,6 +221,7 @@ export function StoreSection({ profile }: Props) {
         {/* Banner */}
         <div className="rounded-xl bg-surface border border-border p-6 space-y-4">
           <h3 className="text-sm font-semibold text-foreground">Store Banner</h3>
+          <p className="text-xs text-muted-foreground -mt-2">Recommended: 1500×500 px (3:1), JPG or PNG, under 5&nbsp;MB.</p>
           <div
             className="relative h-32 w-full rounded-xl overflow-hidden bg-gradient-to-r from-primary/30 to-secondary/30 border border-border cursor-pointer"
             onClick={() => bannerRef.current?.click()}
@@ -229,8 +230,11 @@ export function StoreSection({ profile }: Props) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={bannerImage} alt="Banner" className="w-full h-full object-cover" />
             )}
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors text-white text-xs font-medium">
-              {uploading ? 'Uploading...' : 'Click to change banner'}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 hover:bg-black/40 transition-colors text-white text-xs font-medium px-3 text-center">
+              <span>{uploading ? 'Uploading...' : 'Click to change banner'}</span>
+              {!uploading && (
+                <span className="mt-0.5 text-[10px] font-normal text-white/80">1500×500 px · JPG/PNG · up to 5 MB</span>
+              )}
             </div>
           </div>
           <input ref={bannerRef} type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
@@ -250,12 +254,19 @@ export function StoreSection({ profile }: Props) {
                   {displayName[0]?.toUpperCase() ?? '?'}
                 </div>
               )}
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-medium">
-                {uploading ? '...' : 'Change'}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-medium text-center px-1 leading-tight">
+                {uploading ? (
+                  <span>...</span>
+                ) : (
+                  <>
+                    <span>Change</span>
+                    <span className="text-[8px] font-normal text-white/80 mt-0.5">400×400 · 2 MB</span>
+                  </>
+                )}
               </div>
             </button>
             <input ref={avatarRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-            <p className="text-xs text-muted-foreground">Square image, min 200×200px recommended.</p>
+            <p className="text-xs text-muted-foreground">Recommended: square image, 400×400 px (min 200×200), JPG or PNG, under 2&nbsp;MB.</p>
           </div>
         </div>
 

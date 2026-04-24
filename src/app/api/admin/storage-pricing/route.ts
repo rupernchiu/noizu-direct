@@ -22,10 +22,11 @@ export async function PATCH(req: Request) {
 
   const body = await req.json() as Record<string, unknown>
 
-  // Whitelist updatable fields
   const allowed = [
-    'freePlanMb', 'proPlanGb', 'proPlanPriceCents', 'studioPlanGb', 'studioPlanPriceCents',
-    'topup1gbCents', 'topup5gbCents', 'topup10gbCents',
+    'freePlanMb',
+    'creatorPlanGb', 'creatorPlanPriceCents',
+    'proPlanGb', 'proPlanPriceCents',
+    'overageCentsPerGb', 'overageGracePercent',
     'warningThreshold1', 'warningThreshold2',
     'gracePeriodDays', 'orphanAgeDays', 'deleteWarningHours',
     'feeGraceDays', 'feePayoutBlockDays', 'feeSuspendDays',

@@ -11,6 +11,7 @@ interface CreatorActionsProps {
   isTopCreator: boolean
   isSuspended: boolean
   username: string
+  userEmail: string
   badges: string[]
   legalFullName?: string | null
   boostMultiplier: number
@@ -22,6 +23,7 @@ export function CreatorActions({
   isTopCreator,
   isSuspended,
   username,
+  userEmail,
   badges,
   legalFullName,
   boostMultiplier,
@@ -29,6 +31,10 @@ export function CreatorActions({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [badgesOpen, setBadgesOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [legalNameOpen, setLegalNameOpen] = useState(false)
   const [legalNameInput, setLegalNameInput] = useState(legalFullName ?? '')
   const [boostOpen, setBoostOpen] = useState(false)
@@ -105,6 +111,30 @@ export function CreatorActions({
       router.refresh()
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleDelete() {
+    setDeleteError(null)
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/admin/creators/${creatorId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmText: deleteConfirmText }),
+      })
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({})) as { error?: string }
+        setDeleteError(b.error ?? 'Failed to delete account')
+        return
+      }
+      setDeleteOpen(false)
+      setDeleteConfirmText('')
+      router.refresh()
+    } catch {
+      setDeleteError('Something went wrong')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -235,6 +265,62 @@ export function CreatorActions({
           </div>
         )}
       </div>
+
+      {/* Delete Account */}
+      <button
+        onClick={() => { setDeleteError(null); setDeleteConfirmText(''); setDeleteOpen(true) }}
+        disabled={loading}
+        className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+      >
+        Delete
+      </button>
+
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-card border border-border p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-red-400">Delete creator account?</h3>
+            <p className="text-sm text-muted-foreground">
+              This revokes access for <strong className="text-foreground">{userEmail}</strong> and marks the account as
+              <span className="font-mono text-xs"> DELETED / CLOSED</span>. Order history, payouts, and tax records are preserved.
+              The user is forcibly logged out.
+            </p>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Type <span className="font-mono text-foreground">DELETE</span> to confirm
+              </label>
+              <input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full rounded-lg bg-background border border-red-500/30 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+                autoFocus
+              />
+            </div>
+            {deleteError && (
+              <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2 text-xs text-red-400">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmText !== 'DELETE'}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting…' : 'Delete Account'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setDeleteOpen(false); setDeleteError(null); setDeleteConfirmText('') }}
+                className="flex-1 px-4 py-2 rounded-lg bg-card border border-border text-muted-foreground text-sm hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Badges dropdown */}
       <div className="relative" ref={dropdownRef}>

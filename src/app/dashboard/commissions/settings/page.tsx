@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { parseCommissionDefaults } from '@/lib/commission-defaults'
 import { CommissionSettingsForm } from './CommissionSettingsForm'
-import { Sliders, Inbox, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = { title: 'Commission settings | noizu.direct' }
@@ -33,31 +33,18 @@ export default async function CommissionSettingsPage() {
   try { pricingTiers = JSON.parse(profile.commissionPricing) as PricingTier[] } catch {}
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Sliders className="size-6 text-primary" />
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Commission settings</h2>
-            <p className="text-sm text-muted-foreground">Configure how you accept commissions, pricing tiers, and n-stage milestone templates used when issuing quotes.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/commissions"
-            className="inline-flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
-          >
-            <Inbox className="size-4" />
-            Inbox
-          </Link>
-          <Link
-            href="/dashboard/commissions/quotes/new"
-            className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90"
-          >
-            <Plus className="size-4" />
-            New quote
-          </Link>
-        </div>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Configure how you accept commissions, pricing tiers, and n-stage milestone templates used when issuing quotes.
+        </p>
+        <Link
+          href="/dashboard/commissions/quotes/new"
+          className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90"
+        >
+          <Plus className="size-4" />
+          New quote
+        </Link>
       </div>
 
       <CommissionSettingsForm

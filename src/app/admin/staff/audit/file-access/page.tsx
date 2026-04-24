@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
-import { requireStaffActor } from '@/lib/staffPolicy'
+import { requireAdminOrStaffActor } from '@/lib/staffPolicy'
 import {
   ACCESS_REASON_CODES,
   ACCESS_REASON_LABELS,
@@ -69,7 +69,7 @@ export default async function FileAccessAuditPage({
 }: {
   searchParams: Promise<SearchParams>
 }) {
-  await requireStaffActor('files.audit')
+  await requireAdminOrStaffActor('files.audit')
 
   const sp = await searchParams
   const page = Math.max(1, parseInt(sp.page ?? '1', 10) || 1)
