@@ -65,7 +65,7 @@ export default async function DashboardPage() {
   }
 
   const { computeUnreadTicketCount } = await import('@/lib/tickets')
-  const [totalRevenue, pendingOrders, activeListings, unreadMessages] = await Promise.all([
+  const [totalRevenue, pendingOrders, activeListings, unreadMessages, creatorApp, userRow] = await Promise.all([
     prisma.transaction.aggregate({
       where: { creatorId: userId, status: 'COMPLETED' },
       _sum: { creatorAmount: true },
@@ -73,6 +73,14 @@ export default async function DashboardPage() {
     prisma.order.count({ where: { creatorId: userId, status: 'PENDING' } }),
     prisma.product.count({ where: { creatorId: profile.id, isActive: true } }),
     computeUnreadTicketCount(userId),
+    prisma.creatorApplication.findUnique({
+      where: { userId },
+      select: { status: true, rejectionReason: true, submittedAt: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { payoutFrozen: true, payoutFrozenReason: true },
+    }),
   ])
 
   const recentOrders = await prisma.order.findMany({
@@ -114,6 +122,57 @@ export default async function DashboardPage() {
     },
   ]
 
+  // ── Payout-readiness banner ─────────────────────────────────────────────────
+  // Surfaces KYC + payout-method state so creators understand why earnings
+  // are or aren't payable. Order matters: payout-frozen wins, then KYC state,
+  // then missing payout details. Only one banner renders at a time.
+  type BannerTone = 'red' | 'amber' | 'blue' | 'green'
+  let banner: { tone: BannerTone; title: string; body: string; cta?: { label: string; href: string } } | null = null
+  const appStatus = creatorApp?.status ?? 'DRAFT'
+
+  if (userRow?.payoutFrozen) {
+    banner = {
+      tone: 'red',
+      title: 'Payouts are paused on your account',
+      body: userRow.payoutFrozenReason || 'Please contact support to resolve this so future earnings can be paid out.',
+      cta: { label: 'Contact support', href: '/dashboard/tickets/new' },
+    }
+  } else if (appStatus === 'REJECTED') {
+    banner = {
+      tone: 'red',
+      title: 'Your KYC application was rejected',
+      body: creatorApp?.rejectionReason || 'Review the rejection reason and resubmit to unlock payouts.',
+      cta: { label: 'Resubmit application', href: '/creator/apply' },
+    }
+  } else if (appStatus === 'DRAFT') {
+    banner = {
+      tone: 'amber',
+      title: 'Finish your creator application to receive payouts',
+      body: 'You can list products and accept orders, but earnings are held in escrow until KYC is approved.',
+      cta: { label: 'Resume application', href: '/creator/apply' },
+    }
+  } else if (appStatus === 'SUBMITTED' || appStatus === 'UNDER_REVIEW') {
+    banner = {
+      tone: 'blue',
+      title: 'KYC submitted — under review',
+      body: 'We typically review applications within 1–3 business days. Earnings continue to accumulate and will be paid out once approved.',
+    }
+  } else if (appStatus === 'APPROVED' && !profile.payoutDetails) {
+    banner = {
+      tone: 'amber',
+      title: 'Add your payout details',
+      body: 'Your KYC is approved, but we need a payout destination before we can release earnings.',
+      cta: { label: 'Set up payouts', href: '/dashboard/payouts' },
+    }
+  }
+
+  const bannerStyles: Record<BannerTone, { bg: string; border: string; text: string; cta: string }> = {
+    red:   { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-300',    cta: 'bg-red-500 hover:bg-red-500/90 text-white' },
+    amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-200', cta: 'bg-yellow-500 hover:bg-yellow-500/90 text-black' },
+    blue:  { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   text: 'text-blue-200',   cta: 'bg-blue-500 hover:bg-blue-500/90 text-white' },
+    green: { bg: 'bg-green-500/10',  border: 'border-green-500/30',  text: 'text-green-200',  cta: 'bg-green-500 hover:bg-green-500/90 text-white' },
+  }
+
   // Compute onboarding steps
   const onboardingSteps = [
     { id: 'avatar', label: 'Add profile photo', completed: !!profile.avatar, href: '/dashboard/profile' },
@@ -127,6 +186,24 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Payout-readiness banner */}
+      {banner && (
+        <div className={`rounded-xl border ${bannerStyles[banner.tone].bg} ${bannerStyles[banner.tone].border} px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3`}>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold ${bannerStyles[banner.tone].text}`}>{banner.title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{banner.body}</p>
+          </div>
+          {banner.cta && (
+            <Link
+              href={banner.cta.href}
+              className={`shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${bannerStyles[banner.tone].cta}`}
+            >
+              {banner.cta.label}
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
