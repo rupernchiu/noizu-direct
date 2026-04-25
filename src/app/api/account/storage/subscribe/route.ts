@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent } from '@/lib/airwallex'
+import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { ensureAirwallexCustomer } from '@/lib/support-customer'
 import { priceCentsForPlan } from '@/lib/storage-quota'
 
@@ -77,6 +77,10 @@ export async function POST(req: Request) {
     orderId: `storage_sub_${sub.id}_${Date.now()}`,
     customerId,
     savePaymentMethod: true,
+    threeDsAction: decideThreeDsAction({
+      productType: 'STORAGE',
+      amountUsdCents: priceCents,
+    }),
     metadata: {
       storageSubscriptionId: sub.id,
       plan,

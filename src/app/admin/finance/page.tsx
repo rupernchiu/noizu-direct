@@ -1,10 +1,14 @@
 'use client'
+import Link from 'next/link'
 import { useState, useEffect } from 'react'
-import { TrendingUp, DollarSign, AlertTriangle, Shield, Wallet, ArrowDownToLine, Clock, BarChart3 } from 'lucide-react'
+import { TrendingUp, DollarSign, AlertTriangle, Shield, Wallet, ArrowDownToLine, Clock, Activity, RefreshCw } from 'lucide-react'
 
 type FinanceData = {
   summary: {
     totalGrossUsd: number
+    totalSubtotalUsd: number
+    totalBuyerFeeUsd: number
+    totalCreatorCommissionUsd: number
     totalPlatformRevenueUsd: number
     totalCreatorAmountUsd: number
     escrowLiabilityUsd: number
@@ -12,10 +16,26 @@ type FinanceData = {
     totalPaidOutUsd: number
     pendingPayoutsUsd: number
     netPlatformPositionUsd: number
+    liabilityCoverageRatio: number | null
+    usdAvailableUsd: number
+    totalLiabilityUsd: number
+  }
+  flow: {
+    gross24hUsd: number; orders24h: number
+    gross7dUsd: number; orders7d: number
+    payouts24hUsd: number; payouts24hCount: number
+    refunds30dUsd: number; refunds30dCount: number
   }
   chargebacks: { open: number; won: number; lost: number; totalAmount: number }
+  chargebackRates: {
+    count30d: number; amount30dUsd: number
+    count90d: number; amount90dUsd: number
+    gross30dDenominator: number
+  }
+  perCountry: { country: string | null; gmvUsd: number; orders: number }[]
+  perRail: { rail: string | null; grossUsd: number; buyerFeeUsd: number; creatorCommissionUsd: number; orders: number }[]
   openFraudFlags: number
-  monthlyRevenue: { month: string; gross: number; fees: number; net: number }[]
+  monthlyRevenue: { month: string; gross: number; fees: number; net: number; buyerFee: number; creatorCommission: number }[]
   airwallexBalances: { currency: string; available_amount: number; pending_amount: number; total_amount: number }[]
 }
 
@@ -24,9 +44,9 @@ function usd(cents: number) {
 }
 
 function StatCard({
-  label, value, sub, icon: Icon, color = 'blue',
+  label, value, sub, icon: Icon, color = 'blue', tone,
 }: {
-  label: string; value: string; sub?: string; icon: React.ElementType; color?: string
+  label: string; value: string; sub?: string; icon: React.ElementType; color?: string; tone?: 'success' | 'warning' | 'danger'
 }) {
   const colors: Record<string, string> = {
     green:  'bg-green-500/10 text-green-400',
@@ -36,16 +56,28 @@ function StatCard({
     red:    'bg-red-500/10 text-red-400',
     gray:   'bg-muted/10 text-muted-foreground',
   }
+  const valueColor =
+    tone === 'success' ? 'text-green-400'
+    : tone === 'warning' ? 'text-yellow-400'
+    : tone === 'danger' ? 'text-red-400'
+    : 'text-foreground'
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <div className="flex items-center gap-2 mb-3">
         <div className={`p-1.5 rounded-lg ${colors[color]}`}><Icon size={16} /></div>
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-foreground">{value}</p>
+      <p className={`text-2xl font-bold ${valueColor}`}>{value}</p>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
     </div>
   )
+}
+
+function ratioTone(ratio: number | null): 'success' | 'warning' | 'danger' | undefined {
+  if (ratio === null) return undefined
+  if (ratio >= 1.1) return 'success'
+  if (ratio >= 1.0) return 'warning'
+  return 'danger'
 }
 
 export default function AdminFinancePage() {
@@ -62,23 +94,57 @@ export default function AdminFinancePage() {
   if (loading) return <div className="flex justify-center py-24 text-muted-foreground">Loading financial position…</div>
   if (!data) return <div className="py-24 text-center text-red-400">Failed to load finance data.</div>
 
-  const { summary, chargebacks, openFraudFlags, monthlyRevenue, airwallexBalances } = data
+  const { summary, flow, chargebacks, chargebackRates, perRail, openFraudFlags, monthlyRevenue, airwallexBalances } = data
+
+  // Visa monitoring traffic-light: <0.65% healthy, 0.65–0.9 monitor, >=0.9 warning
+  const cbRatio30 = chargebackRates.gross30dDenominator > 0
+    ? (chargebackRates.amount30dUsd / chargebackRates.gross30dDenominator) * 100
+    : 0
+  const cbTone: 'success' | 'warning' | 'danger' = cbRatio30 >= 0.9 ? 'danger' : cbRatio30 >= 0.65 ? 'warning' : 'success'
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Financial Position</h1>
-        <p className="text-sm text-muted-foreground mt-1">Platform treasury, liabilities, and Airwallex account balances</p>
+        <h1 className="text-2xl font-bold text-foreground">Operational Position</h1>
+        <p className="text-sm text-muted-foreground mt-1">Daily ops view — coverage, today&apos;s flow, live balances</p>
       </div>
 
-      {/* Platform P&L */}
+      {/* Liability coverage ratio — single most important number */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Liability Coverage</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard
+            label="Coverage Ratio"
+            value={summary.liabilityCoverageRatio !== null ? `${summary.liabilityCoverageRatio}×` : '—'}
+            sub="Airwallex USD ÷ total liability — target ≥1.10"
+            icon={Shield}
+            color={summary.liabilityCoverageRatio === null ? 'gray' : summary.liabilityCoverageRatio >= 1.1 ? 'green' : summary.liabilityCoverageRatio >= 1.0 ? 'yellow' : 'red'}
+            tone={ratioTone(summary.liabilityCoverageRatio)}
+          />
+          <StatCard label="USD Available (Airwallex)" value={usd(summary.usdAvailableUsd)} sub="Cash on hand for payouts" icon={Wallet} color="blue" />
+          <StatCard label="Total Liability" value={usd(summary.totalLiabilityUsd)} sub="Escrow + Available + Queued" icon={AlertTriangle} color="yellow" />
+        </div>
+      </div>
+
+      {/* Today's flow card */}
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Today vs 7-Day Average</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <StatCard label="Gross 24h" value={usd(flow.gross24hUsd)} sub={`${flow.orders24h} orders`} icon={Activity} color="blue" />
+          <StatCard label="Avg 24h (7d basis)" value={usd(Math.round(flow.gross7dUsd / 7))} sub={`${(flow.orders7d / 7).toFixed(1)} orders/day avg`} icon={TrendingUp} color="purple" />
+          <StatCard label="Payouts 24h" value={usd(flow.payouts24hUsd)} sub={`${flow.payouts24hCount} sent`} icon={ArrowDownToLine} color="gray" />
+          <StatCard label="Refunds 30d" value={usd(flow.refunds30dUsd)} sub={`${flow.refunds30dCount} orders`} icon={RefreshCw} color="red" />
+        </div>
+      </div>
+
+      {/* P&L components */}
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Platform P&amp;L (All Time)</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Gross Volume" value={usd(summary.totalGrossUsd)} sub="Total buyer payments" icon={TrendingUp} color="blue" />
-          <StatCard label="Platform Revenue" value={usd(summary.totalPlatformRevenueUsd)} sub="Fees retained" icon={DollarSign} color="green" />
-          <StatCard label="Creator Earnings" value={usd(summary.totalCreatorAmountUsd)} sub="Total creator net" icon={BarChart3} color="purple" />
-          <StatCard label="Total Paid Out" value={usd(summary.totalPaidOutUsd)} sub="Sent to creators" icon={ArrowDownToLine} color="gray" />
+          <StatCard label="Buyer Fees Collected" value={usd(summary.totalBuyerFeeUsd)} sub="Rail-aware (5.5%/8%)" icon={DollarSign} color="green" />
+          <StatCard label="Creator Commission" value={usd(summary.totalCreatorCommissionUsd)} sub="5% of subtotal" icon={DollarSign} color="purple" />
+          <StatCard label="Total Platform Revenue" value={usd(summary.totalPlatformRevenueUsd)} sub="Buyer fee + commission" icon={DollarSign} color="green" />
         </div>
       </div>
 
@@ -92,7 +158,7 @@ export default function AdminFinancePage() {
         </div>
       </div>
 
-      {/* Risk summary */}
+      {/* Risk + chargeback ratio */}
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Risk Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -110,6 +176,14 @@ export default function AdminFinancePage() {
               <p className="text-xs text-red-400 mt-2">{usd(chargebacks.totalAmount)} lost to chargebacks</p>
             )}
           </div>
+          <StatCard
+            label="Chargeback Rate (30d)"
+            value={`${cbRatio30.toFixed(2)}%`}
+            sub={`${chargebackRates.count30d} disputes / ${usd(chargebackRates.gross30dDenominator)} GMV — Visa target <0.65%`}
+            icon={Shield}
+            color={cbTone === 'danger' ? 'red' : cbTone === 'warning' ? 'yellow' : 'green'}
+            tone={cbTone}
+          />
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-1.5 rounded-lg bg-red-500/10"><Shield size={16} className="text-red-400" /></div>
@@ -118,19 +192,42 @@ export default function AdminFinancePage() {
             <p className="text-2xl font-bold text-red-400">{openFraudFlags}</p>
             <p className="text-xs text-muted-foreground mt-1">Open flags needing review</p>
             {openFraudFlags > 0 && (
-              <a href="/admin/fraud" className="text-xs text-primary hover:underline mt-2 block">Review flags →</a>
+              <Link href="/admin/fraud" className="text-xs text-primary hover:underline mt-2 block">Review flags →</Link>
             )}
-          </div>
-          <div className="rounded-xl border border-border bg-card p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="p-1.5 rounded-lg bg-green-500/10"><DollarSign size={16} className="text-green-400" /></div>
-              <span className="text-xs font-medium text-muted-foreground">Net Platform Position</span>
-            </div>
-            <p className="text-2xl font-bold text-green-400">{usd(summary.netPlatformPositionUsd)}</p>
-            <p className="text-xs text-muted-foreground mt-1">Revenue collected (fees)</p>
           </div>
         </div>
       </div>
+
+      {/* Per-rail breakdown */}
+      {perRail.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Volume by Payment Rail</h2>
+          <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <table className="w-full text-sm [&_td]:whitespace-nowrap">
+              <thead>
+                <tr className="text-xs text-muted-foreground border-b border-border bg-muted/20">
+                  <th className="px-3 py-1.5 text-left font-medium">Rail</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Orders</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Gross</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Buyer Fee</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Creator Comm.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perRail.map(r => (
+                  <tr key={r.rail ?? 'legacy'} className="border-b border-border last:border-0 hover:bg-muted/10">
+                    <td className="px-3 py-1.5 font-semibold text-foreground">{r.rail ?? <span className="text-muted-foreground italic">legacy/unknown</span>}</td>
+                    <td className="px-3 py-1.5 text-right text-foreground">{r.orders}</td>
+                    <td className="px-3 py-1.5 text-right text-foreground">{usd(r.grossUsd)}</td>
+                    <td className="px-3 py-1.5 text-right text-green-400">{usd(r.buyerFeeUsd)}</td>
+                    <td className="px-3 py-1.5 text-right text-primary">{usd(r.creatorCommissionUsd)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Airwallex live balances */}
       <div>
@@ -181,7 +278,8 @@ export default function AdminFinancePage() {
                 <tr className="text-xs text-muted-foreground border-b border-border bg-muted/20">
                   <th className="px-3 py-1.5 text-left font-medium">Month</th>
                   <th className="px-3 py-1.5 text-right font-medium">Gross</th>
-                  <th className="px-3 py-1.5 text-right font-medium">Platform Fees</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Buyer Fee</th>
+                  <th className="px-3 py-1.5 text-right font-medium">Creator Comm.</th>
                   <th className="px-3 py-1.5 text-right font-medium">Creator Net</th>
                 </tr>
               </thead>
@@ -190,8 +288,9 @@ export default function AdminFinancePage() {
                   <tr key={m.month} className="border-b border-border last:border-0 hover:bg-muted/10">
                     <td className="px-3 py-1.5 text-muted-foreground">{m.month}</td>
                     <td className="px-3 py-1.5 text-right text-foreground">{usd(m.gross)}</td>
-                    <td className="px-3 py-1.5 text-right text-green-400">{usd(m.fees)}</td>
-                    <td className="px-3 py-1.5 text-right text-primary">{usd(m.net)}</td>
+                    <td className="px-3 py-1.5 text-right text-green-400">{usd(m.buyerFee)}</td>
+                    <td className="px-3 py-1.5 text-right text-primary">{usd(m.creatorCommission)}</td>
+                    <td className="px-3 py-1.5 text-right text-foreground">{usd(m.net)}</td>
                   </tr>
                 ))}
               </tbody>

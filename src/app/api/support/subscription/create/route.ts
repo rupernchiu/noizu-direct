@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent, getCurrencyFactor } from '@/lib/airwallex'
+import { createPaymentIntent, decideThreeDsAction, getCurrencyFactor } from '@/lib/airwallex'
 import { ensureAirwallexCustomer } from '@/lib/support-customer'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 
@@ -125,12 +125,19 @@ export async function POST(req: Request) {
         },
       })
 
+  // Recurring tip subscription is intangible/digital — first charge gets
+  // FORCE_3DS to push liability to issuer; subsequent charges via
+  // chargeWithConsent are MIT (no buyer present, no 3DS).
   const intent = await createPaymentIntent({
     amount: displayAmount,
     currency,
     orderId: sub.id,
     customerId,
     savePaymentMethod: true,
+    threeDsAction: decideThreeDsAction({
+      productType: 'SUBSCRIPTION',
+      amountUsdCents: amountUsd,
+    }),
     metadata: {
       supportSubscriptionId: sub.id,
       kind: body.kind,

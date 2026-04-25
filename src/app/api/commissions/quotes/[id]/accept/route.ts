@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent } from '@/lib/airwallex'
+import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 import { createQuoteBackingProduct } from '@/lib/commissions'
 
@@ -154,11 +154,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Create payment intent for the full amount in buyer's currency
   const displayAmount = await convertToDisplayCurrency(orderAmountUsd, currency)
   try {
+    // Commission orders are digital-equivalent (custom work, often delivered as
+    // files): force 3DS to shift chargeback liability to issuer.
     const intent = await createPaymentIntent({
       amount: displayAmount,
       currency,
       orderId: order.id,
       buyerEmail: buyer?.email,
+      threeDsAction: decideThreeDsAction({
+        productType: 'COMMISSION',
+        amountUsdCents: orderAmountUsd,
+      }),
       metadata: { commissionQuoteId: quote.id, isMilestoneBased: String(quote.isMilestoneBased) },
     })
     await prisma.order.update({

@@ -1586,6 +1586,85 @@ model FraudFlag {
   reviewNote  String?
 }
 
+// ── Treasury / Reserves (sprint 0.7) ──────────────────────────────────────────
+//
+// PlatformReserve is the *ledger header* for a single reserve account
+// (e.g. fraud rolling reserve, marketing accrual, per-country tax accrual).
+// Movements are recorded as PlatformReserveEntry rows so we keep an audit trail
+// of every accrual and release. Reserves are auto-computed daily by cron, but
+// every release is approved by an admin (manual-pay pattern, same as payouts).
+model PlatformReserve {
+  id              String   @id @default(cuid())
+  kind            String // FRAUD_ROLLING|MARKETING|TAX_DESTINATION|TAX_CREATOR_WITHHOLDING|REFUND_FLOAT
+  // Optional sub-key for kinds that segment by country/creator. e.g. "MY" for
+  // tax destination reserves, creatorId for withholding reserves. Null for
+  // platform-wide reserves like fraud rolling.
+  scope           String?
+  label           String // human label shown on dashboard
+  // Cumulative tracking — derived from entries but cached here for fast reads
+  cumulativeInUsd Int      @default(0) // total deposits over all time, USD cents
+  cumulativeOutUsd Int     @default(0) // total releases over all time, USD cents
+  balanceUsd      Int      @default(0) // current = in - out
+  targetUsd       Int? // optional target balance for ratio displays
+  policyHoldDays  Int? // null for indefinite-hold reserves (until action), else release window
+  isActive        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  entries PlatformReserveEntry[]
+
+  @@unique([kind, scope])
+  @@index([kind, isActive])
+}
+
+model PlatformReserveEntry {
+  id          String   @id @default(cuid())
+  reserveId   String
+  // ACCRUAL (cron-driven, deposits into reserve)
+  // RELEASE (admin-approved, withdraws from reserve to platform GA)
+  // ADJUSTMENT (manual correction, e.g. reconciliation)
+  direction   String // ACCRUAL|RELEASE|ADJUSTMENT
+  amountUsd   Int // signed: ACCRUAL > 0, RELEASE > 0 (interpretation by direction)
+  reason      String
+  // Optional links for audit
+  refOrderId  String?
+  refPayoutId String?
+  refUserId   String?
+  // Approval audit (only for RELEASE)
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  reserve PlatformReserve @relation(fields: [reserveId], references: [id], onDelete: Cascade)
+
+  @@index([reserveId, createdAt])
+  @@index([direction, createdAt])
+}
+
+// ── Audit log (cross-feature) ─────────────────────────────────────────────────
+//
+// AdminAuditEvent captures admin-initiated state changes that have money/policy
+// impact (payout approvals, reserve releases, fee config changes). Existing
+// PayoutSettingChange is feature-specific; this is a unified ledger for
+// dashboard reviews and quarterly compliance audits.
+model AdminAuditEvent {
+  id          String   @id @default(cuid())
+  actorId     String // user.id of the admin who took the action
+  action      String // PAYOUT_APPROVED|RESERVE_RELEASED|FEE_RATE_CHANGED|...
+  resourceType String // PAYOUT|RESERVE|SETTINGS|ORDER|...
+  resourceId  String?
+  amountUsd   Int? // signed amount for money-moving actions
+  metadata    String? // JSON blob for action-specific context
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([resourceType, resourceId])
+}
+
 // ── Newsletter ────────────────────────────────────────────────────────────────
 
 model NewsletterSubscriber {

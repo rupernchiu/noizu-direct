@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent, getCurrencyFactor } from '@/lib/airwallex'
+import { createPaymentIntent, decideThreeDsAction, getCurrencyFactor } from '@/lib/airwallex'
 import { ensureAirwallexCustomer } from '@/lib/support-customer'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 
@@ -105,11 +105,18 @@ export async function POST(req: Request) {
 
   const displayAmount = await convertToDisplayCurrency(grossUsd, currency)
 
+  // One-time creator tip is intangible/digital — FORCE_3DS shifts chargeback
+  // liability to issuer (digital goods get <50% dispute-win rate even with
+  // perfect evidence). See project_fee_tax_fraud_model.md.
   const intent = await createPaymentIntent({
     amount: displayAmount,
     currency,
     orderId: tx.id,
     customerId,
+    threeDsAction: decideThreeDsAction({
+      productType: 'DIGITAL',
+      amountUsdCents: body.amountUsd,
+    }),
     metadata: { supportTxId: tx.id, kind: body.kind, creatorId: creator.id },
   })
 
