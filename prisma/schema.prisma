@@ -393,6 +393,17 @@ model Order {
   // ── Digital download fraud defenses (sprint 1.4) ──
   maxDownloadsAllowed            Int       @default(5)
   downloadCapReachedAt           DateTime?
+  // ── Refund lifecycle (sprint 3.0) ──
+  // Once a refund is initiated (admin or dispute resolution), refundStatus tracks
+  // the Airwallex side: NONE → PENDING (request emitted) → SUCCEEDED|FAILED.
+  // escrowStatus tracks the *internal* state; refundStatus tracks whether the
+  // money actually left Airwallex. Both must reach a terminal state before we
+  // consider the order fully closed.
+  refundStatus                   String    @default("NONE") // NONE|PENDING|SUCCEEDED|FAILED
+  refundRequestedAt              DateTime?
+  refundProcessedAt              DateTime?
+  refundFailureReason            String?
+  airwallexRefundId              String?
   // Escrow
   escrowStatus                   String    @default("HELD") // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
   escrowHeldAt                   DateTime?

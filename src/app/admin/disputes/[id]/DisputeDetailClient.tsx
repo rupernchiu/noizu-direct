@@ -9,10 +9,19 @@ import { AuthedThumbnail, type RevealState } from '@/components/admin/AuthedThum
 interface DisputeDetail {
   id: string; orderId: string; reason: string; description: string
   status: string; evidence: string; creatorResponse: string | null
+  creatorRespondedAt?: Date | null
   adminNote: string | null; createdAt: Date; resolvedAt: Date | null
+  refundAmount?: number | null
   order: {
     id: string; amountUsd: number; escrowStatus: string
+    refundStatus?: string | null
+    refundRequestedAt?: Date | null
+    refundProcessedAt?: Date | null
+    refundFailureReason?: string | null
+    airwallexRefundId?: string | null
     trackingNumber: string | null; courierName: string | null; createdAt: Date
+    trackingAddedAt?: Date | null
+    escrowReleasedAt?: Date | null
     product: { title: string; type: string; images: string }
     buyer: { name: string; email: string }
     creator: { name: string; email: string }
@@ -190,19 +199,75 @@ export default function DisputeDetailClient({
             </div>
           </div>
 
-          {dispute.order.escrowTransactions.length > 0 && (
-            <div className="bg-card border border-border rounded-xl p-5">
-              <h3 className="font-semibold text-foreground mb-3">Escrow History</h3>
-              <div className="flex flex-col gap-2">
-                {dispute.order.escrowTransactions.map(et => (
-                  <div key={et.id} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{et.type} · {fmt(et.createdAt)}</span>
-                    <span className="text-foreground font-medium">USD {(et.amount / 100).toFixed(2)}</span>
+          {/* Combined timeline — order lifecycle + dispute markers + escrow + refund.
+              Built client-side from already-loaded fields so we don't need an extra query. */}
+          {(() => {
+            type Ev = { at: Date; kind: string; tone: 'gray' | 'blue' | 'amber' | 'green' | 'red'; label: string; detail?: string }
+            const events: Ev[] = []
+            const o = dispute.order
+            events.push({ at: o.createdAt, kind: 'ORDER_CREATED', tone: 'blue', label: 'Order placed', detail: `USD ${(o.amountUsd / 100).toFixed(2)}` })
+            if (o.trackingAddedAt) {
+              events.push({ at: o.trackingAddedAt, kind: 'TRACKING_ADDED', tone: 'gray', label: 'Tracking added', detail: o.trackingNumber ?? undefined })
+            }
+            for (const et of o.escrowTransactions) {
+              const tone: Ev['tone'] = et.type.includes('REFUND') ? 'amber' : et.type === 'HOLD' ? 'gray' : 'green'
+              events.push({ at: et.createdAt, kind: et.type, tone, label: et.type.replace(/_/g, ' '), detail: `USD ${(et.amount / 100).toFixed(2)}${et.note ? ` — ${et.note}` : ''}` })
+            }
+            events.push({ at: dispute.createdAt, kind: 'DISPUTE_RAISED', tone: 'red', label: 'Dispute raised', detail: dispute.reason.replace(/_/g, ' ') })
+            if (dispute.creatorRespondedAt) {
+              events.push({ at: dispute.creatorRespondedAt, kind: 'CREATOR_RESPONDED', tone: 'blue', label: 'Creator responded' })
+            }
+            if (dispute.resolvedAt) {
+              const resolution = dispute.status === 'RESOLVED_REFUND' ? 'refund' : dispute.status === 'RESOLVED_RELEASE' ? 'release' : dispute.status.toLowerCase()
+              events.push({ at: dispute.resolvedAt, kind: 'DISPUTE_RESOLVED', tone: dispute.status === 'RESOLVED_REFUND' ? 'amber' : 'green', label: `Dispute resolved — ${resolution}`, detail: dispute.refundAmount != null ? `Refund USD ${(dispute.refundAmount / 100).toFixed(2)}` : undefined })
+            }
+            if (o.refundRequestedAt) {
+              events.push({ at: o.refundRequestedAt, kind: 'REFUND_REQUESTED', tone: 'amber', label: 'Refund requested at processor', detail: o.airwallexRefundId ? `Airwallex ref: ${o.airwallexRefundId}` : 'No processor ref' })
+            }
+            if (o.refundProcessedAt) {
+              const ok = o.refundStatus === 'SUCCEEDED'
+              events.push({
+                at: o.refundProcessedAt,
+                kind: ok ? 'REFUND_SUCCEEDED' : 'REFUND_FAILED',
+                tone: ok ? 'green' : 'red',
+                label: ok ? 'Refund settled at processor' : 'Refund failed at processor',
+                detail: !ok ? o.refundFailureReason ?? undefined : undefined,
+              })
+            }
+            events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+            const dotClass: Record<Ev['tone'], string> = {
+              gray: 'bg-muted-foreground',
+              blue: 'bg-blue-500',
+              amber: 'bg-yellow-500',
+              green: 'bg-green-500',
+              red: 'bg-red-500',
+            }
+            return (
+              <div className="bg-card border border-border rounded-xl p-5">
+                <h3 className="font-semibold text-foreground mb-3">Timeline</h3>
+                <ol className="relative pl-4 border-l border-border flex flex-col gap-3">
+                  {events.map((ev, i) => (
+                    <li key={i} className="relative">
+                      <span className={`absolute -left-[1.21rem] top-1.5 size-2 rounded-full ${dotClass[ev.tone]}`} />
+                      <div className="text-xs text-muted-foreground">{fmt(ev.at)}</div>
+                      <div className="text-sm text-foreground font-medium">{ev.label}</div>
+                      {ev.detail && <div className="text-xs text-muted-foreground mt-0.5">{ev.detail}</div>}
+                    </li>
+                  ))}
+                </ol>
+                {o.refundStatus && o.refundStatus !== 'NONE' && (
+                  <div className={`mt-4 rounded-lg border px-3 py-2 text-xs ${
+                    o.refundStatus === 'SUCCEEDED' ? 'border-green-500/30 bg-green-500/10 text-green-300' :
+                    o.refundStatus === 'FAILED'    ? 'border-red-500/30 bg-red-500/10 text-red-300' :
+                                                     'border-yellow-500/30 bg-yellow-500/10 text-yellow-300'
+                  }`}>
+                    Refund status: <span className="font-mono">{o.refundStatus}</span>
+                    {o.refundFailureReason && <div className="mt-1 opacity-80">{o.refundFailureReason}</div>}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            )
+          })()}
         </div>
 
         {/* Right: dispute + resolution */}

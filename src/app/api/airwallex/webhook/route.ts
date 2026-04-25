@@ -720,6 +720,53 @@ async function handleDisputeClosed(obj: Record<string, any>, outcome: 'WON' | 'L
   }
 }
 
+// ── Refund webhook handlers ─────────────────────────────────────────────────
+//
+// Airwallex emits refund.succeeded / refund.failed (and the related
+// payment_attempt.refund.* aliases) when a refund initiated via createRefund()
+// reaches a terminal state. We match on Order.airwallexRefundId — the refund
+// object's `id` — and update Order.refundStatus accordingly.
+//
+// If we receive a webhook for a refund we don't recognize (e.g., manual refund
+// issued in the Airwallex dashboard before refundEscrow was wired up), we
+// log and ack — there's no Order to update.
+
+async function handleRefundUpdate(obj: Record<string, any>, succeeded: boolean) {
+  const refundId = (obj.id ?? obj.refund_id) as string | undefined
+  if (!refundId) return
+
+  const order = await prisma.order.findFirst({ where: { airwallexRefundId: refundId } })
+  if (!order) {
+    console.warn('[airwallex/webhook] refund event for unknown refund', { refundId, succeeded })
+    return
+  }
+
+  const failureReason = succeeded
+    ? null
+    : (obj.failure_reason ?? obj.failure_message ?? 'Refund failed') as string
+
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      refundStatus: succeeded ? 'SUCCEEDED' : 'FAILED',
+      refundProcessedAt: new Date(),
+      refundFailureReason: failureReason ? failureReason.slice(0, 500) : null,
+    },
+  })
+
+  await prisma.auditEvent.create({
+    data: {
+      actorId: 'system',
+      actorName: 'Airwallex Webhook',
+      action: succeeded ? 'orders.refund.succeeded' : 'orders.refund.failed',
+      entityType: 'Order',
+      entityId: order.id,
+      entityLabel: `USD ${(order.amountUsd / 100).toFixed(2)}`,
+      reason: failureReason ?? null,
+    },
+  }).catch((err: unknown) => console.error('[airwallex/webhook]', err))
+}
+
 async function handleTransferFailed(transferId: string, failureReason?: string) {
   const payout = await prisma.payout.findFirst({
     where: { airwallexTransferId: transferId },
@@ -875,6 +922,16 @@ export async function POST(req: NextRequest) {
       event.name === 'payment_dispute.won'
     ) {
       await handleDisputeClosed(obj, 'WON')
+    } else if (
+      event.name === 'refund.succeeded' ||
+      event.name === 'payment_attempt.refund.succeeded'
+    ) {
+      await handleRefundUpdate(obj, true)
+    } else if (
+      event.name === 'refund.failed' ||
+      event.name === 'payment_attempt.refund.failed'
+    ) {
+      await handleRefundUpdate(obj, false)
     }
   } catch (err) {
     // Returning 500 causes Airwallex to retry. The handler's idempotency guard

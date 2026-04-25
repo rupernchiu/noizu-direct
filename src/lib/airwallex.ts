@@ -368,6 +368,48 @@ export async function getAirwallexBalances(): Promise<AirwallexBalance[]> {
 }
 
 /**
+ * Issue a refund against a captured payment intent. Airwallex returns the
+ * refund object synchronously with status (e.g., RECEIVED|PROCESSING). The
+ * terminal SUCCEEDED|FAILED state arrives later via the
+ * payment_attempt.refund.* webhook (or refund.succeeded / refund.failed
+ * depending on tenant config).
+ *
+ * Reference: https://www.airwallex.com/docs/api#/Payments/Refunds/_api_v1_pa_refunds_create/post
+ */
+export async function createRefund(opts: {
+  paymentIntentId: string
+  amount: number // minor units (USD cents in our pipeline)
+  currency: string
+  requestId: string // idempotency key — pass `refund_${orderId}_${ts}` so retries collapse
+  reason?: string
+  metadata?: Record<string, unknown>
+}): Promise<{ id: string; status: string }> {
+  const { paymentIntentId, amount, currency, requestId, reason, metadata } = opts
+  const token = await getAirwallexToken()
+  const factor = getCurrencyFactor(currency)
+  const res = await fetch(`${BASE_URL}/api/v1/pa/refunds/create`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      request_id: requestId,
+      amount: amount / factor,
+      currency,
+      payment_intent_id: paymentIntentId,
+      reason: reason ?? 'requested_by_customer',
+      metadata,
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    throw new Error(`Refund create failed: ${res.status} ${text}`)
+  }
+  return res.json()
+}
+
+/**
  * Submit chargeback evidence to Airwallex for a given dispute.
  *
  * Reference: https://www.airwallex.com/docs/api#/Payments/Disputes

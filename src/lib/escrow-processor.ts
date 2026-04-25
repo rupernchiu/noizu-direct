@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { releaseMilestone } from '@/lib/milestone-release'
+import { createRefund } from '@/lib/airwallex'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -485,10 +486,18 @@ export async function refundEscrow(orderId: string, amount: number, performedBy:
   const isPartial = amount < order.amountUsd
   const now = new Date()
 
+  // Update internal escrow + dispute state up-front so the audit trail is
+  // captured even if the Airwallex refund call fails. refundStatus tracks
+  // the money-side state separately from escrowStatus.
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },
-      data: { escrowStatus: isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED', status: isPartial ? 'COMPLETED' : 'CANCELLED' },
+      data: {
+        escrowStatus: isPartial ? 'PARTIALLY_REFUNDED' : 'REFUNDED',
+        status: isPartial ? 'COMPLETED' : 'CANCELLED',
+        refundStatus: 'PENDING',
+        refundRequestedAt: now,
+      },
     })
     await tx.escrowTransaction.create({
       data: {
@@ -512,6 +521,41 @@ export async function refundEscrow(orderId: string, amount: number, performedBy:
       })
     }
   })
+
+  // Fire the Airwallex refund call. We require an intent ID; if missing, mark
+  // FAILED with a clear reason so an admin can investigate (typically means
+  // the order pre-dates Airwallex integration or the intent ID was lost).
+  if (order.airwallexIntentId) {
+    try {
+      const refund = await createRefund({
+        paymentIntentId: order.airwallexIntentId,
+        amount,
+        currency: 'USD',
+        requestId: `refund_${orderId}_${now.getTime()}`,
+        reason: note ? note.slice(0, 100) : 'requested_by_customer',
+        metadata: { orderId, performedBy, isPartial },
+      })
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { airwallexRefundId: refund.id },
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { refundStatus: 'FAILED', refundFailureReason: message.slice(0, 500) },
+      })
+      console.error('[escrow-processor] refund create failed', { orderId, err: message })
+    }
+  } else {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        refundStatus: 'FAILED',
+        refundFailureReason: 'No Airwallex payment intent on order — manual refund required',
+      },
+    })
+  }
 
   await Promise.all([
     createNotification(order.buyerId, 'REFUND_ISSUED',

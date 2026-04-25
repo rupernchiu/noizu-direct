@@ -13,7 +13,22 @@ export default async function AdminDisputeDetailPage({ params }: { params: Promi
     where: { id },
     include: {
       order: {
-        include: {
+        select: {
+          id: true,
+          amountUsd: true,
+          escrowStatus: true,
+          escrowReleasedAt: true,
+          trackingNumber: true,
+          courierName: true,
+          courierCode: true,
+          trackingAddedAt: true,
+          createdAt: true,
+          refundStatus: true,
+          refundRequestedAt: true,
+          refundProcessedAt: true,
+          refundFailureReason: true,
+          airwallexRefundId: true,
+          shippingAddress: true,
           product: { select: { title: true, type: true, images: true } },
           buyer: { select: { name: true, email: true } },
           creator: { select: { name: true, email: true } },
