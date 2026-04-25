@@ -52,6 +52,9 @@ export default function PayoutRequestPage() {
 
   // Request state
   const [available, setAvailable] = useState<number | null>(null)
+  const [rail, setRail] = useState<'LOCAL' | 'SWIFT'>('LOCAL')
+  const [minPayoutUsd, setMinPayoutUsd] = useState<number>(1000)
+  const [swiftFeeUsd, setSwiftFeeUsd] = useState<number>(0)
   const [amount, setAmount] = useState('')
   const [requestLoading, setRequestLoading] = useState(false)
   const [requestError, setRequestError] = useState<string | null>(null)
@@ -64,7 +67,17 @@ export default function PayoutRequestPage() {
 
     fetch('/api/dashboard/payout')
       .then(r => r.json())
-      .then((d: { available?: number }) => setAvailable(d.available ?? 0))
+      .then((d: {
+        available?: number
+        rail?: 'LOCAL' | 'SWIFT'
+        minPayoutUsd?: number
+        swiftFeeUsd?: number
+      }) => {
+        setAvailable(d.available ?? 0)
+        if (d.rail) setRail(d.rail)
+        if (typeof d.minPayoutUsd === 'number') setMinPayoutUsd(d.minPayoutUsd)
+        if (typeof d.swiftFeeUsd === 'number') setSwiftFeeUsd(d.swiftFeeUsd)
+      })
       .catch(() => setAvailable(0))
   }, [])
 
@@ -108,13 +121,20 @@ export default function PayoutRequestPage() {
   }
 
   const numAmount = parseFloat(amount) || 0
-  const fee = numAmount * FEE_RATE
-  const net = numAmount - fee
+  // Phase 1.5 — SWIFT corridor charges a per-transfer intermediary bank fee
+  // passed through to the creator. LOCAL rails (PHP/SGD/IDR/MYR/THB) use the
+  // existing 4% withdrawal fee model.
+  const fee = rail === 'SWIFT' ? swiftFeeUsd / 100 : numAmount * FEE_RATE
+  const net = Math.max(0, numAmount - fee)
+  const minUsdDisplay = (minPayoutUsd / 100).toFixed(2)
 
   async function submitRequest(e: React.FormEvent) {
     e.preventDefault()
     setRequestError(null)
-    if (numAmount < 50) { setRequestError('Minimum payout is RM 50'); return }
+    if (numAmount * 100 < minPayoutUsd) {
+      setRequestError(`Minimum payout is USD ${minUsdDisplay}`)
+      return
+    }
     if (available !== null && numAmount * 100 > available) { setRequestError('Exceeds available balance'); return }
     setRequestLoading(true)
     try {
@@ -266,7 +286,7 @@ export default function PayoutRequestPage() {
         <div className="rounded-xl bg-secondary/10 border border-secondary/30 px-4 py-3">
           <p className="text-xs text-muted-foreground">Available Balance</p>
           <p className="text-2xl font-bold text-secondary">
-            {available === null ? '...' : `RM ${(available / 100).toFixed(2)}`}
+            {available === null ? '...' : `USD ${(available / 100).toFixed(2)}`}
           </p>
         </div>
 
@@ -276,35 +296,47 @@ export default function PayoutRequestPage() {
           </div>
         )}
 
+        {rail === 'SWIFT' && (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-4 py-3 text-xs text-amber-300 leading-relaxed">
+            <strong className="block text-amber-200 mb-1">SWIFT corridor</strong>
+            Your payout country uses SWIFT routing rather than a local rail.
+            Intermediary bank fees (≈ USD {(swiftFeeUsd / 100).toFixed(2)}) are
+            passed through to you and deducted from each transfer. Minimum payout
+            is USD {minUsdDisplay} to keep the fee-to-payout ratio sensible.
+          </div>
+        )}
+
         <form onSubmit={submitRequest} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Amount (MYR)</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Amount (USD)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">RM</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">USD</span>
               <input
-                type="number" step="0.01" min="50"
+                type="number" step="0.01" min={minUsdDisplay}
                 value={amount}
                 onChange={e => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full rounded-lg bg-card border border-border pl-10 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full rounded-lg bg-card border border-border pl-12 pr-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Minimum payout: RM 50</p>
+            <p className="text-xs text-muted-foreground mt-1">Minimum payout: USD {minUsdDisplay}</p>
           </div>
 
           {numAmount > 0 && (
             <div className="rounded-lg bg-card border border-border p-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="text-foreground">RM {numAmount.toFixed(2)}</span>
+                <span className="text-foreground">USD {numAmount.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Withdrawal fee (4%)</span>
-                <span className="text-red-400">-RM {fee.toFixed(2)}</span>
+                <span className="text-muted-foreground">
+                  {rail === 'SWIFT' ? 'SWIFT intermediary fee' : 'Withdrawal fee (4%)'}
+                </span>
+                <span className="text-red-400">-USD {fee.toFixed(2)}</span>
               </div>
               <div className="flex justify-between border-t border-border pt-2 font-medium">
                 <span className="text-foreground">You receive</span>
-                <span className="text-secondary">RM {net.toFixed(2)}</span>
+                <span className="text-secondary">USD {net.toFixed(2)}</span>
               </div>
             </div>
           )}

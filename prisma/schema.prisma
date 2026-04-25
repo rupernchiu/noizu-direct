@@ -39,6 +39,12 @@ model User {
   agreementSkipCount        Int       @default(0)
   legalFullName             String?
   airwallexCustomerId       String?
+  // ── B2B reverse-charge (sprint 2.3) ──
+  // Buyer's business tax ID. If present and buyer country ≠ creator country
+  // and both are EU/SEA registered, destination tax is reverse-charged
+  // (platform doesn't collect; buyer self-assesses).
+  businessTaxId             String?
+  businessTaxCountry        String?
 
   creatorProfile       CreatorProfile?
   supportSubscriptions SupportSubscription[] @relation("SupportSubscriber")
@@ -138,6 +144,22 @@ model CreatorProfile {
   payoutDetails          String? // AES-256 encrypted JSON
   payoutCountry          String?
   payoutCurrency         String?
+  // ── SWIFT corridor (sprint 1.5) ──
+  // Tier-3 SEA: VN/KH/MM/LA — Airwallex local payout rails not available, so
+  // payouts go via SWIFT international wire. Fees (sender + intermediary +
+  // beneficiary bank) are passed through to the creator at payout-method setup.
+  payoutRail             String    @default("LOCAL") // LOCAL | SWIFT | PAYPAL
+  swiftBankName          String?
+  swiftBankCode          String? // BIC/SWIFT code
+  swiftIntermediaryFeeUsd Int?    // creator-disclosed estimate (cents)
+  // ── Personal tax (sprint 2.1) ──
+  // Self-declared at onboarding. If true, platform marks up the buyer price by
+  // taxRatePercent and withholds it from the payout, remitting on the creator's
+  // behalf. If false, no tax is applied — creator self-declares own taxes.
+  taxRegistered          Boolean   @default(false)
+  taxId                  String? // SST/GST/VAT registration number
+  taxRatePercent         Float? // overrides PlatformSettings.defaultCreatorTaxRatePercent
+  taxJurisdiction        String? // ISO-3166 alpha-2; falls back to payoutCountry
   createdAt              DateTime  @default(now())
 
   user                 User                  @relation(fields: [userId], references: [id])
@@ -351,6 +373,14 @@ model Order {
   buyerFeeUsd                    Int? // buyer-side surcharge in USD cents
   creatorCommissionUsd           Int? // 5% commission deducted at payout
   buyerCountry                   String? // ISO-3166-1 alpha-2, for per-country GMV/tax meter
+  // ── Tax engine snapshot (sprint 2.x) ──
+  destinationTaxAmountUsd        Int       @default(0) // Layer 2: platform's destination tax
+  destinationTaxRatePercent      Float? // rate at order time (snapshot)
+  destinationTaxCountry          String? // tax jurisdiction (usually = buyerCountry)
+  creatorTaxAmountUsd            Int       @default(0) // Layer 1: creator personal tax markup
+  creatorTaxRatePercent          Float? // creator's rate at order time
+  reverseChargeApplied           Boolean   @default(false) // B2B reverse-charge flag (sprint 2.3)
+  buyerBusinessTaxId             String? // buyer's tax ID if B2B reverse-charge claimed
   trackingNumber                 String?
   courierName                    String?
   courierCode                    String?
@@ -360,6 +390,9 @@ model Order {
   downloadToken                  String?
   downloadExpiry                 DateTime?
   downloadCount                  Int       @default(0)
+  // ── Digital download fraud defenses (sprint 1.4) ──
+  maxDownloadsAllowed            Int       @default(5)
+  downloadCapReachedAt           DateTime?
   // Escrow
   escrowStatus                   String    @default("HELD") // HELD|TRACKING_ADDED|RELEASED|DISPUTED|REFUNDED|PARTIALLY_REFUNDED
   escrowHeldAt                   DateTime?
@@ -492,6 +525,10 @@ model Transaction {
   buyerFeeUsd        Int? // buyer surcharge component
   creatorCommissionUsd Int? // 5% commission piece (overlaps with platformFee semantically once new model is live)
   buyerCountry       String? // ISO-3166-1 alpha-2, for per-country GMV meter
+  // ── Tax engine (sprint 2.x) ──
+  destinationTaxUsd  Int      @default(0) // Layer 2 destination tax collected
+  creatorTaxUsd      Int      @default(0) // Layer 1 markup-and-withhold for tax-registered creators
+  reverseCharge      Boolean  @default(false)
   airwallexReference String?
   status             String   @default("PENDING")
   // Chargeback/dispute: when a payment.dispute.created webhook fires *after* a
@@ -908,6 +945,18 @@ model PlatformSettings {
   commissionEscrowDays           Int     @default(30)
   newCreatorEscrowExtraDays      Int     @default(7)
   newCreatorTransactionThreshold Int     @default(10)
+  // ── Clawback exposure window (sprint 1.1) ──
+  // Earnings completed within the last N days are still chargeback-exposed and
+  // shown as "Exposed" on creator dashboards (not yet eligible for payout).
+  // Default 120d matches the longest standard card-network dispute window.
+  clawbackExposureWindowDays     Int     @default(120)
+  // ── Tax engine (sprint 2.1/2.2) ──
+  // Per-country destination tax line is enabled when registration crosses the
+  // country threshold. Stored as JSON: {"MY": true, "SG": false, ...}
+  taxDestinationCountries        String  @default("{}")
+  // Layer 1 personal-tax markup default for self-declared registered creators
+  // (overridden per-creator via CreatorProfile.taxRatePercent if set).
+  defaultCreatorTaxRatePercent   Float   @default(0.0)
   maintenanceMode                Boolean @default(false)
   maintenanceMessage             String?
 }
@@ -1651,8 +1700,8 @@ model PlatformReserveEntry {
 model AdminAuditEvent {
   id          String   @id @default(cuid())
   actorId     String // user.id of the admin who took the action
-  action      String // PAYOUT_APPROVED|RESERVE_RELEASED|FEE_RATE_CHANGED|...
-  resourceType String // PAYOUT|RESERVE|SETTINGS|ORDER|...
+  action      String // PAYOUT_APPROVED|RESERVE_RELEASED|FEE_RATE_CHANGED|CLAWBACK_APPLIED|DISPUTE_EVIDENCE_SUBMITTED|...
+  resourceType String // PAYOUT|RESERVE|SETTINGS|ORDER|USER|DISPUTE|...
   resourceId  String?
   amountUsd   Int? // signed amount for money-moving actions
   metadata    String? // JSON blob for action-specific context
@@ -1663,6 +1712,26 @@ model AdminAuditEvent {
   @@index([actorId, createdAt])
   @@index([action, createdAt])
   @@index([resourceType, resourceId])
+}
+
+// ── Digital download access log (sprint 1.4) ────────────────────────────────
+// Every signed-URL emission and download attempt for a digital order is logged.
+// Used to (a) enforce maxDownloadsAllowed, (b) provide chargeback evidence
+// (timestamp + IP) when a buyer claims "never received", (c) feed the fraud
+// review queue when access patterns look suspicious (multiple IPs, geo-distance).
+model DownloadAccessLog {
+  id        String   @id @default(cuid())
+  orderId   String
+  userId    String? // null if download token used without session (signed URL fallback)
+  ipAddress String?
+  userAgent String?
+  outcome   String // ISSUED | DOWNLOADED | DENIED_CAP | DENIED_EXPIRED | DENIED_ESCROW
+  bytesServed Int? // for partial / multi-range, optional
+  createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([outcome, createdAt])
 }
 
 // ── Newsletter ────────────────────────────────────────────────────────────────

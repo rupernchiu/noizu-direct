@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireCreator } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { Resend } from 'resend'
+import { getCreatorBalance } from '@/lib/creator-balance'
+import { minimumPayoutUsdCents, rateForCountry, swiftFeeUsdCents } from '@/lib/payout-rail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
@@ -12,22 +14,25 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const userId = (session.user as any).id as string
 
-    const [completedTxAgg, payoutsAgg] = await Promise.all([
-      prisma.transaction.aggregate({
-        where: { creatorId: userId, status: 'COMPLETED' },
-        _sum: { creatorAmount: true },
-      }),
-      prisma.payout.aggregate({
-        where: { creatorId: userId, status: { not: 'FAILED' } },
-        _sum: { amountUsd: true },
-      }),
-    ])
-
-    const totalEarned = completedTxAgg._sum.creatorAmount ?? 0
-    const totalPaidOut = payoutsAgg._sum.amountUsd ?? 0
-    const available = Math.max(0, totalEarned - totalPaidOut)
-
-    return NextResponse.json({ available })
+    const balance = await getCreatorBalance(userId)
+    const profile = await prisma.creatorProfile.findUnique({
+      where: { userId },
+      select: { payoutCountry: true, payoutRail: true, swiftIntermediaryFeeUsd: true },
+    })
+    const rail = ((profile?.payoutRail as 'LOCAL' | 'SWIFT' | null) ?? null)
+      ?? rateForCountry(profile?.payoutCountry ?? null)
+    return NextResponse.json({
+      available: balance.availableUsd,
+      exposed: balance.exposedUsd,
+      escrow: balance.escrowUsd,
+      blocked: balance.blockedUsd,
+      paidOut: balance.paidOutUsd,
+      lifetime: balance.lifetimeUsd,
+      exposureWindowDays: balance.exposureWindowDays,
+      rail,
+      minPayoutUsd: minimumPayoutUsdCents(rail),
+      swiftFeeUsd: rail === 'SWIFT' ? swiftFeeUsdCents(profile?.swiftIntermediaryFeeUsd ?? null) : 0,
+    })
   } catch (err) {
     console.error('[dashboard/payout GET] Error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -42,9 +47,24 @@ export async function POST(req: Request) {
 
     const { amount } = await req.json() as { amount: number }
 
-    // 1. Min amount check (RM50 = 5000 cents)
-    if (!amount || amount < 5000) {
-      return NextResponse.json({ error: 'Minimum payout is RM50' }, { status: 400 })
+    // Per-rail minimum: USD 10 LOCAL, USD 100 SWIFT (tier-3 corridors:
+    // VN/KH/MM/LA). Profile may already have payoutRail set; fall back to
+    // country-derived rail.
+    const profileForRail = await prisma.creatorProfile.findUnique({
+      where: { userId },
+      select: { payoutCountry: true, payoutRail: true },
+    })
+    const rail = (profileForRail?.payoutRail as 'LOCAL' | 'SWIFT' | undefined)
+      ?? rateForCountry(profileForRail?.payoutCountry ?? null)
+    const minCents = minimumPayoutUsdCents(rail)
+    if (!amount || amount < minCents) {
+      const minUsd = (minCents / 100).toFixed(2)
+      const railNote = rail === 'SWIFT'
+        ? ' (SWIFT corridor — intermediary bank fees are passed through to you)'
+        : ''
+      return NextResponse.json({
+        error: `Minimum payout is USD ${minUsd}${railNote}`,
+      }, { status: 400 })
     }
 
     // 2. No pending payout
@@ -101,23 +121,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please set up your payout details first' }, { status: 400 })
     }
 
-    // 7. Balance check
-    const [completedTxAgg, payoutsAgg] = await Promise.all([
-      prisma.transaction.aggregate({
-        where: { creatorId: userId, status: 'COMPLETED' },
-        _sum: { creatorAmount: true },
-      }),
-      prisma.payout.aggregate({
-        where: { creatorId: userId, status: { not: 'FAILED' } },
-        _sum: { amountUsd: true },
-      }),
-    ])
-    const totalEarned = completedTxAgg._sum.creatorAmount ?? 0
-    const totalPaidOut = payoutsAgg._sum.amountUsd ?? 0
-    const available = Math.max(0, totalEarned - totalPaidOut)
-
-    if (amount > available) {
-      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 })
+    // 7. Balance check (uses available/exposed split — exposed earnings are
+    //    inside the clawback window and not yet payable)
+    const balance = await getCreatorBalance(userId)
+    if (amount > balance.availableUsd) {
+      const exposedFmt = (balance.exposedUsd / 100).toFixed(2)
+      return NextResponse.json({
+        error: `Insufficient available balance. Earnings from the last ${balance.exposureWindowDays} days (USD ${exposedFmt}) are still chargeback-exposed and not yet payable.`,
+      }, { status: 400 })
     }
 
     const payout = await prisma.payout.create({

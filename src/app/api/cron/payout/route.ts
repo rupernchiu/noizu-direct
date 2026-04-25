@@ -4,12 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { executeTransfer, getCurrencyFactor } from '@/lib/airwallex'
 import { Resend } from 'resend'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { minimumPayoutUsdCents, rateForCountry } from '@/lib/payout-rail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://noizu.direct'
-
-// USD 10.00 minimum in cents
-const MIN_USD_CENTS = 1000
 
 async function getUsdRate(to: string): Promise<number> {
   if (to === 'USD') return 1
@@ -102,9 +100,6 @@ async function runPayoutSweep() {
     const totalPaid = paidMap.get(row.creatorId) ?? 0
     const availableUsd = totalEarned - totalPaid
 
-    // Below USD 10 minimum
-    if (availableUsd < MIN_USD_CENTS) { skipped++; continue }
-
     // Already has a pending payout
     const hasPending = await prisma.payout.findFirst({
       where: { creatorId: row.creatorId, status: { in: ['PENDING', 'PROCESSING'] } },
@@ -119,9 +114,15 @@ async function runPayoutSweep() {
         payoutDetails: true,
         payoutCurrency: true,
         payoutCountry: true,
+        payoutRail: true,
         airwallexBeneficiaryId: true,
       },
     })
+
+    // Per-rail minimum: USD 10 LOCAL, USD 100 SWIFT (tier-3 corridors).
+    const rail = (profile?.payoutRail as 'LOCAL' | 'SWIFT' | undefined)
+      ?? rateForCountry(profile?.payoutCountry)
+    if (availableUsd < minimumPayoutUsdCents(rail)) { skipped++; continue }
     const user = await prisma.user.findUnique({
       where: { id: row.creatorId },
       select: { email: true, name: true, payoutFrozen: true, payoutFrozenReason: true },
@@ -156,6 +157,7 @@ async function runPayoutSweep() {
           amount: displayAmount,
           currency: payoutCurrency,
           payoutId: payout.id,
+          rail,
         })
         await prisma.payout.update({
           where: { id: payout.id },

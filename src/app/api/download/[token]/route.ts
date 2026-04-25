@@ -7,15 +7,37 @@ import { Readable } from 'stream'
 
 const PAID_STATUSES = new Set(['PAID', 'PROCESSING', 'DELIVERED', 'COMPLETED'])
 
-// H11 — token lifetime policy.
-// - 30-day window is still enforced via Order.downloadExpiry (webhook sets this).
-// - Per-token cap: at most DOWNLOAD_CAP successful signed redirects.
-//   Past that, 410 Gone — buyer must contact support or re-purchase.
-//
-// TODO(H11 follow-up, Agent B's scope): on user password change, null out
-// Order.downloadToken and mint a fresh one so a leaked token doesn't outlive
-// the credential compromise.
-const DOWNLOAD_CAP = 10
+// Per-order download cap is now data-driven via Order.maxDownloadsAllowed
+// (sprint 1.4, default 5). Falls back to 10 for legacy orders that pre-date
+// the migration and have NULL.
+const LEGACY_DOWNLOAD_CAP = 10
+
+function clientIp(req: Request): string | null {
+  const fwd = req.headers.get('x-forwarded-for')
+  if (fwd) return fwd.split(',')[0]?.trim() ?? null
+  return req.headers.get('x-real-ip') ?? null
+}
+
+async function logAccess(
+  orderId: string,
+  userId: string | null,
+  req: Request,
+  outcome: 'ISSUED' | 'DENIED_CAP' | 'DENIED_EXPIRED' | 'DENIED_ESCROW' | 'DENIED_AUTH'
+): Promise<void> {
+  try {
+    await prisma.downloadAccessLog.create({
+      data: {
+        orderId,
+        userId,
+        ipAddress: clientIp(req),
+        userAgent: req.headers.get('user-agent') ?? null,
+        outcome,
+      },
+    })
+  } catch {
+    // Pre-migration safety: don't block downloads if the log table is missing.
+  }
+}
 
 interface DigitalFile {
   key: string
@@ -47,22 +69,37 @@ export async function GET(
 
   // H11 — collapse "not found" and "forbidden" into the same 404.
   if (!order) return NOT_FOUND()
-  if (order.buyerId !== userId) return NOT_FOUND()
+  if (order.buyerId !== userId) {
+    await logAccess(order.id, userId, req, 'DENIED_AUTH')
+    return NOT_FOUND()
+  }
 
   if (!order.downloadExpiry || order.downloadExpiry < new Date()) {
+    await logAccess(order.id, userId, req, 'DENIED_EXPIRED')
     return new Response('Download link expired', { status: 410 })
   }
   if (!PAID_STATUSES.has(order.status)) {
+    await logAccess(order.id, userId, req, 'DENIED_ESCROW')
     return new Response('Order not paid', { status: 402 })
   }
 
-  // H11 — per-token download cap. `downloadCount` column is populated by the
-  // migration shipped alongside this change; if the migration has not been
-  // applied, `order.downloadCount` is undefined at runtime and the OR
-  // fallback to 0 lets downloads proceed (the cap will start enforcing after
-  // migration).
+  // Per-order cap is data-driven via Order.maxDownloadsAllowed (sprint 1.4
+  // default 5). Falls back to LEGACY_DOWNLOAD_CAP for legacy orders that
+  // pre-date the migration and have NULL.
+  const cap = order.maxDownloadsAllowed ?? LEGACY_DOWNLOAD_CAP
   const currentCount = order.downloadCount ?? 0
-  if (currentCount >= DOWNLOAD_CAP) {
+  if (currentCount >= cap) {
+    await logAccess(order.id, userId, req, 'DENIED_CAP')
+    try {
+      if (!order.downloadCapReachedAt) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { downloadCapReachedAt: new Date() },
+        })
+      }
+    } catch {
+      // pre-migration: column may not exist yet
+    }
     return new Response('Download limit reached', { status: 410 })
   }
 
@@ -108,6 +145,7 @@ export async function GET(
         // If the column doesn't exist yet (pre-migration), don't block the
         // download — the cap will start enforcing after migration.
       }
+      await logAccess(order.id, userId, req, 'ISSUED')
 
       return Response.redirect(signed, 302)
     }
@@ -133,6 +171,7 @@ export async function GET(
         data: { downloadCount: { increment: 1 } },
       })
     } catch { /* pre-migration */ }
+    await logAccess(order.id, userId, req, 'ISSUED')
     return Response.redirect(signed, 302)
   }
 
@@ -154,6 +193,7 @@ export async function GET(
         data: { downloadCount: { increment: 1 } },
       })
     } catch { /* pre-migration */ }
+    await logAccess(order.id, userId, req, 'ISSUED')
     return new Response(webStream, {
       headers: {
         'Content-Disposition': `attachment; filename="${filename}"`,

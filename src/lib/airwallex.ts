@@ -309,12 +309,16 @@ export async function executeTransfer({
   amount,
   currency,
   payoutId,
+  rail = 'LOCAL',
 }: {
   beneficiaryId: string
   amount: number  // in cents
   currency: string
   payoutId: string
   creatorName?: string
+  // Phase 1.5 — tier-3 (VN/KH/MM/LA) creators are paid via SWIFT and
+  // shoulder the intermediary fee themselves (`fee_paid_by: PAYEE`).
+  rail?: 'LOCAL' | 'SWIFT'
 }): Promise<{ transfer_id?: string; id?: string; status: string }> {
   const token = await getAirwallexToken()
   const res = await fetch(`${BASE_URL}/api/v1/transfers/create`, {
@@ -325,7 +329,8 @@ export async function executeTransfer({
       beneficiary_id: beneficiaryId,
       amount: amount / 100,
       currency,
-      payment_method: 'LOCAL',
+      payment_method: rail,
+      ...(rail === 'SWIFT' ? { fee_paid_by: 'PAYEE' } : {}),
       memo: 'noizu.direct Creator Payout',
     }),
   })
@@ -360,4 +365,34 @@ export async function getAirwallexBalances(): Promise<AirwallexBalance[]> {
   if (!res.ok) return []
   const data = await res.json() as { items?: AirwallexBalance[] } | AirwallexBalance[]
   return Array.isArray(data) ? data : (data.items ?? [])
+}
+
+/**
+ * Submit chargeback evidence to Airwallex for a given dispute.
+ *
+ * Reference: https://www.airwallex.com/docs/api#/Payments/Disputes
+ *
+ * The payload shape is documented in src/lib/dispute-evidence.ts. Caller is
+ * responsible for assembling the payload (typically via packageDisputeEvidence()).
+ * Returns Airwallex's response on success or throws on HTTP failure.
+ */
+export async function submitDisputeEvidence(opts: {
+  disputeId: string
+  evidence: Record<string, unknown>
+}): Promise<unknown> {
+  const { disputeId, evidence } = opts
+  const token = await getAirwallexToken()
+  const res = await fetch(`${BASE_URL}/api/v1/pa/disputes/${disputeId}/submit_evidence`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(evidence),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Airwallex submit_evidence failed: ${res.status} — ${body}`)
+  }
+  return res.json()
 }

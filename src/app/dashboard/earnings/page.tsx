@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { FilterSelect } from '@/components/ui/FilterSelect'
 import { Pagination } from '@/components/ui/Pagination'
+import { getCreatorBalance } from '@/lib/creator-balance'
 
 const TX_PER_PAGE = 10
 const PAYOUT_PER_PAGE = 5
@@ -52,19 +53,8 @@ export default async function EarningsPage({
   const txWhere: any = { creatorId: userId }
   if (txStatus) txWhere.status = txStatus
 
-  const [completedTxAgg, escrowTxAgg, payoutsAgg, txTotal, transactions, payoutTotal, payouts, profile] = await Promise.all([
-    prisma.transaction.aggregate({
-      where: { creatorId: userId, status: 'COMPLETED' },
-      _sum: { creatorAmount: true },
-    }),
-    prisma.transaction.aggregate({
-      where: { creatorId: userId, status: 'ESCROW' },
-      _sum: { creatorAmount: true },
-    }),
-    prisma.payout.aggregate({
-      where: { creatorId: userId, status: { in: ['PENDING', 'PROCESSING', 'PAID'] } },
-      _sum: { amountUsd: true },
-    }),
+  const [balance, txTotal, transactions, payoutTotal, payouts, profile] = await Promise.all([
+    getCreatorBalance(userId),
     prisma.transaction.count({ where: txWhere }),
     prisma.transaction.findMany({
       where: txWhere,
@@ -85,10 +75,12 @@ export default async function EarningsPage({
     }),
   ])
 
-  const totalEarnedCents = completedTxAgg._sum.creatorAmount ?? 0
-  const totalEscrowCents = escrowTxAgg._sum.creatorAmount ?? 0
-  const totalPaidOutCents = payoutsAgg._sum.amountUsd ?? 0
-  const availableCents = Math.max(0, totalEarnedCents - totalPaidOutCents)
+  const totalEarnedCents = balance.lifetimeUsd
+  const totalEscrowCents = balance.escrowUsd
+  const totalPaidOutCents = balance.paidOutUsd
+  const availableCents = balance.availableUsd
+  const exposedCents = balance.exposedUsd
+  const exposureWindowDays = balance.exposureWindowDays
   const payoutCurrency = profile?.payoutCurrency ?? 'USD'
 
   return (
@@ -115,11 +107,16 @@ export default async function EarningsPage({
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 sm:gap-4">
         <div className="rounded-xl border border-border bg-secondary/10 p-3 sm:p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">Available</p>
           <p className="text-xl sm:text-2xl font-bold text-secondary">${(availableCents / 100).toFixed(2)}</p>
-          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Escrow cleared</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Payable now</p>
+        </div>
+        <div className="rounded-xl border border-border bg-amber-500/10 p-3 sm:p-4">
+          <p className="text-xs font-medium text-muted-foreground mb-1">Exposed</p>
+          <p className="text-xl sm:text-2xl font-bold text-amber-500">${(exposedCents / 100).toFixed(2)}</p>
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">Last {exposureWindowDays}d clawback hold</p>
         </div>
         <div className="rounded-xl border border-border bg-yellow-500/10 p-3 sm:p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1">In Escrow</p>
