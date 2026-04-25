@@ -28,6 +28,42 @@ export async function getAirwallexToken(): Promise<string> {
   return _cachedToken.value
 }
 
+/**
+ * Pick a 3DS posture for a given purchase.
+ *
+ * Spec (memory: project_fee_tax_fraud_model.md): digital goods of any amount,
+ * and physical goods ≥ USD 25, must FORCE 3DS. Below that threshold for
+ * physical we hand off to Airwallex Risk Engine via EXTERNAL_3DS so the issuer
+ * decides. SKIP_3DS is intentionally never returned — call sites can opt in
+ * manually if they need it for a test fixture.
+ */
+export function decideThreeDsAction(args: {
+  productType: 'DIGITAL' | 'PHYSICAL' | 'POD' | 'COMMISSION' | string
+  amountUsdCents: number
+}): 'FORCE_3DS' | 'EXTERNAL_3DS' {
+  const { productType, amountUsdCents } = args
+  // Digital surfaces (downloads, subscriptions, commissions) are highest-fraud:
+  // dispute-win-rate is <50% even with perfect evidence and the goods are
+  // already delivered. Mandatory 3DS shifts liability to issuer.
+  const isDigital =
+    productType === 'DIGITAL' ||
+    productType === 'COMMISSION' ||
+    productType === 'SUBSCRIPTION' ||
+    productType === 'STORAGE'
+  if (isDigital) return 'FORCE_3DS'
+  // Physical/POD: force above USD 25 threshold (matches industry chargeback
+  // sweet spot; below that fraud cost-to-loss ratio rarely justifies friction).
+  if (amountUsdCents >= 2500) return 'FORCE_3DS'
+  return 'EXTERNAL_3DS'
+}
+
+// Three-DS posture flags accepted by Airwallex `payment_method_options.card.three_ds_action`.
+// FORCE_3DS — always challenge; mandatory for digital goods + physical ≥ USD 25 per
+//             our fraud spec (project_fee_tax_fraud_model.md).
+// EXTERNAL_3DS — issuer/risk-engine decides. We rely on Airwallex Risk Engine rules.
+// SKIP_3DS  — never challenge. Reserved for low-value test paths only — do not ship.
+export type ThreeDsAction = 'FORCE_3DS' | 'EXTERNAL_3DS' | 'SKIP_3DS'
+
 export async function createPaymentIntent({
   amount,
   currency,
@@ -36,6 +72,7 @@ export async function createPaymentIntent({
   customerId,
   savePaymentMethod,
   metadata,
+  threeDsAction,
 }: {
   amount: number   // in cents
   currency: string
@@ -44,6 +81,7 @@ export async function createPaymentIntent({
   customerId?: string
   savePaymentMethod?: boolean
   metadata?: Record<string, string | number | boolean>
+  threeDsAction?: ThreeDsAction
 }): Promise<any> {
   const token = await getAirwallexToken()
   const body: Record<string, unknown> = {
@@ -55,9 +93,17 @@ export async function createPaymentIntent({
     metadata: { orderId, ...(metadata ?? {}) },
   }
   if (customerId) body.customer_id = customerId
+  // Build payment_method_options.card incrementally so save-payment + 3DS can co-exist.
+  const cardOpts: Record<string, unknown> = {}
   if (savePaymentMethod) {
-    body.payment_method_options = { card: { auto_capture: true } }
+    cardOpts.auto_capture = true
     body.save_payment_method = true
+  }
+  if (threeDsAction) {
+    cardOpts.three_ds_action = threeDsAction
+  }
+  if (Object.keys(cardOpts).length > 0) {
+    body.payment_method_options = { card: cardOpts }
   }
   const res = await fetch(`${BASE_URL}/api/v1/pa/payment_intents/create`, {
     method: 'POST',

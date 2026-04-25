@@ -1,9 +1,24 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { createPaymentIntent } from '@/lib/airwallex'
+import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
+import {
+  calculateFees,
+  getFeeRatesFromSettings,
+  type PaymentRail,
+  LOCAL_RAILS,
+  CARD_RAILS,
+} from '@/lib/fees'
 import { convertUsdCentsTo } from '@/lib/fx'
+
+const ALL_RAILS: readonly PaymentRail[] = [...LOCAL_RAILS, ...CARD_RAILS] as const
+
+function parseRail(input: unknown): PaymentRail | null {
+  if (typeof input !== 'string') return null
+  const upper = input.toUpperCase() as PaymentRail
+  return (ALL_RAILS as readonly string[]).includes(upper) ? upper : null
+}
 
 const SUPPORTED_CURRENCIES = ['USD', 'MYR', 'SGD', 'PHP', 'THB', 'IDR']
 
@@ -42,11 +57,18 @@ export async function POST(req: Request) {
     currency?: string
     shippingAddress?: ShippingAddress
     discounts?: { discountCodeId: string }[]
+    paymentRail?: string
   }
   const { orderId: cartSessionId, shippingAddress, discounts = [] } = body
   const currency = SUPPORTED_CURRENCIES.includes((body.currency ?? '').toUpperCase())
     ? body.currency!.toUpperCase()
     : 'USD'
+
+  // Buyer-selected rail (optional). When provided we apply the 5/5.5/8 fee
+  // model snapshotted onto the Order; when null we keep the legacy flat 2.5%
+  // path so older clients / non-checkout callers don't break.
+  const selectedRail = parseRail(body.paymentRail)
+  const buyerCountry = shippingAddress?.country?.toUpperCase() ?? null
 
   if (!cartSessionId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
 
@@ -57,11 +79,27 @@ export async function POST(req: Request) {
 
   if (existingOrder) {
     const displayAmount = await convertToDisplayCurrency(existingOrder.amountUsd, currency)
+    const productType = await prisma.product
+      .findUnique({ where: { id: existingOrder.productId }, select: { type: true } })
+      .then(p => p?.type ?? 'PHYSICAL')
+    const usdRate = currency === 'USD' ? 1 : displayAmount / existingOrder.amountUsd
     const intent = await createPaymentIntent({
       amount: displayAmount,
       currency,
       orderId: existingOrder.id,
       buyerEmail: buyer?.email,
+      metadata: {
+        usd_amount: existingOrder.amountUsd,
+        fx_rate_used: usdRate,
+        fx_locked_at: new Date().toISOString(),
+        fx_source: 'airwallex_first_frankfurter_fallback',
+        ...(selectedRail ? { payment_rail: selectedRail } : {}),
+        ...(buyerCountry ? { buyer_country: buyerCountry } : {}),
+      },
+      threeDsAction: decideThreeDsAction({
+        productType,
+        amountUsdCents: existingOrder.amountUsd,
+      }),
     })
     await prisma.order.update({
       where: { id: existingOrder.id },
@@ -69,6 +107,8 @@ export async function POST(req: Request) {
         airwallexIntentId: intent.id as string,
         displayCurrency: currency,
         displayAmount,
+        ...(selectedRail ? { paymentRail: selectedRail } : {}),
+        ...(buyerCountry ? { buyerCountry } : {}),
       },
     })
     return NextResponse.json({ intentId: intent.id, clientSecret: intent.client_secret, currency, displayAmount })
@@ -146,9 +186,22 @@ export async function POST(req: Request) {
   // Totals
   const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
   const discountedSubtotal = Math.max(0, subtotal - totalVerifiedDiscount)
-  const feeRate = await getProcessingFeeRate()
-  const processingFee = feeOnSubtotal(discountedSubtotal, feeRate)
-  const grandTotal = discountedSubtotal + processingFee
+
+  // Rail-aware fee path (5/5.5/8) when buyer has chosen a rail; otherwise the
+  // legacy flat 2.5% so older callers + non-checkout flows keep working.
+  let processingFee: number
+  let grandTotal: number
+  let feeBreakdown: ReturnType<typeof calculateFees> | null = null
+  if (selectedRail) {
+    const rates = await getFeeRatesFromSettings()
+    feeBreakdown = calculateFees(discountedSubtotal, selectedRail, rates)
+    processingFee = feeBreakdown.buyerFeeUsdCents
+    grandTotal = feeBreakdown.grossUsdCents
+  } else {
+    const feeRate = await getProcessingFeeRate()
+    processingFee = feeOnSubtotal(discountedSubtotal, feeRate)
+    grandTotal = discountedSubtotal + processingFee
+  }
 
   // Clean up *stale* PENDING orders for this buyer before creating new ones.
   // M4 (F7): previously this blanket-deleted every PENDING order, which races
@@ -175,7 +228,6 @@ export async function POST(req: Request) {
     const groupFee = Math.round((groupSubtotal / subtotal) * processingFee)
     const orderAmount = groupSubtotal + groupFee
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
-    const isDigitalGroup = !isPhysicalGroup
 
     // Each group only gets the discount belonging to its creator
     const groupDiscount = verifiedDiscountsByCreator.get(items[0].product.creatorId)
@@ -185,6 +237,24 @@ export async function POST(req: Request) {
     const commissionItem = isCommissionGroup ? items.find(i => i.product.type === 'COMMISSION') : null
 
     const orderAmountUsd = orderAmount - groupDiscountShare
+
+    // Rail-aware fee snapshot. Apportion the cart-level breakdown to each
+    // creator group by its USD subtotal share so per-group splits sum to the
+    // overall PaymentIntent down to the cent.
+    let groupSubtotalUsd: number | null = null
+    let groupBuyerFeeUsd: number | null = null
+    let groupCreatorCommissionUsd: number | null = null
+    if (feeBreakdown && discountedSubtotal > 0) {
+      const groupDiscountedSubtotal = Math.max(0, groupSubtotal - groupDiscountShare)
+      groupSubtotalUsd = groupDiscountedSubtotal
+      groupBuyerFeeUsd = Math.round(
+        (groupDiscountedSubtotal / discountedSubtotal) * feeBreakdown.buyerFeeUsdCents,
+      )
+      groupCreatorCommissionUsd = Math.round(
+        groupDiscountedSubtotal * (feeBreakdown.creatorCommissionPercent / 100),
+      )
+    }
+
     const order = await prisma.order.create({
       data: {
         buyerId: userId,
@@ -206,6 +276,12 @@ export async function POST(req: Request) {
         // Download token is generated in webhook after payment confirmed — not here
         discountCodeId: groupDiscountCodeId,
         discountAmount: groupDiscountShare,
+        // Rail-aware fee snapshot (sprint 0.1 — null when legacy flat-rate path)
+        paymentRail: selectedRail,
+        subtotalUsd: groupSubtotalUsd,
+        buyerFeeUsd: groupBuyerFeeUsd,
+        creatorCommissionUsd: groupCreatorCommissionUsd,
+        buyerCountry,
         // Commission fields
         commissionStatus: isCommissionGroup ? 'PENDING_ACCEPTANCE' : null,
         commissionAcceptDeadlineAt: isCommissionGroup
@@ -225,12 +301,38 @@ export async function POST(req: Request) {
   // Convert grand total to the buyer's selected display currency
   const grandTotalDisplay = await convertToDisplayCurrency(grandTotal, currency)
 
+  // Lock the FX rate + USD canonical at intent-creation time for audit. The
+  // metadata hangs on the Airwallex intent so disputes/refunds 90 days later
+  // can be reconstructed without re-querying historical rates. (Sprint 0.2)
+  const usdRate = currency === 'USD' ? 1 : grandTotalDisplay / grandTotal
+  const intentMetadata: Record<string, string | number | boolean> = {
+    usd_amount: grandTotal,
+    fx_rate_used: usdRate,
+    fx_locked_at: new Date().toISOString(),
+    fx_source: 'airwallex_first_frankfurter_fallback',
+  }
+  if (selectedRail) intentMetadata.payment_rail = selectedRail
+  if (buyerCountry) intentMetadata.buyer_country = buyerCountry
+
+  // 3DS posture: digital/commission goods always FORCE_3DS; physical ≥ USD 25
+  // FORCE_3DS; below that EXTERNAL_3DS so issuer/risk-engine decides.
+  // Pick the strongest posture across the cart — if any item demands force, force.
+  const cartHasDigital = cartItems.some(i =>
+    i.product.type === 'DIGITAL' || i.product.type === 'COMMISSION',
+  )
+  const threeDsAction = decideThreeDsAction({
+    productType: cartHasDigital ? 'DIGITAL' : 'PHYSICAL',
+    amountUsdCents: grandTotal,
+  })
+
   // Create payment intent in the buyer's currency — enables local payment methods (FPX, PayNow, etc.)
   const intent = await createPaymentIntent({
     amount: grandTotalDisplay,
     currency,
     orderId: cartSessionId,
     buyerEmail: buyer?.email,
+    metadata: intentMetadata,
+    threeDsAction,
   })
 
   // Store intentId and resolved display currency/amount on all created orders

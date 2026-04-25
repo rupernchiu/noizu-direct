@@ -90,9 +90,24 @@ async function handlePaymentSucceeded(intentId: string) {
       })
     }
 
-    // Create Transaction record — fee is backed out of gross (amountUsd includes fee)
-    const processingFee = feeFromGross(order.amountUsd, feeRate)
-    const creatorAmount = order.amountUsd - processingFee
+    // Create Transaction record. Two paths:
+    //   (a) Rail-aware: order has snapshotted breakdown (paymentRail + subtotalUsd
+    //       + buyerFeeUsd + creatorCommissionUsd). Use it verbatim — same numbers
+    //       the buyer saw at checkout, even if PlatformSettings rates shift later.
+    //   (b) Legacy: back out a flat 2.5% from gross via feeFromGross().
+    const isRailAware =
+      order.paymentRail != null &&
+      order.subtotalUsd != null &&
+      order.buyerFeeUsd != null &&
+      order.creatorCommissionUsd != null
+    const processingFee = isRailAware
+      ? order.buyerFeeUsd!
+      : feeFromGross(order.amountUsd, feeRate)
+    const creatorCommission = isRailAware ? order.creatorCommissionUsd! : 0
+    const creatorAmount = isRailAware
+      ? order.subtotalUsd! - creatorCommission
+      : order.amountUsd - processingFee
+
     await prisma.transaction.create({
       data: {
         orderId: order.id,
@@ -100,11 +115,16 @@ async function handlePaymentSucceeded(intentId: string) {
         creatorId: order.creatorId,
         grossAmountUsd: order.amountUsd,
         processingFee,
-        platformFee: 0,
+        platformFee: creatorCommission,
         withdrawalFee: 0,
         creatorAmount,
         currency: order.displayCurrency ?? 'USD',
         airwallexReference: intentId,
+        paymentRail: order.paymentRail,
+        subtotalUsd: order.subtotalUsd,
+        buyerFeeUsd: order.buyerFeeUsd,
+        creatorCommissionUsd: order.creatorCommissionUsd,
+        buyerCountry: order.buyerCountry,
         // Commission funds are held as ESCROW until deposit/balance portions release
         status: isCommission ? 'ESCROW' : 'COMPLETED',
       },

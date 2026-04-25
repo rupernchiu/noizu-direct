@@ -343,6 +343,14 @@ model Order {
   exchangeRateAt                 DateTime?
   cartSessionId                  String?
   airwallexIntentId              String?
+  // ── Rail-aware fee breakdown (sprint 0.1) ──
+  // Snapshotted at intent-creation time so the webhook + payouts reproduce
+  // the exact split even if PlatformSettings rates change later.
+  paymentRail                    String? // FPX|FAST|PAYNOW|GCASH|CARD|...  (null = legacy 2.5% flat)
+  subtotalUsd                    Int? // pre-fee subtotal in USD cents
+  buyerFeeUsd                    Int? // buyer-side surcharge in USD cents
+  creatorCommissionUsd           Int? // 5% commission deducted at payout
+  buyerCountry                   String? // ISO-3166-1 alpha-2, for per-country GMV/tax meter
   trackingNumber                 String?
   courierName                    String?
   courierCode                    String?
@@ -478,6 +486,12 @@ model Transaction {
   withdrawalFee      Int      @default(0)
   creatorAmount      Int
   currency           String   @default("USD")
+  // ── Rail-aware fee breakdown (sprint 0.1, 5/5.5/8) ──
+  paymentRail        String? // FPX|FAST|PAYNOW|GCASH|CARD|... null = legacy
+  subtotalUsd        Int? // pre-fee subtotal in USD cents
+  buyerFeeUsd        Int? // buyer surcharge component
+  creatorCommissionUsd Int? // 5% commission piece (overlaps with platformFee semantically once new model is live)
+  buyerCountry       String? // ISO-3166-1 alpha-2, for per-country GMV meter
   airwallexReference String?
   status             String   @default("PENDING")
   // Chargeback/dispute: when a payment.dispute.created webhook fires *after* a
@@ -879,6 +893,13 @@ model PlatformSettings {
   processingFeePercent           Float   @default(2.5)
   platformFeePercent             Float   @default(0.0)
   withdrawalFeePercent           Float   @default(4.0)
+  // ── Rail-aware fee model (sprint 0.1, 5/5.5/8 strategy) ──
+  // creatorCommissionPercent: deducted from creator payout
+  // buyerFeeLocalPercent:     surcharge added to buyer total on FPX/PayNow/etc
+  // buyerFeeCardPercent:      surcharge added to buyer total on Visa/MC/AMEX
+  creatorCommissionPercent       Float   @default(5.0)
+  buyerFeeLocalPercent           Float   @default(5.5)
+  buyerFeeCardPercent            Float   @default(8.0)
   topCreatorThreshold            Int     @default(100)
   // Escrow policy
   digitalEscrowHours             Int     @default(48)
