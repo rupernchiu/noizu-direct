@@ -1751,3 +1751,20 @@ model NewsletterSubscriber {
   @@index([status, subscribedAt])
   @@index([source])
 }
+
+// ── Cron Heartbeat ────────────────────────────────────────────────────────────
+//
+// One row per cron job. Each invocation of `withCronHeartbeat()` upserts the
+// row with its run timestamp + outcome so admins can see at-a-glance whether
+// each scheduled job is firing on its expected cadence. Stale lastRanAt =
+// scheduler is broken or the secret rotated.
+model CronHeartbeat {
+  cronName       String   @id
+  lastRanAt      DateTime
+  lastSucceeded  Boolean
+  lastDurationMs Int
+  lastError      String?
+  totalRuns      Int      @default(0)
+  totalFailures  Int      @default(0)
+  updatedAt      DateTime @updatedAt
+}

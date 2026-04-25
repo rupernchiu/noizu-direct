@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { withCronHeartbeat } from '@/lib/cron-heartbeat'
 import { auditedDeletePrivate } from '@/lib/private-file-audit'
 import { Resend } from 'resend'
 
@@ -204,7 +205,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    return NextResponse.json(await run())
+    return NextResponse.json(await withCronHeartbeat('kyc-orphan-cleanup', () => run()))
   } catch (e) {
     console.error('[cron/kyc-orphan-cleanup]', e)
     return NextResponse.json(
@@ -219,7 +220,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    return NextResponse.json(await run())
+    return NextResponse.json(await withCronHeartbeat('kyc-orphan-cleanup', () => run()))
   } catch (e) {
     console.error('[cron/kyc-orphan-cleanup]', e)
     return NextResponse.json(

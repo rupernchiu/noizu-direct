@@ -17,6 +17,7 @@ import { prisma } from '@/lib/prisma'
 import { chargeWithConsent } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { withCronHeartbeat } from '@/lib/cron-heartbeat'
 
 async function runRenewals() {
   const now = new Date()
@@ -206,7 +207,7 @@ async function bumpDunning(subId: string, currentCount: number, tierId: string |
 export async function POST(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
-    return NextResponse.json(await runRenewals())
+    return NextResponse.json(await withCronHeartbeat('support-renewals', () => runRenewals()))
   } catch (e) {
     console.error('[cron/support-renewals]', e)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
-    return NextResponse.json(await runRenewals())
+    return NextResponse.json(await withCronHeartbeat('support-renewals', () => runRenewals()))
   } catch (e) {
     console.error('[cron/support-renewals]', e)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { executeTransfer, getCurrencyFactor } from '@/lib/airwallex'
 import { Resend } from 'resend'
 import { isCronAuthorized } from '@/lib/cron-auth'
+import { withCronHeartbeat } from '@/lib/cron-heartbeat'
 import { minimumPayoutUsdCents, rateForCountry } from '@/lib/payout-rail'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -205,7 +206,7 @@ async function runPayoutSweep() {
 export async function POST(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
-    return NextResponse.json(await runPayoutSweep())
+    return NextResponse.json(await withCronHeartbeat('payout', () => runPayoutSweep()))
   } catch (e) {
     console.error('[cron/payout]', e)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -215,7 +216,7 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   try {
-    return NextResponse.json(await runPayoutSweep())
+    return NextResponse.json(await withCronHeartbeat('payout', () => runPayoutSweep()))
   } catch (e) {
     console.error('[cron/payout]', e)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

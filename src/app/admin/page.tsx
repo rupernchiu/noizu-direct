@@ -10,7 +10,7 @@ export default async function AdminOverviewPage() {
   const session = await auth()
   if (!session || (session.user as any).role !== 'ADMIN') redirect('/')
 
-  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders, topTrendingProducts, recPairCount, topRecPairs] = await Promise.all([
+  const [userCount, creatorCount, revenueAgg, pendingPayouts, recentOrders, topTrendingProducts, recPairCount, topRecPairs, cronHeartbeats] = await Promise.all([
     prisma.user.count(),
     prisma.creatorProfile.count(),
     prisma.transaction.aggregate({ where: { status: 'COMPLETED' }, _sum: { grossAmountUsd: true } }),
@@ -41,9 +41,20 @@ export default async function AdminOverviewPage() {
         recommendedProduct: { select: { title: true } },
       },
     }),
+    prisma.cronHeartbeat.findMany({ orderBy: { cronName: 'asc' } }),
   ])
 
   const totalRevenue = revenueAgg._sum.grossAmountUsd ?? 0
+
+  // Cron staleness thresholds (ms). If lastRanAt older than this, mark red.
+  const cronStaleThresholdMs: Record<string, number> = {
+    'escrow-processor': 2 * 60 * 60 * 1000,        // hourly → stale at 2h
+    'payout': 8 * 24 * 60 * 60 * 1000,             // weekly → stale at 8d
+    'storage-renewals': 2 * 60 * 60 * 1000,        // hourly → stale at 2h
+    'support-renewals': 2 * 60 * 60 * 1000,        // hourly → stale at 2h
+    'kyc-orphan-cleanup': 2 * 24 * 60 * 60 * 1000, // daily → stale at 2d
+  }
+  const cronNowMs = Date.now()
 
   const statusColors: Record<string, string> = {
     PENDING: 'bg-yellow-500/20 text-yellow-400',
@@ -75,6 +86,69 @@ export default async function AdminOverviewPage() {
         <div className="bg-card rounded-xl p-4 border border-border">
           <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Pending Payouts</p>
           <p className="text-2xl font-bold text-destructive mt-1">{pendingPayouts}</p>
+        </div>
+      </div>
+
+      {/* Cron Health */}
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Cron Health</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Money-moving jobs &mdash; red = past expected interval</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm [&_td]:whitespace-nowrap">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Job</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Last Ran</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Status</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Duration</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Runs / Failures</th>
+                <th className="text-left px-3 py-1.5 text-muted-foreground font-medium">Last Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cronHeartbeats.map((hb) => {
+                const ageMs = cronNowMs - new Date(hb.lastRanAt).getTime()
+                const threshold = cronStaleThresholdMs[hb.cronName] ?? 24 * 60 * 60 * 1000
+                const isStale = ageMs > threshold
+                const ageLabel =
+                  ageMs < 60_000 ? `${Math.round(ageMs / 1000)}s ago` :
+                  ageMs < 3_600_000 ? `${Math.round(ageMs / 60_000)}m ago` :
+                  ageMs < 86_400_000 ? `${Math.round(ageMs / 3_600_000)}h ago` :
+                  `${Math.round(ageMs / 86_400_000)}d ago`
+                const statusClass = !hb.lastSucceeded
+                  ? 'bg-red-500/20 text-red-400'
+                  : isStale
+                    ? 'bg-yellow-500/20 text-yellow-400'
+                    : 'bg-green-500/20 text-green-400'
+                const statusLabel = !hb.lastSucceeded ? 'FAILED' : isStale ? 'STALE' : 'OK'
+                return (
+                  <tr key={hb.cronName} className="border-b border-border last:border-0 hover:bg-surface">
+                    <td className="px-3 py-1.5 text-foreground font-mono text-xs">{hb.cronName}</td>
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs">{ageLabel}</td>
+                    <td className="px-3 py-1.5">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusClass}`}>{statusLabel}</span>
+                    </td>
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs">{hb.lastDurationMs}ms</td>
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs">
+                      {hb.totalRuns.toLocaleString()} / <span className={hb.totalFailures > 0 ? 'text-red-400' : ''}>{hb.totalFailures}</span>
+                    </td>
+                    <td className="px-3 py-1.5 text-muted-foreground text-xs truncate max-w-[280px]">{hb.lastError ?? '—'}</td>
+                  </tr>
+                )
+              })}
+              {cronHeartbeats.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
+                    No cron runs recorded yet. Heartbeats appear after the first invocation of an instrumented job.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
