@@ -46,7 +46,10 @@ export default async function AdminDiscountsPage({
   if (status === 'ACTIVE') where.isActive = true
   if (status === 'INACTIVE') where.isActive = false
 
-  const [allCodes, totalAll, creators] = await Promise.all([
+  // Last 30 days for the redemption KPIs at the top of the page.
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
+  const [allCodes, totalAll, creators, redemptionAggregate, activeCount] = await Promise.all([
     prisma.discountCode.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -61,6 +64,16 @@ export default async function AdminDiscountsPage({
       select: { id: true, displayName: true },
       orderBy: { displayName: 'asc' },
     }),
+    prisma.order.aggregate({
+      where: {
+        discountCodeId: { not: null },
+        createdAt: { gte: thirtyDaysAgo },
+        status: { notIn: ['CANCELLED'] },
+      },
+      _sum: { discountAmount: true },
+      _count: { _all: true },
+    }),
+    prisma.discountCode.count({ where: { isActive: true } }),
   ])
 
   const now = new Date()
@@ -72,11 +85,32 @@ export default async function AdminDiscountsPage({
     return true
   })
 
+  const redemptionsLast30 = redemptionAggregate._count._all
+  const dollarsDiscountedLast30 = redemptionAggregate._sum.discountAmount ?? 0
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-foreground">Discount Codes</h2>
         <CreateDiscountForm creators={creators} />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Active codes</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{activeCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">of {totalAll} total</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Redemptions (30d)</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{redemptionsLast30}</p>
+          <p className="text-xs text-muted-foreground mt-1">orders with a code applied</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">Discounted (30d)</p>
+          <p className="text-2xl font-bold text-foreground mt-1">${(dollarsDiscountedLast30 / 100).toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground mt-1">total $ off granted</p>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">

@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle } from 'lucide-react'
+import { BarChart3, TrendingUp, TrendingDown, Users, AlertTriangle, Download } from 'lucide-react'
 
 type InsightsData = {
   fiscalYearStart: string
@@ -60,6 +60,9 @@ export default function InsightsPage() {
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><BarChart3 size={20} />Insights & P&amp;L</h1>
         <p className="text-sm text-muted-foreground mt-1">YTD strategic view — margins, concentration, refund rates</p>
       </div>
+
+      <PnlDownloadCard />
+
 
       {/* P&L decomposition */}
       <div>
@@ -242,6 +245,55 @@ export default function InsightsPage() {
             <div className="text-xs text-muted-foreground mt-1">Of gross volume goes to creators</div>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function PnlDownloadCard() {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState<string>('') // '' = full year
+
+  const url = `/api/admin/finance/exports/pnl?year=${year}${month ? `&month=${month}` : ''}`
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2 text-sm text-foreground">
+        <Download size={16} />
+        <span className="font-medium">Download P&amp;L CSV</span>
+      </div>
+      <div className="flex items-center gap-2 ml-auto">
+        <select
+          value={year}
+          onChange={e => setYear(parseInt(e.target.value, 10))}
+          className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+        >
+          {[now.getFullYear(), now.getFullYear() - 1, now.getFullYear() - 2].map(y => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+        <select
+          value={month}
+          onChange={e => setMonth(e.target.value)}
+          className="h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground"
+        >
+          <option value="">Full year</option>
+          {MONTHS.map((m, i) => (
+            <option key={m} value={i + 1}>{m}</option>
+          ))}
+        </select>
+        <a
+          href={url}
+          className="px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-medium"
+        >
+          Download
+        </a>
       </div>
     </div>
   )
