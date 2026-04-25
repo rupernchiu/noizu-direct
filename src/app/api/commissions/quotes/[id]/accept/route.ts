@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
 import { createQuoteBackingProduct } from '@/lib/commissions'
+import { createNotification } from '@/lib/notifications'
 
 const SUPPORTED_CURRENCIES = ['USD', 'MYR', 'SGD', 'PHP', 'THB', 'IDR']
 
@@ -175,6 +176,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         displayAmount,
       },
     })
+
+    await createNotification(
+      quote.creator.userId,
+      'NEW_ORDER',
+      'Quote accepted — payment in progress',
+      `Your quote "${quote.title}" has been accepted. The buyer is completing payment now; you'll be notified again once funds clear into escrow.`,
+      order.id,
+      `/dashboard/orders/${order.id}`,
+    )
+
     return NextResponse.json({
       ok: true,
       orderId: order.id,

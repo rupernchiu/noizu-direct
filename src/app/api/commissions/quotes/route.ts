@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
     if (!['PENDING', 'QUOTED'].includes(request.status)) {
       return NextResponse.json({ error: 'Request is no longer open' }, { status: 400 })
     }
+    if (request.expiresAt && request.expiresAt < new Date()) {
+      return NextResponse.json({ error: 'Request has expired — buyer must resubmit' }, { status: 400 })
+    }
     buyerId = request.buyerId
   } else if (!buyerId && body.buyerEmail?.trim()) {
     const email = body.buyerEmail.trim().toLowerCase()
@@ -113,6 +116,13 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const statusFilter = url.searchParams.get('status') ?? undefined
   const view = url.searchParams.get('view') ?? 'buyer'
+
+  // Sweep: any SENT quote past its expiresAt is flipped to EXPIRED before we list.
+  // Cheap idempotent updateMany; avoids stale "live" rows in the buyer/creator view.
+  await prisma.commissionQuote.updateMany({
+    where: { status: 'SENT', expiresAt: { lt: new Date() } },
+    data: { status: 'EXPIRED' },
+  })
 
   if (view === 'creator') {
     const profile = await prisma.creatorProfile.findUnique({ where: { userId }, select: { id: true } })
