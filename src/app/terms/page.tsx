@@ -86,23 +86,30 @@ const FEE_TILES = [
   {
     icon: Percent,
     label: 'Platform commission',
-    value: '0%',
-    detail: 'During launch. Future commissions published on the Fees page with 14 days’ notice.',
+    value: '5%',
+    detail: 'Deducted from Creator earnings on every completed order. Applies to all rails and product types.',
     tone: 'primary' as const,
   },
   {
     icon: Receipt,
-    label: 'Processing fee',
-    value: '2.5%',
-    detail: 'Applied to every order at checkout. Covers card-gateway costs; non-refundable on completed orders.',
+    label: 'Buyer fee — local rails',
+    value: '+5.5%',
+    detail: 'FPX, DuitNow, TouchnGo, GCash, PayNow, FAST, BI-FAST, PromptPay, InstaPay. Lowest checkout cost.',
     tone: 'accent' as const,
   },
   {
-    icon: TrendingUp,
-    label: 'Chargeback / reversal',
-    value: 'Hold against payouts',
-    detail: 'Disputed amount held from subsequent Seller payouts until the chargeback is resolved.',
+    icon: Receipt,
+    label: 'Buyer fee — cards',
+    value: '+8%',
+    detail: 'Visa / Mastercard / Amex (any geography). Covers gateway, FX spread, and chargeback exposure.',
     tone: 'primary' as const,
+  },
+  {
+    icon: TrendingUp,
+    label: 'Chargeback / clawback',
+    value: '120-day exposure',
+    detail: 'Amounts from the last 120 days remain exposed and may be deducted from a Creator balance if a chargeback is upheld.',
+    tone: 'accent' as const,
   },
 ] as const
 
@@ -323,7 +330,7 @@ export default async function TermsPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEE_TILES.map(({ icon: Icon, label, value, detail, tone }) => (
               <div
                 key={label}
@@ -354,6 +361,131 @@ export default async function TermsPage() {
                 <p className="text-xs text-muted-foreground leading-relaxed">{detail}</p>
               </div>
             ))}
+          </div>
+
+          {/* ── Creator clawback notice ─────────────────────────── */}
+          <div
+            id="creator-clawback"
+            className="mt-12 rounded-2xl border border-amber-500/35 bg-amber-50/60 dark:bg-amber-500/5 p-6 sm:p-7 scroll-mt-28"
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(217,119,6,0.10)' }}
+              >
+                <Gavel size={20} style={{ color: '#b45309' }} aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-foreground mb-2">
+                  Chargeback &amp; Clawback Clause (Creators)
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  By accepting payouts on noizu.direct, the Creator agrees that the platform retains
+                  the right to claw back any amount paid to the Creator if the corresponding buyer
+                  payment is later reversed by a card network, bank, or payment provider — including
+                  chargebacks, fraud reversals, and ACH/IBG returns. This right applies for{' '}
+                  <strong className="text-foreground">120 days</strong> from the original order date,
+                  matching the longest standard card-network dispute window.
+                </p>
+                <ul className="mt-3 text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1.5">
+                  <li>
+                    Earnings from the last 120 days are shown in your dashboard as{' '}
+                    <em>“Exposed”</em> and are not yet eligible for payout.
+                  </li>
+                  <li>
+                    If a chargeback is upheld against an order, the disputed amount is deducted from the
+                    Creator&apos;s balance. If the balance is insufficient, the Creator owes the platform
+                    that amount and future payouts are withheld until cleared.
+                  </li>
+                  <li>
+                    The platform does <strong className="text-foreground">not</strong> reimburse Creators for
+                    fraud losses on chargebacks. This is industry standard across PayPal, Stripe Connect,
+                    Gumroad, Patreon, OnlyFans, Etsy, Fiverr, and Upwork.
+                  </li>
+                  <li>
+                    Successfully won disputes (via Airwallex evidence submission) release the held amount
+                    back to the Creator&apos;s available balance.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Tax disclaimer ─────────────────────────────────── */}
+          <div
+            id="tax-disclaimer"
+            className="mt-6 rounded-2xl border border-sky-500/35 bg-sky-50/60 dark:bg-sky-500/5 p-6 sm:p-7 scroll-mt-28"
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(2,132,199,0.10)' }}
+              >
+                <Receipt size={20} style={{ color: '#0284c7' }} aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-foreground mb-2">
+                  Tax Disclosure (Creators &amp; Buyers)
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  noizu.direct currently operates as a marketplace agent. Sales tax / GST / VAT is not
+                  collected at checkout while the platform is below each country&apos;s registration
+                  threshold. As GMV grows and crosses a country&apos;s threshold, that
+                  country&apos;s buyers will see a separate tax line at checkout — applied only to
+                  buyers in that country.
+                </p>
+                <ul className="mt-3 text-sm text-muted-foreground leading-relaxed list-disc pl-5 space-y-1.5">
+                  <li>
+                    <strong className="text-foreground">Creators</strong> are responsible for declaring
+                    and paying their own personal income / business tax in their country of residence.
+                    Self-declared “tax-registered” Creators may opt into platform-managed
+                    markup-and-withhold; otherwise, no tax is added or deducted.
+                  </li>
+                  <li>
+                    <strong className="text-foreground">Buyers</strong> see prices in USD and a local
+                    conversion at checkout. The FX rate is locked at PaymentIntent creation; the
+                    converted amount displayed is what the rail will charge.
+                  </li>
+                  <li>
+                    Country thresholds tracked per the published roadmap: MY SST RM 500k @ 8%, SG GST
+                    S$100k @ 9%, ID PPN IDR 600M @ 11%, TH VAT THB 1.8M @ 7%, PH VAT PHP 3M @ 12%.
+                  </li>
+                  <li>
+                    Once a country crosses its registration threshold, this clause and the checkout flow
+                    update with at least 14 days&apos; notice before tax collection begins for that
+                    country&apos;s buyers.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* ── SWIFT fee passthrough ──────────────────────────── */}
+          <div
+            id="swift-fees"
+            className="mt-6 rounded-2xl border border-border bg-card p-6 sm:p-7 scroll-mt-28"
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: 'rgba(124,58,237,0.10)' }}
+              >
+                <CircleDollarSign size={20} className="text-primary" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-foreground mb-2">
+                  SWIFT Payouts (Tier-3 Creator Countries)
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Creators in countries served only by SWIFT (currently Vietnam, Cambodia, Myanmar, and
+                  Laos) are paid via SWIFT international wire. SWIFT corridor fees — sender bank fee,
+                  intermediary bank fee (where applicable), and beneficiary bank fee — are passed through
+                  transparently to the Creator and shown at payout-method setup. Minimum SWIFT payout is{' '}
+                  <strong className="text-foreground">USD 100</strong> to keep per-transaction fees below
+                  ~5% of the payout.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
