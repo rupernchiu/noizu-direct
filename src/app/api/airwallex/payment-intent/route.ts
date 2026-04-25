@@ -10,6 +10,10 @@ import {
   LOCAL_RAILS,
   CARD_RAILS,
 } from '@/lib/fees'
+import {
+  destinationTaxFromMap,
+  loadEnabledTaxCountries,
+} from '@/lib/destination-tax'
 import { convertUsdCentsTo } from '@/lib/fx'
 
 const ALL_RAILS: readonly PaymentRail[] = [...LOCAL_RAILS, ...CARD_RAILS] as const
@@ -50,7 +54,17 @@ export async function POST(req: Request) {
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const userId = (session.user as any).id as string
-  const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+  const buyer = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      email: true,
+      // Phase 2.3 — B2B reverse-charge eligibility. Tax ID + tax country must
+      // be set on the buyer's account; cross-border vs. the seller's
+      // jurisdiction zeroes the destination tax line.
+      businessTaxId: true,
+      businessTaxCountry: true,
+    },
+  })
 
   const body = await req.json() as {
     orderId: string
@@ -117,7 +131,15 @@ export async function POST(req: Request) {
   // Cart flow: cartSessionId is client-generated. Create PENDING orders from cart.
   const cartItems = await prisma.cartItem.findMany({
     where: { buyerId: userId },
-    include: { product: { include: { creator: { include: { user: true } } } } },
+    include: {
+      product: {
+        include: {
+          creator: {
+            include: { user: true },
+          },
+        },
+      },
+    },
   })
 
   if (cartItems.length === 0) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
@@ -187,20 +209,104 @@ export async function POST(req: Request) {
   const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0)
   const discountedSubtotal = Math.max(0, subtotal - totalVerifiedDiscount)
 
+  // Phase 2.1 — load tax-registration status per creator. We mark up the
+  // buyer price by the creator's declared tax rate and withhold the same
+  // amount from the creator's payout (Layer 1 markup-and-withhold).
+  const creatorIds = Array.from(new Set(cartItems.map((i) => i.product.creator.userId)))
+  const creatorTaxProfiles = await prisma.creatorProfile.findMany({
+    where: { userId: { in: creatorIds } },
+    select: {
+      userId: true,
+      taxRegistered: true,
+      taxRatePercent: true,
+      taxJurisdiction: true,
+    },
+  })
+  const creatorTaxByUserId = new Map<string, { rate: number; jurisdiction: string | null }>()
+  for (const p of creatorTaxProfiles) {
+    creatorTaxByUserId.set(p.userId, {
+      rate: p.taxRegistered ? (p.taxRatePercent ?? 0) : 0,
+      jurisdiction: p.taxRegistered ? (p.taxJurisdiction ?? null) : null,
+    })
+  }
+
+  // Phase 2.2 — destination tax. We mark up the buyer's checkout total by the
+  // jurisdiction's consumption-tax rate when (a) the buyer's country has a
+  // known rate, (b) PlatformSettings has flipped that country to enabled
+  // (meaning we've crossed registration threshold there). Phase 2.3 — B2B
+  // reverse charge: when a verified business tax ID is on the buyer's account
+  // and the buyer is cross-border vs. the platform jurisdiction, we zero out
+  // the destination-tax line and stamp reverseChargeApplied on the order.
+  const enabledTaxCountries = await loadEnabledTaxCountries()
+
   // Rail-aware fee path (5/5.5/8) when buyer has chosen a rail; otherwise the
   // legacy flat 2.5% so older callers + non-checkout flows keep working.
   let processingFee: number
   let grandTotal: number
+  let creatorTaxAggregate = 0
+  let destinationTaxAggregate = 0
   let feeBreakdown: ReturnType<typeof calculateFees> | null = null
   if (selectedRail) {
     const rates = await getFeeRatesFromSettings()
-    feeBreakdown = calculateFees(discountedSubtotal, selectedRail, rates)
+    // Aggregate breakdown — per-creator tax must be apportioned per-group below
+    // so we use a tax-free aggregate here for the buyer-fee math, then add
+    // each group's creator-tax line on top.
+    feeBreakdown = calculateFees(discountedSubtotal, selectedRail, rates, 0)
     processingFee = feeBreakdown.buyerFeeUsdCents
-    grandTotal = feeBreakdown.grossUsdCents
+    // Compute aggregate creator-tax across all groups, post-discount.
+    for (const item of cartItems) {
+      const tax = creatorTaxByUserId.get(item.product.creator.userId)
+      if (!tax || tax.rate <= 0) continue
+      const itemSubtotal = item.product.price * item.quantity
+      const discount = verifiedDiscountsByCreator.get(item.product.creator.userId)?.amount ?? 0
+      const creatorAllItems = cartItems.filter(
+        (ci) => ci.product.creator.userId === item.product.creator.userId,
+      )
+      const creatorSubtotal = creatorAllItems.reduce(
+        (s, ci) => s + ci.product.price * ci.quantity,
+        0,
+      )
+      const itemShare = creatorSubtotal > 0 ? itemSubtotal / creatorSubtotal : 0
+      const itemDiscountedSubtotal = Math.max(0, itemSubtotal - Math.round(discount * itemShare))
+      creatorTaxAggregate += Math.round(itemDiscountedSubtotal * (tax.rate / 100))
+    }
+    grandTotal = feeBreakdown.grossUsdCents + creatorTaxAggregate
   } else {
     const feeRate = await getProcessingFeeRate()
     processingFee = feeOnSubtotal(discountedSubtotal, feeRate)
     grandTotal = discountedSubtotal + processingFee
+  }
+
+  // Apply destination tax on top of the (post-creator-tax) gross. We base it
+  // on the discounted subtotal so it's invariant w.r.t. rail choice. Returns 0
+  // when the buyer's country isn't registered yet.
+  let destinationTaxLine = destinationTaxFromMap(
+    buyerCountry,
+    discountedSubtotal,
+    enabledTaxCountries,
+  )
+
+  // Phase 2.3 — B2B reverse charge. When the buyer has a verified business
+  // tax ID AND is cross-border vs. the destination jurisdiction (i.e. not
+  // buying inside their own country), the destination-tax line is reversed
+  // to the buyer (they self-account). We zero our line and stamp the
+  // reverseChargeApplied flag so the tax export can prove the exemption.
+  const buyerHasBusinessTaxId =
+    typeof buyer?.businessTaxId === 'string' && buyer.businessTaxId.trim().length > 0
+  const buyerTaxCountry = buyer?.businessTaxCountry?.toUpperCase() ?? null
+  const reverseChargeApplied = Boolean(
+    destinationTaxLine &&
+      buyerHasBusinessTaxId &&
+      buyerTaxCountry &&
+      destinationTaxLine.countryCode !== buyerTaxCountry,
+  )
+  if (reverseChargeApplied) {
+    destinationTaxLine = null
+  }
+
+  if (destinationTaxLine) {
+    destinationTaxAggregate = destinationTaxLine.amountUsdCents
+    grandTotal += destinationTaxAggregate
   }
 
   // Clean up *stale* PENDING orders for this buyer before creating new ones.
@@ -226,7 +332,6 @@ export async function POST(req: Request) {
   for (const [, items] of creatorMap) {
     const groupSubtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0)
     const groupFee = Math.round((groupSubtotal / subtotal) * processingFee)
-    const orderAmount = groupSubtotal + groupFee
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
 
     // Each group only gets the discount belonging to its creator
@@ -236,6 +341,26 @@ export async function POST(req: Request) {
     const isCommissionGroup = items.some(i => i.product.type === 'COMMISSION')
     const commissionItem = isCommissionGroup ? items.find(i => i.product.type === 'COMMISSION') : null
 
+    // Phase 2.1 — creator-tax markup. The creator's declared tax rate is
+    // applied to their post-discount subtotal; the same amount is withheld
+    // from their payout (handled in webhook-side Transaction creation).
+    const creatorTaxInfo = creatorTaxByUserId.get(items[0].product.creator.userId)
+    const groupDiscountedSubtotal = Math.max(0, groupSubtotal - groupDiscountShare)
+    const groupCreatorTaxRate = creatorTaxInfo?.rate ?? 0
+    const groupCreatorTaxUsd = groupCreatorTaxRate > 0
+      ? Math.round(groupDiscountedSubtotal * (groupCreatorTaxRate / 100))
+      : 0
+
+    // Phase 2.2 — apportion destination-tax across creator groups by their
+    // share of the discounted cart subtotal.
+    const groupDestinationTaxUsd = destinationTaxLine && discountedSubtotal > 0
+      ? Math.round(
+          (groupDiscountedSubtotal / discountedSubtotal) * destinationTaxAggregate,
+        )
+      : 0
+
+    const orderAmount =
+      groupSubtotal + groupFee + groupCreatorTaxUsd + groupDestinationTaxUsd
     const orderAmountUsd = orderAmount - groupDiscountShare
 
     // Rail-aware fee snapshot. Apportion the cart-level breakdown to each
@@ -245,7 +370,6 @@ export async function POST(req: Request) {
     let groupBuyerFeeUsd: number | null = null
     let groupCreatorCommissionUsd: number | null = null
     if (feeBreakdown && discountedSubtotal > 0) {
-      const groupDiscountedSubtotal = Math.max(0, groupSubtotal - groupDiscountShare)
       groupSubtotalUsd = groupDiscountedSubtotal
       groupBuyerFeeUsd = Math.round(
         (groupDiscountedSubtotal / discountedSubtotal) * feeBreakdown.buyerFeeUsdCents,
@@ -281,6 +405,16 @@ export async function POST(req: Request) {
         subtotalUsd: groupSubtotalUsd,
         buyerFeeUsd: groupBuyerFeeUsd,
         creatorCommissionUsd: groupCreatorCommissionUsd,
+        // Phase 2.1 — creator-tax (Layer 1 markup-and-withhold)
+        creatorTaxAmountUsd: groupCreatorTaxUsd,
+        creatorTaxRatePercent: groupCreatorTaxRate > 0 ? groupCreatorTaxRate : null,
+        // Phase 2.2 — destination tax (Layer 2 platform-collected)
+        destinationTaxAmountUsd: groupDestinationTaxUsd,
+        destinationTaxRatePercent: destinationTaxLine?.ratePercent ?? null,
+        destinationTaxCountry: destinationTaxLine?.countryCode ?? null,
+        // Phase 2.3 — B2B reverse charge stamp
+        reverseChargeApplied,
+        buyerBusinessTaxId: reverseChargeApplied ? buyer?.businessTaxId ?? null : null,
         buyerCountry,
         // Commission fields
         commissionStatus: isCommissionGroup ? 'PENDING_ACCEPTANCE' : null,

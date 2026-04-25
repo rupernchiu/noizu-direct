@@ -91,11 +91,23 @@ export interface FeeBreakdown {
   subtotalUsdCents: number
   /** Buyer-side surcharge in USD cents (paid by buyer, kept by platform). */
   buyerFeeUsdCents: number
-  /** Total amount the buyer pays (subtotal + buyerFee), USD cents. */
+  /**
+   * Phase 2.1 — creator-tax markup.
+   *
+   * For tax-registered creators we mark up the buyer price by the creator's
+   * declared tax rate and withhold the same amount from the creator's payout.
+   * This keeps the platform out of the tax-collection loop while still
+   * surfacing the line item correctly to the buyer (Layer 1).
+   *
+   * Zero when the creator is not tax-registered.
+   */
+  creatorTaxUsdCents: number
+  creatorTaxRatePercent: number
+  /** Total amount the buyer pays (subtotal + buyerFee + creatorTax), USD cents. */
   grossUsdCents: number
   /** Platform's commission deducted from creator at payout, USD cents. */
   creatorCommissionUsdCents: number
-  /** What the creator nets (subtotal − commission), USD cents. */
+  /** What the creator nets (subtotal − commission − creatorTax), USD cents. */
   creatorPayoutUsdCents: number
   /** Total platform gross take (buyerFee + creatorCommission), USD cents. */
   platformGrossUsdCents: number
@@ -118,9 +130,17 @@ export function calculateFees(
   subtotalUsdCents: number,
   rail: PaymentRail,
   rates: FeeRates = DEFAULT_FEE_RATES,
+  /**
+   * Phase 2.1 — creator-tax rate (e.g. 8 for an MY SST-registered creator).
+   * Pass 0 (or omit) for non-tax-registered creators.
+   */
+  creatorTaxRatePercent = 0,
 ): FeeBreakdown {
   if (!Number.isInteger(subtotalUsdCents) || subtotalUsdCents < 0) {
     throw new Error(`calculateFees: subtotalUsdCents must be a non-negative integer (got ${subtotalUsdCents})`)
+  }
+  if (creatorTaxRatePercent < 0 || creatorTaxRatePercent > 100) {
+    throw new Error(`calculateFees: creatorTaxRatePercent must be in [0, 100] (got ${creatorTaxRatePercent})`)
   }
 
   const buyerFeePercent = isLocalRail(rail)
@@ -128,16 +148,24 @@ export function calculateFees(
     : rates.buyerFeeCardPercent
 
   const buyerFeeUsdCents = Math.round(subtotalUsdCents * (buyerFeePercent / 100))
-  const grossUsdCents = subtotalUsdCents + buyerFeeUsdCents
+  const creatorTaxUsdCents = creatorTaxRatePercent > 0
+    ? Math.round(subtotalUsdCents * (creatorTaxRatePercent / 100))
+    : 0
+  const grossUsdCents = subtotalUsdCents + buyerFeeUsdCents + creatorTaxUsdCents
 
   const creatorCommissionUsdCents = Math.round(
     subtotalUsdCents * (rates.creatorCommissionPercent / 100),
   )
-  const creatorPayoutUsdCents = subtotalUsdCents - creatorCommissionUsdCents
+  // Withhold the creator-tax from payout — we (the platform) hold this amount
+  // until the creator files / we remit on their behalf.
+  const creatorPayoutUsdCents =
+    subtotalUsdCents - creatorCommissionUsdCents - creatorTaxUsdCents
 
   return {
     subtotalUsdCents,
     buyerFeeUsdCents,
+    creatorTaxUsdCents,
+    creatorTaxRatePercent,
     grossUsdCents,
     creatorCommissionUsdCents,
     creatorPayoutUsdCents,
@@ -157,13 +185,15 @@ export function feesFromGross(
   grossUsdCents: number,
   rail: PaymentRail,
   rates: FeeRates = DEFAULT_FEE_RATES,
+  creatorTaxRatePercent = 0,
 ): FeeBreakdown {
   const buyerFeePercent = isLocalRail(rail)
     ? rates.buyerFeeLocalPercent
     : rates.buyerFeeCardPercent
-  // gross = subtotal × (1 + buyerFeePct/100)  →  subtotal = gross / (1 + buyerFeePct/100)
-  const subtotalUsdCents = Math.round(grossUsdCents / (1 + buyerFeePercent / 100))
-  return calculateFees(subtotalUsdCents, rail, rates)
+  // gross = subtotal × (1 + buyerFeePct/100 + creatorTaxPct/100)
+  const multiplier = 1 + buyerFeePercent / 100 + creatorTaxRatePercent / 100
+  const subtotalUsdCents = Math.round(grossUsdCents / multiplier)
+  return calculateFees(subtotalUsdCents, rail, rates, creatorTaxRatePercent)
 }
 
 /**

@@ -104,8 +104,10 @@ async function handlePaymentSucceeded(intentId: string) {
       ? order.buyerFeeUsd!
       : feeFromGross(order.amountUsd, feeRate)
     const creatorCommission = isRailAware ? order.creatorCommissionUsd! : 0
+    // Phase 2.1 — withhold creator-tax from payout (Layer 1).
+    const creatorTax = order.creatorTaxAmountUsd ?? 0
     const creatorAmount = isRailAware
-      ? order.subtotalUsd! - creatorCommission
+      ? order.subtotalUsd! - creatorCommission - creatorTax
       : order.amountUsd - processingFee
 
     await prisma.transaction.create({
@@ -124,6 +126,8 @@ async function handlePaymentSucceeded(intentId: string) {
         subtotalUsd: order.subtotalUsd,
         buyerFeeUsd: order.buyerFeeUsd,
         creatorCommissionUsd: order.creatorCommissionUsd,
+        // Phase 2.1 / 2.2 — tax snapshot on the transaction.
+        creatorTaxUsd: creatorTax,
         buyerCountry: order.buyerCountry,
         // Commission funds are held as ESCROW until deposit/balance portions release
         status: isCommission ? 'ESCROW' : 'COMPLETED',
