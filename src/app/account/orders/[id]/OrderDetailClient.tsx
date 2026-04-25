@@ -12,6 +12,20 @@ interface Order {
   trackingAddedAt: Date | null; estimatedDelivery: Date | null
   escrowAutoReleaseAt: Date | null; buyerConfirmedAt: Date | null
   createdAt: Date; escrowHeldAt: Date | null
+  // Pricing breakdown (Phase 3.3 — surface tax & discount lines on receipt)
+  subtotalUsd: number | null
+  buyerFeeUsd: number | null
+  discountAmount: number
+  creatorTaxAmountUsd: number
+  creatorTaxRatePercent: number | null
+  destinationTaxAmountUsd: number
+  destinationTaxRatePercent: number | null
+  destinationTaxCountry: string | null
+  reverseChargeApplied: boolean
+  buyerBusinessTaxId: string | null
+  displayCurrency: string
+  displayAmount: number
+  exchangeRate: number
   product: { title: string; type: string; images: string }
   dispute: { id: string; reason: string; status: string; createdAt: Date } | null
 }
@@ -174,7 +188,7 @@ export default function OrderDetailClient({ order, trackingUrl, courierDisplayNa
       )}
 
       {/* Product summary */}
-      <div className="bg-card border border-border rounded-xl p-5 flex gap-3">
+      <div className="bg-card border border-border rounded-xl p-5 flex gap-3 mb-4">
         {imgs[0] && <img src={imgs[0]} alt={order.product.title} style={{ width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
         <div>
           <p className="font-medium text-foreground text-sm">{order.product.title}</p>
@@ -183,6 +197,8 @@ export default function OrderDetailClient({ order, trackingUrl, courierDisplayNa
           </p>
         </div>
       </div>
+
+      <PricingBreakdown order={order} />
 
       {/* Confirm receipt modal */}
       {showConfirm && (
@@ -198,6 +214,88 @@ export default function OrderDetailClient({ order, trackingUrl, courierDisplayNa
             </div>
           </div>
         </div>
+      )}
+    </div>
+  )
+}
+
+function PricingBreakdown({ order }: { order: Order }) {
+  const subtotal = order.subtotalUsd ?? Math.max(0, order.amountUsd - (order.buyerFeeUsd ?? 0) - order.creatorTaxAmountUsd - order.destinationTaxAmountUsd)
+  const hasDiscount = order.discountAmount > 0
+  const hasBuyerFee = (order.buyerFeeUsd ?? 0) > 0
+  const hasCreatorTax = order.creatorTaxAmountUsd > 0
+  const hasDestinationTax = order.destinationTaxAmountUsd > 0
+  const hasReverseCharge = order.reverseChargeApplied
+  const showDisplayCurrency = order.displayCurrency !== 'USD' && order.displayAmount > 0
+
+  // If everything is legacy (no rail-aware breakdown captured) we fall back to
+  // the simple total-only view that was here before.
+  if (order.subtotalUsd === null && !hasCreatorTax && !hasDestinationTax) {
+    return (
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h2 className="font-semibold text-foreground text-sm mb-3">Order total</h2>
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Total paid</span>
+          <span className="text-foreground font-medium">USD {(order.amountUsd / 100).toFixed(2)}</span>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5">
+      <h2 className="font-semibold text-foreground text-sm mb-3">Pricing breakdown</h2>
+      <div className="space-y-1.5 text-sm">
+        <div className="flex justify-between">
+          <span className="text-muted-foreground">Subtotal</span>
+          <span className="text-foreground">USD {(subtotal / 100).toFixed(2)}</span>
+        </div>
+        {hasDiscount && (
+          <div className="flex justify-between text-success">
+            <span>Discount</span>
+            <span>− USD {(order.discountAmount / 100).toFixed(2)}</span>
+          </div>
+        )}
+        {hasCreatorTax && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              Creator tax{order.creatorTaxRatePercent ? ` (${order.creatorTaxRatePercent}%)` : ''}
+            </span>
+            <span className="text-foreground">USD {(order.creatorTaxAmountUsd / 100).toFixed(2)}</span>
+          </div>
+        )}
+        {hasDestinationTax && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              {order.destinationTaxCountry ? `${order.destinationTaxCountry} ` : ''}Tax
+              {order.destinationTaxRatePercent ? ` (${order.destinationTaxRatePercent}%)` : ''}
+            </span>
+            <span className="text-foreground">USD {(order.destinationTaxAmountUsd / 100).toFixed(2)}</span>
+          </div>
+        )}
+        {hasBuyerFee && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Processing fee</span>
+            <span className="text-foreground">USD {((order.buyerFeeUsd ?? 0) / 100).toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between pt-2 mt-2 border-t border-border font-semibold">
+          <span className="text-foreground">Total</span>
+          <span className="text-foreground">USD {(order.amountUsd / 100).toFixed(2)}</span>
+        </div>
+        {showDisplayCurrency && (
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Charged in {order.displayCurrency}</span>
+            <span>{order.displayCurrency} {(order.displayAmount / 100).toFixed(2)}</span>
+          </div>
+        )}
+      </div>
+      {hasReverseCharge && (
+        <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">
+          Reverse-charge VAT: tax has been zeroed because you provided a business
+          tax ID{order.buyerBusinessTaxId ? ` (${order.buyerBusinessTaxId})` : ''}. You are responsible for
+          self-assessing the tax in your jurisdiction.
+        </p>
       )}
     </div>
   )
