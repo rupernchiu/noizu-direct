@@ -173,6 +173,7 @@ export async function runEscrowProcessor() {
 
   for (const order of expiredCommissions) {
     try {
+      const cancelAt = new Date()
       await prisma.$transaction(async (tx) => {
         await tx.order.update({
           where: { id: order.id },
@@ -180,6 +181,8 @@ export async function runEscrowProcessor() {
             escrowStatus: 'REFUNDED',
             status: 'CANCELLED',
             commissionStatus: 'COMPLETED',
+            refundStatus: 'PENDING',
+            refundRequestedAt: cancelAt,
           },
         })
         await tx.escrowTransaction.create({
@@ -192,6 +195,42 @@ export async function runEscrowProcessor() {
           },
         })
       })
+
+      // Fire the Airwallex refund. Same conservative pattern as refundEscrow:
+      // a missing intent or API failure falls through to refundStatus=FAILED
+      // so an admin can retry from the dispute/refund UI.
+      if (order.airwallexIntentId) {
+        try {
+          const refund = await createRefund({
+            paymentIntentId: order.airwallexIntentId,
+            amount: order.amountUsd,
+            currency: 'USD',
+            requestId: `refund_${order.id}_${cancelAt.getTime()}`,
+            reason: 'Commission auto-cancelled — creator did not accept within 48h',
+            metadata: { orderId: order.id, autoCancel: true },
+          })
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { airwallexRefundId: refund.id },
+          })
+        } catch (refundErr) {
+          const message = refundErr instanceof Error ? refundErr.message : String(refundErr)
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { refundStatus: 'FAILED', refundFailureReason: message.slice(0, 500) },
+          })
+          console.error('[escrow] commission auto-cancel refund failed', { orderId: order.id, err: message })
+        }
+      } else {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            refundStatus: 'FAILED',
+            refundFailureReason: 'No Airwallex payment intent on order — manual refund required',
+          },
+        })
+      }
+
       await Promise.all([
         createNotification(
           order.creatorId, 'ORDER_CANCELLED',
@@ -202,7 +241,7 @@ export async function runEscrowProcessor() {
         createNotification(
           order.buyerId, 'REFUND_ISSUED',
           'Commission request cancelled',
-          `Your commission request #${order.id.slice(-8).toUpperCase()} was cancelled — the creator did not respond within 48 hours. A full refund of USD ${(order.amountUsd / 100).toFixed(2)} will be returned to you.`,
+          `Your commission request #${order.id.slice(-8).toUpperCase()} was cancelled — the creator did not respond within 48 hours. A full refund of USD ${(order.amountUsd / 100).toFixed(2)} is being returned to you.`,
           order.id, '/account/orders',
         ),
       ])
