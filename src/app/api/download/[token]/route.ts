@@ -91,11 +91,26 @@ export async function GET(
   if (currentCount >= cap) {
     await logAccess(order.id, userId, req, 'DENIED_CAP')
     try {
+      // First time we hit the cap → stamp it AND escalate to FraudFlag so the
+      // admin queue can review (account-sharing or extract-and-redistribute
+      // attempts both look like this). Subsequent denied-cap hits don't
+      // re-flag — checking downloadCapReachedAt makes the upgrade idempotent.
       if (!order.downloadCapReachedAt) {
+        const reachedAt = new Date()
         await prisma.order.update({
           where: { id: order.id },
-          data: { downloadCapReachedAt: new Date() },
+          data: { downloadCapReachedAt: reachedAt },
         })
+        await prisma.fraudFlag.create({
+          data: {
+            type: 'VELOCITY',
+            severity: 'MEDIUM',
+            status: 'OPEN',
+            description: `Download cap reached on order ${order.id.slice(-8).toUpperCase()} — buyer issued ${currentCount}/${cap} downloads. Possible credential sharing or extraction attempt.`,
+            orderId: order.id,
+            userId,
+          },
+        }).catch((err: unknown) => console.error('[download] fraud flag create failed', err))
       }
     } catch {
       // pre-migration: column may not exist yet
