@@ -176,6 +176,32 @@ export async function chargeWithConsent({
   return confirmRes.json()
 }
 
+/**
+ * Live FX quote from Airwallex. We use this for buyer-facing display rates so
+ * the indicative figure shown at checkout tracks Airwallex's own settlement
+ * rate rather than ECB/Frankfurter mid-market (which lags up to 3 days on
+ * weekends/holidays).
+ *
+ * @returns rate such that 1 fromCurrency = X toCurrency (major units)
+ */
+export async function getAirwallexFxRate(
+  fromCurrency: string,
+  toCurrency: string,
+): Promise<number> {
+  if (fromCurrency === toCurrency) return 1
+  const token = await getAirwallexToken()
+  const url = `${BASE_URL}/api/v1/fx/conversion_rate?buy_currency=${toCurrency}&sell_currency=${fromCurrency}&sell_amount=1`
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) {
+    const err = await res.text()
+    throw new Error(`Airwallex FX rate ${fromCurrency}->${toCurrency} failed: ${res.status} ${err}`)
+  }
+  const data = (await res.json()) as { client_rate: number }
+  return data.client_rate
+}
+
 export async function confirmPaymentIntent(intentId: string): Promise<any> {
   const token = await getAirwallexToken()
   const res = await fetch(`${BASE_URL}/api/v1/pa/payment_intents/${intentId}`, {
