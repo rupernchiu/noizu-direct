@@ -27,6 +27,18 @@ export default async function AdminSettingsPage() {
           processingFeePercent: settings.processingFeePercent,
           platformFeePercent: settings.platformFeePercent,
           withdrawalFeePercent: settings.withdrawalFeePercent,
+          creatorCommissionPercent: settings.creatorCommissionPercent,
+          buyerFeeLocalPercent: settings.buyerFeeLocalPercent,
+          buyerFeeCardPercent: settings.buyerFeeCardPercent,
+          digitalEscrowHours: settings.digitalEscrowHours,
+          physicalEscrowDays: settings.physicalEscrowDays,
+          podEscrowDays: settings.podEscrowDays,
+          commissionEscrowDays: settings.commissionEscrowDays,
+          newCreatorEscrowExtraDays: settings.newCreatorEscrowExtraDays,
+          newCreatorTransactionThreshold: settings.newCreatorTransactionThreshold,
+          clawbackExposureWindowDays: settings.clawbackExposureWindowDays,
+          taxDestinationCountries: settings.taxDestinationCountries,
+          defaultCreatorTaxRatePercent: settings.defaultCreatorTaxRatePercent,
           topCreatorThreshold: settings.topCreatorThreshold,
         }}
       />
