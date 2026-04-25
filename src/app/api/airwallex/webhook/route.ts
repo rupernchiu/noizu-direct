@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
 import { listPaymentConsents } from '@/lib/airwallex'
+import { rollStorageRenewalPeriod } from '@/lib/storage-renewal'
 import { openOrAttachTicket, TicketBlockedError } from '@/lib/tickets'
 import { Resend } from 'resend'
 import crypto from 'crypto'
@@ -264,37 +265,20 @@ async function handleStoragePaymentSucceeded(intentId: string): Promise<boolean>
     return true
   }
 
-  // Case 2: recurring renewal — the cron created the intent via
-  // chargeWithConsent; we identify by requestId metadata on the webhook object
-  // not being readable here, so we look for an ACTIVE/PAST_DUE sub whose
-  // stored consent was used. Match by the intent metadata instead: the cron
-  // embeds storageSubscriptionId. We query subs whose currentPeriodEnd was
-  // recently hit and whose last charge intent matches.
-  //
-  // Simpler approach: the cron records the intentId on the subscription's
-  // `lastChargedAt` side via a StorageTransaction equivalent. Since we don't
-  // have a StorageTransaction table, match by looking up subs where a charge
-  // was attempted matching this intent. Because `chargeWithConsent` uses a
-  // deterministic requestId (`storage_${subId}_${periodStamp}`), we match
-  // by scanning ACTIVE/PAST_DUE subs. This only fires if intentId wasn't a
-  // first-charge, so it must be a renewal by elimination.
+  // Case 2: recurring renewal — match by lastRenewalIntentId stamped by the
+  // cron when it called chargeWithConsent. Both cron and webhook then call the
+  // same idempotent rollStorageRenewalPeriod, so whichever fires first wins
+  // and the second one no-ops via the CAS guard on currentPeriodEnd.
   const candidate = await prisma.storageSubscription.findFirst({
     where: {
+      lastRenewalIntentId: intentId,
       status: { in: ['ACTIVE', 'PAST_DUE'] },
-      // Match by the request id convention — handled in cron; here we just
-      // need any ACTIVE/PAST_DUE sub that the webhook arrived for. Since
-      // Airwallex includes customer_id on the intent payload, ideally we'd
-      // look it up — but the cron stores the pending intentId as lastRenewalIntentId.
-      // Fallback: no-op if no match (keeps webhook safe & idempotent).
     },
-    orderBy: { updatedAt: 'desc' },
   })
-  // Without a lastRenewalIntentId column, we rely on the cron's synchronous
-  // behavior (see below) to have already recorded success. This webhook then
-  // serves as a confirmation that the charge cleared — it's safe to no-op
-  // if we can't uniquely attribute it.
   if (!candidate) return false
-  return false
+
+  const { rolled } = await rollStorageRenewalPeriod(candidate.id, new Date())
+  return rolled
 }
 
 async function activateStorageSubscription(subId: string, initialIntentId: string) {

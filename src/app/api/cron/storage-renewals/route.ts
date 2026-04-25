@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { chargeWithConsent } from '@/lib/airwallex'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { withCronHeartbeat } from '@/lib/cron-heartbeat'
+import { rollStorageRenewalPeriod } from '@/lib/storage-renewal'
 
 async function runRenewals() {
   const now = new Date()
@@ -59,15 +60,24 @@ async function runRenewals() {
         },
       })
 
-      // chargeWithConsent confirms synchronously. If it returned without
-      // throwing and intent.status is SUCCEEDED, roll the period here.
+      // Stamp the intent id on the sub so the webhook can attribute
+      // payment_intent.succeeded back to this subscription if the synchronous
+      // confirmation was PROCESSING (rare for stored-card flows, but happens
+      // on 3DS step-up or temporary acquirer queues).
+      await prisma.storageSubscription.update({
+        where: { id: sub.id },
+        data: { lastRenewalIntentId: intent.id },
+      }).catch((err: unknown) => console.error('[cron/storage-renewals] stamp intent', err))
+
       if (intent.status === 'SUCCEEDED') {
-        await rollPeriod(sub.id, sub.userId, sub.plan, now)
+        // Idempotent: if the webhook already rolled this period in a race,
+        // rollStorageRenewalPeriod returns rolled=false and we just count it.
+        await rollStorageRenewalPeriod(sub.id, now)
         charged++
       } else if (intent.status === 'REQUIRES_PAYMENT_METHOD' || intent.status === 'CANCELLED') {
         await bumpDunning(sub.id, sub.userId, sub.failedChargeCount)
       } else {
-        // Webhook will finalize — leave state alone
+        // PROCESSING / REQUIRES_CAPTURE — webhook will finalize via lastRenewalIntentId
         charged++
       }
     } catch (e) {
@@ -77,29 +87,6 @@ async function runRenewals() {
   }
 
   return { charged, canceled, retryBackoff, errors }
-}
-
-async function rollPeriod(subId: string, userId: string, plan: string, now: Date) {
-  const sub = await prisma.storageSubscription.findUnique({ where: { id: subId } })
-  if (!sub) return
-  const newEnd = new Date((sub.currentPeriodEnd ?? now).getTime() + 30 * 24 * 60 * 60 * 1000)
-  await prisma.$transaction([
-    prisma.storageSubscription.update({
-      where: { id: subId },
-      data: {
-        status: 'ACTIVE',
-        currentPeriodStart: sub.currentPeriodEnd ?? now,
-        currentPeriodEnd: newEnd,
-        lastChargedAt: now,
-        failedChargeCount: 0,
-        nextRetryAt: null,
-      },
-    }),
-    prisma.user.update({
-      where: { id: userId },
-      data: { storagePlan: plan, storagePlanRenewsAt: newEnd },
-    }),
-  ])
 }
 
 async function bumpDunning(subId: string, userId: string, currentCount: number) {

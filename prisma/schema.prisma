@@ -1193,12 +1193,20 @@ model StorageSubscription {
   failedChargeCount         Int       @default(0)
   lastChargedAt             DateTime?
   nextRetryAt               DateTime?
+  // Last renewal payment intent id from Airwallex chargeWithConsent. Lets the
+  // webhook attribute payment_intent.succeeded to the right sub when the
+  // cron's synchronous confirmation came back PROCESSING (rare for stored-card
+  // flows, but it does happen). Both cron and webhook converge on the same
+  // idempotent rollStorageRenewalPeriod helper so the period only advances
+  // once per cycle.
+  lastRenewalIntentId       String?
   createdAt                 DateTime  @default(now())
   updatedAt                 DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 
   @@index([status, currentPeriodEnd])
+  @@index([lastRenewalIntentId])
 }
 
 // ── Commission Requests & Quotes ──────────────────────────────────────────────
