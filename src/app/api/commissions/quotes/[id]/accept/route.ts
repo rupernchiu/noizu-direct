@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
-import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
+import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
 import { createQuoteBackingProduct } from '@/lib/commissions'
 import { createNotification } from '@/lib/notifications'
 
@@ -53,10 +53,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const buyer = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
 
-  // Fee is added on top of the quote amount (buyer pays it) — matches the cart flow
-  const feeRate = await getProcessingFeeRate()
-  const processingFee = feeOnSubtotal(quote.amountUsd, feeRate)
-  const orderAmountUsd = quote.amountUsd + processingFee
+  // Rail-aware fee model (5/5.5/8). Commissions are 3DS-forced and the buyer
+  // doesn't pre-select a rail at quote-accept time — Airwallex DropIn picks the
+  // method later. We charge the conservative CARD tier (8% buyer fee) since
+  // (a) it matches the 3DS policy, (b) it lets us collect the same revenue
+  // regardless of which method the buyer eventually chooses, and (c) any
+  // recalc-on-webhook would surprise the buyer with a different total than
+  // what they accepted.
+  const rates = await getFeeRatesFromSettings()
+  const creatorProfile = await prisma.creatorProfile.findUnique({
+    where: { id: quote.creatorId },
+    select: { taxRegistered: true, taxRatePercent: true, taxJurisdiction: true },
+  })
+  const creatorTaxRate = creatorProfile?.taxRegistered
+    ? (creatorProfile.taxRatePercent ?? 0)
+    : 0
+  const breakdown = calculateFees(quote.amountUsd, 'CARD', rates, creatorTaxRate)
+  const orderAmountUsd = breakdown.grossUsdCents
   const now = new Date()
 
   const backingProduct = await createQuoteBackingProduct({
@@ -98,6 +111,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         commissionDepositConsentAt: now,
         commissionQuoteId: quote.id,
         commissionIsMilestoneBased: quote.isMilestoneBased,
+        // Rail-aware fee snapshot (commissions default to CARD per 3DS policy)
+        paymentRail: 'CARD',
+        subtotalUsd: breakdown.subtotalUsdCents,
+        buyerFeeUsd: breakdown.buyerFeeUsdCents,
+        creatorCommissionUsd: breakdown.creatorCommissionUsdCents,
+        creatorTaxAmountUsd: breakdown.creatorTaxUsdCents,
+        creatorTaxRatePercent: creatorTaxRate > 0 ? creatorTaxRate : null,
       },
     })
     if (quote.isMilestoneBased) {

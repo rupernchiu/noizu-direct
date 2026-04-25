@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Lock } from 'lucide-react'
 import { QuoteAcceptActions } from './QuoteAcceptActions'
 import { MilestoneBuyerActions } from './MilestoneBuyerActions'
-import { getProcessingFeePercent, feeOnSubtotal } from '@/lib/platform-fees'
+import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
 
 function fmtUsd(cents: number) { return '$' + (cents / 100).toFixed(2) }
 
@@ -17,7 +17,15 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
   const quote = await prisma.commissionQuote.findUnique({
     where: { id },
     include: {
-      creator: { select: { username: true, user: { select: { name: true, avatar: true } } } },
+      creator: {
+        select: {
+          id: true,
+          username: true,
+          taxRegistered: true,
+          taxRatePercent: true,
+          user: { select: { name: true, avatar: true } },
+        },
+      },
       milestones: { orderBy: { order: 'asc' } },
       order: { select: { id: true, status: true, escrowStatus: true, commissionStatus: true, commissionIsMilestoneBased: true } },
     },
@@ -29,9 +37,19 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
   const creatorName = quote.creator.user.name ?? quote.creator.username
   const deposit = Math.round(quote.amountUsd * (quote.depositPercent / 100))
 
-  const feePercent   = await getProcessingFeePercent()
-  const processingFee = feeOnSubtotal(quote.amountUsd, feePercent / 100)
-  const totalDue     = quote.amountUsd + processingFee
+  // Rail-aware fee preview — matches accept-route's CARD-tier policy.
+  const rates = await getFeeRatesFromSettings()
+  const creatorTaxRate = quote.creator.taxRegistered ? (quote.creator.taxRatePercent ?? 0) : 0
+  const breakdown = calculateFees(quote.amountUsd, 'CARD', rates, creatorTaxRate)
+  const processingFee = breakdown.buyerFeeUsdCents
+  const creatorTax = breakdown.creatorTaxUsdCents
+  const totalDue = breakdown.grossUsdCents
+
+  // Quote expiry visibility (Phase B1) — buyer sees a countdown badge.
+  const now = new Date()
+  const expiresInMs = quote.expiresAt ? quote.expiresAt.getTime() - now.getTime() : null
+  const expiresInDays = expiresInMs !== null ? Math.ceil(expiresInMs / (24 * 60 * 60 * 1000)) : null
+  const isExpired = quote.status === 'EXPIRED' || (expiresInMs !== null && expiresInMs <= 0)
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -42,7 +60,17 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
           <h1 className="text-2xl font-bold text-foreground">{quote.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">Quote from {creatorName} · {quote.createdAt.toISOString().slice(0,10)}</p>
         </div>
-        <span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{quote.status}</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="text-xs px-2 py-0.5 rounded bg-muted text-foreground">{quote.status}</span>
+          {quote.status === 'SENT' && expiresInDays !== null && !isExpired && (
+            <span className={`text-xs px-2 py-0.5 rounded ${expiresInDays <= 1 ? 'bg-red-500/15 text-red-500' : expiresInDays <= 3 ? 'bg-amber-500/15 text-amber-600' : 'bg-muted text-muted-foreground'}`}>
+              Expires in {expiresInDays} day{expiresInDays === 1 ? '' : 's'}
+            </span>
+          )}
+          {isExpired && quote.status !== 'ACCEPTED' && (
+            <span className="text-xs px-2 py-0.5 rounded bg-red-500/15 text-red-500">Expired</span>
+          )}
+        </div>
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -89,7 +117,11 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
                   </div>
                 )}
                 {quote.order && m.status === 'DELIVERED' && (
-                  <MilestoneBuyerActions milestoneId={m.id} revisionsRemaining={m.revisionsAllowed - m.revisionsUsed} />
+                  <MilestoneBuyerActions
+                    milestoneId={m.id}
+                    revisionsRemaining={m.revisionsAllowed - m.revisionsUsed}
+                    autoReleaseAt={m.autoReleaseAt ? m.autoReleaseAt.toISOString() : null}
+                  />
                 )}
               </div>
             ))}
@@ -108,9 +140,15 @@ export default async function BuyerQuoteDetailPage({ params }: { params: Promise
                   <span className="text-foreground shrink-0">{fmtUsd(quote.amountUsd)}</span>
                 </div>
                 <div className="flex justify-between gap-4">
-                  <span className="text-muted-foreground">Processing fee ({feePercent}%)</span>
+                  <span className="text-muted-foreground">Buyer fee ({breakdown.buyerFeePercent}%)</span>
                   <span className="text-foreground shrink-0">{fmtUsd(processingFee)}</span>
                 </div>
+                {creatorTax > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <span className="text-muted-foreground">Creator tax ({creatorTaxRate}%)</span>
+                    <span className="text-foreground shrink-0">{fmtUsd(creatorTax)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4 pt-2 border-t border-border">
                   <span className="font-semibold text-foreground">Total (USD)</span>
                   <span className="font-semibold text-foreground shrink-0">{fmtUsd(totalDue)}</span>

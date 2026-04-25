@@ -2,7 +2,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function MilestoneBuyerActions({ milestoneId, revisionsRemaining }: { milestoneId: string; revisionsRemaining: number }) {
+interface MilestoneBuyerActionsProps {
+  milestoneId: string
+  revisionsRemaining: number
+  /** ISO timestamp of when escrow auto-releases to creator if buyer takes no action. */
+  autoReleaseAt?: string | null
+}
+
+export function MilestoneBuyerActions({ milestoneId, revisionsRemaining, autoReleaseAt }: MilestoneBuyerActionsProps) {
   const router = useRouter()
   const [mode, setMode] = useState<'idle' | 'approving' | 'revising'>('idle')
   const [showRevision, setShowRevision] = useState(false)
@@ -39,8 +46,29 @@ export function MilestoneBuyerActions({ milestoneId, revisionsRemaining }: { mil
     router.refresh()
   }
 
+  // Surface the 14-day auto-release timer that escrow-processor enforces — buyer
+  // would otherwise miss the deadline silently and have funds release before
+  // they reviewed the deliverable.
+  const autoReleaseMs = autoReleaseAt ? new Date(autoReleaseAt).getTime() - Date.now() : null
+  const autoReleaseDays = autoReleaseMs !== null ? Math.ceil(autoReleaseMs / (24 * 60 * 60 * 1000)) : null
+  const autoReleaseStyle =
+    autoReleaseDays === null ? '' :
+    autoReleaseDays <= 1 ? 'text-red-500' :
+    autoReleaseDays <= 3 ? 'text-amber-600' :
+    'text-muted-foreground'
+
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-2">
+      {autoReleaseDays !== null && autoReleaseDays > 0 && (
+        <p className={`text-xs ${autoReleaseStyle}`}>
+          ⏱ Funds auto-release to creator in {autoReleaseDays} day{autoReleaseDays === 1 ? '' : 's'} unless you approve or request a revision.
+        </p>
+      )}
+      {autoReleaseDays !== null && autoReleaseDays <= 0 && (
+        <p className="text-xs text-muted-foreground">
+          Auto-release window closed — funds may release at any moment.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <button onClick={onApprove} disabled={mode !== 'idle'} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50">
           {mode === 'approving' ? 'Approving…' : 'Approve & release payment'}
