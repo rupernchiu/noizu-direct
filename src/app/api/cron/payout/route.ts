@@ -6,6 +6,7 @@ import { Resend } from 'resend'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { withCronHeartbeat } from '@/lib/cron-heartbeat'
 import { minimumPayoutUsdCents, rateForCountry } from '@/lib/payout-rail'
+import { getCreatorBalance } from '@/lib/creator-balance'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://noizu.direct'
@@ -73,33 +74,24 @@ async function runPayoutSweep() {
     ]).catch((err) => console.error('[cron/payout] activate change failed', { changeId: change.id, err }))
   }
 
-  // Find all creators with COMPLETED transactions.
-  // Exclude any transaction marked `payoutBlocked` — this flag gets set when a
-  // chargeback arrives on an already-released order (see M3 / webhook:
-  // handleDisputeCreated). Keeps money from leaving while the dispute is live.
+  // Candidate creators: anyone with at least one COMPLETED transaction.
+  // The clawback exposure window, payoutBlocked filter, and paidOut deduction
+  // are all handled inside getCreatorBalance() so the math stays in one place
+  // (creator-balance.ts) for the cron, the dashboard, and the manual payout
+  // API. PlatformSettings.clawbackExposureWindowDays drives the window.
   const completedByCreator = await prisma.transaction.groupBy({
     by: ['creatorId'],
-    where: { status: 'COMPLETED', payoutBlocked: false },
+    where: { status: 'COMPLETED' },
     _sum: { creatorAmount: true },
   })
-
-  // Find total already paid per creator
-  const paidByCreator = await prisma.payout.groupBy({
-    by: ['creatorId'],
-    where: { status: { in: ['PENDING', 'PROCESSING', 'PAID'] } },
-    _sum: { amountUsd: true },
-  })
-
-  const paidMap = new Map(paidByCreator.map(p => [p.creatorId, p._sum.amountUsd ?? 0]))
 
   let processed = 0
   let skipped = 0
   const errors: string[] = []
 
   for (const row of completedByCreator) {
-    const totalEarned = row._sum.creatorAmount ?? 0
-    const totalPaid = paidMap.get(row.creatorId) ?? 0
-    const availableUsd = totalEarned - totalPaid
+    const balance = await getCreatorBalance(row.creatorId)
+    const availableUsd = balance.availableUsd
 
     // Already has a pending payout
     const hasPending = await prisma.payout.findFirst({
