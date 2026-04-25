@@ -11,7 +11,6 @@ interface OrdersActionsProps {
 
 export function OrdersActions({ orderId, status, productType }: OrdersActionsProps) {
   const router = useRouter()
-  const [tracking, setTracking] = useState('')
   const [loading, setLoading] = useState(false)
 
   if (productType === 'COMMISSION') {
@@ -51,26 +50,23 @@ export function OrdersActions({ orderId, status, productType }: OrdersActionsPro
     )
   }
 
-  if (status === 'PAID' && productType === 'PHYSICAL') {
+  if (status === 'PAID' && (productType === 'PHYSICAL' || productType === 'POD')) {
     return (
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          value={tracking}
-          onChange={(e) => setTracking(e.target.value)}
-          placeholder="Tracking #"
-          className="w-28 rounded-md bg-background border border-border px-2 py-1 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-        />
-        <button
-          onClick={() => updateOrder({ status: 'SHIPPED', trackingNumber: tracking })}
-          disabled={loading || !tracking.trim()}
-          className="text-xs px-2 py-1 rounded-md bg-primary hover:bg-primary/90 text-white disabled:opacity-50 transition-colors"
-        >
-          Ship
-        </button>
-      </div>
+      <Link
+        href={`/dashboard/orders/${orderId}`}
+        className="text-xs px-2 py-1 rounded-md bg-primary hover:bg-primary/90 text-white transition-colors"
+      >
+        Add tracking
+      </Link>
     )
   }
 
-  return <span className="text-xs text-muted-foreground">—</span>
+  return (
+    <Link
+      href={`/dashboard/orders/${orderId}`}
+      className="text-xs text-primary hover:text-primary/80 transition-colors"
+    >
+      View
+    </Link>
+  )
 }

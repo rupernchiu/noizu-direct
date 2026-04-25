@@ -6,6 +6,8 @@ import { ArrowLeft } from 'lucide-react'
 import { STATUS_LABELS, TYPE_LABELS } from '@/lib/labels'
 import { CommissionActions } from './CommissionActions'
 import { MilestoneCreatorActions } from './MilestoneCreatorActions'
+import { TrackingForm } from './TrackingForm'
+import { getTrackingUrl, getCourierName } from '@/lib/courier-tracking'
 
 const statusStyles: Record<string, string> = {
   PENDING:    'bg-yellow-500/20 text-yellow-400',
@@ -299,12 +301,29 @@ export default async function OrderDetailPage({
 
       {!isCommission && order.shippingAddress && (
         <div className="bg-surface rounded-xl border border-border p-5">
-          <h2 className="text-lg font-semibold text-foreground mb-3">Shipping</h2>
+          <h2 className="text-lg font-semibold text-foreground mb-3">Shipping address</h2>
           <p className="text-sm text-foreground whitespace-pre-wrap">{order.shippingAddress}</p>
-          {order.trackingNumber && (
-            <p className="text-sm text-muted-foreground mt-2">Tracking: {order.trackingNumber}</p>
-          )}
         </div>
+      )}
+
+      {!isCommission && (order.product?.type === 'PHYSICAL' || order.product?.type === 'POD') && escrowFunded && (
+        <TrackingForm
+          orderId={order.id}
+          productType={order.product.type}
+          isPod={order.product.type === 'POD'}
+          trackingNumber={order.trackingNumber}
+          courierCode={order.courierCode}
+          courierName={order.courierCode ? getCourierName(order.courierCode) : order.courierName}
+          estimatedDelivery={order.estimatedDelivery}
+          trackingAddedAt={order.trackingAddedAt}
+          trackingUrl={
+            order.courierCode && order.trackingNumber
+              ? getTrackingUrl(order.courierCode, order.trackingNumber)
+              : null
+          }
+          escrowStatus={order.escrowStatus}
+          escrowAutoReleaseAt={order.escrowAutoReleaseAt}
+        />
       )}
     </div>
   )
