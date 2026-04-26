@@ -413,6 +413,11 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
           discounts: liveGroups
             .filter(g => creatorDiscounts[g.creator.id]?.applied)
             .map(g => ({ discountCodeId: creatorDiscounts[g.creator.id].applied!.discountCodeId })),
+          // The buyer picks the actual rail in the Airwallex DropIn that
+          // follows. Until then we lock in CARD (8% — the conservative tier)
+          // so the rail-aware fee snapshot lands on the Order; the buyer sees
+          // the same 8% they were quoted in the cart preview.
+          paymentRail: 'CARD',
         }),
       })
       const data = await res.json() as { intentId?: string; clientSecret?: string; currency?: string; error?: string }
@@ -800,8 +805,11 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                     <span className="text-foreground">Included by seller</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Processing fee (2.5%)</span>
+                <div
+                  className="flex items-center justify-between text-sm"
+                  title="Card-tier rate. Local rails (FPX, PayNow, GCash, etc.) are charged at a lower 5.5% — final amount may be less than shown."
+                >
+                  <span className="text-muted-foreground">Processing fee ({(feeRate * 100).toFixed(1)}%)</span>
                   <span className="text-foreground">{formatPrice(liveProcessingFee)}</span>
                 </div>
               </div>

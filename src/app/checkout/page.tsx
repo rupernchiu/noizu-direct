@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { CheckoutPageClient } from './CheckoutPageClient'
-import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
+import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
 
 export default async function CheckoutPage() {
   const session = await auth()
@@ -27,9 +27,15 @@ export default async function CheckoutPage() {
   if (cartItems.length === 0) redirect('/marketplace')
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-  const feeRate = await getProcessingFeeRate()
-  const processingFee = feeOnSubtotal(subtotal, feeRate)
-  const total = subtotal + processingFee
+  // Default to the CARD-tier buyer fee (8%) before the buyer picks a rail at
+  // the Airwallex DropIn. Local rails (FPX, PayNow…) reprice to 5.5% on the
+  // payment-intent route — always strictly less, so the final amount can only
+  // go down from this preview.
+  const rates = await getFeeRatesFromSettings()
+  const breakdown = calculateFees(subtotal, 'CARD', rates, 0)
+  const processingFee = breakdown.buyerFeeUsdCents
+  const total = breakdown.grossUsdCents
+  const feeRate = rates.buyerFeeCardPercent / 100
   const hasPhysical = cartItems.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
 
   // Group by creator

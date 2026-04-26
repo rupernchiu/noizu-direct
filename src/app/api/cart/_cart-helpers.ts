@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getProcessingFeeRate, feeOnSubtotal } from '@/lib/platform-fees'
+import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,9 +111,15 @@ export async function getCartResponse(buyerId: string): Promise<CartResponse> {
   const groups = Array.from(groupMap.values())
 
   const subtotal = groups.reduce((acc, g) => acc + g.subtotal, 0)
-  const feeRate = await getProcessingFeeRate()
-  const processingFee = feeOnSubtotal(subtotal, feeRate)
-  const total = subtotal + processingFee
+  // Cart preview defaults to the CARD-tier buyer fee (8%) — the conservative
+  // ceiling. The buyer picks the actual rail in the Airwallex DropIn at the
+  // end of checkout; if they pick a local rail (FPX, PayNow, etc.) the
+  // payment-intent route reprices to 5.5% which is strictly less. Showing the
+  // ceiling here avoids any "fee went up at checkout" surprise.
+  const rates = await getFeeRatesFromSettings()
+  const breakdown = calculateFees(subtotal, 'CARD', rates, 0)
+  const processingFee = breakdown.buyerFeeUsdCents
+  const total = breakdown.grossUsdCents
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0)
 
   return { items, groups, subtotal, processingFee, total, itemCount }

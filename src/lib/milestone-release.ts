@@ -9,6 +9,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
+import { breakdownFromOrderSnapshot } from '@/lib/fees'
 import { createNotification } from '@/lib/notifications'
 
 export async function releaseMilestone(milestoneId: string, performedBy?: string, note?: string) {
@@ -18,6 +19,9 @@ export async function releaseMilestone(milestoneId: string, performedBy?: string
       orderRef: {
         select: {
           id: true, buyerId: true, creatorId: true, amountUsd: true,
+          paymentRail: true, subtotalUsd: true, buyerFeeUsd: true,
+          creatorCommissionUsd: true, creatorTaxAmountUsd: true,
+          creatorTaxRatePercent: true,
           transactions: { where: { status: 'ESCROW' }, take: 1 },
         },
       },
@@ -30,7 +34,16 @@ export async function releaseMilestone(milestoneId: string, performedBy?: string
   const escrowTx = order.transactions[0] // aggregate ESCROW tx created in webhook
   const now = new Date()
 
-  // Proportional fee/creator-amount split — mirrors escrow-processor's partial-release math
+  // Proportional fee/creator-amount split — mirrors escrow-processor's partial-release math.
+  //
+  // Three resolution strategies, most-trusted first:
+  //   1. ESCROW transaction exists → take its fee/creator split and apportion
+  //      this milestone's share by amount ratio. Always preferred when present
+  //      because those numbers are what the buyer was actually charged.
+  //   2. No ESCROW tx but the order has the rail-aware snapshot → derive the
+  //      milestone slice from the snapshotted commission %. Keeps payouts on
+  //      the 5/8 model even when the webhook hasn't materialised the tx yet.
+  //   3. Neither: legacy 2.5% feeFromGross.
   let processingFeePortion = 0
   let creatorAmountPortion = milestone.amountUsd
   if (escrowTx) {
@@ -38,10 +51,19 @@ export async function releaseMilestone(milestoneId: string, performedBy?: string
     processingFeePortion = Math.round(escrowTx.processingFee * ratio)
     creatorAmountPortion = Math.round(escrowTx.creatorAmount * ratio)
   } else {
-    // Fallback: compute from live fee rate if somehow no ESCROW tx (quote accepted but webhook not run)
-    const feeRate = await getProcessingFeeRate()
-    processingFeePortion = feeFromGross(milestone.amountUsd, feeRate)
-    creatorAmountPortion = milestone.amountUsd - processingFeePortion
+    const snapshot = breakdownFromOrderSnapshot(order)
+    if (snapshot && snapshot.grossUsdCents > 0) {
+      const ratio = milestone.amountUsd / snapshot.grossUsdCents
+      processingFeePortion = Math.round(snapshot.buyerFeeUsdCents * ratio)
+      const commissionPortion = Math.round(snapshot.creatorCommissionUsdCents * ratio)
+      const taxPortion = Math.round(snapshot.creatorTaxUsdCents * ratio)
+      const subtotalPortion = Math.round(snapshot.subtotalUsdCents * ratio)
+      creatorAmountPortion = subtotalPortion - commissionPortion - taxPortion
+    } else {
+      const feeRate = await getProcessingFeeRate()
+      processingFeePortion = feeFromGross(milestone.amountUsd, feeRate)
+      creatorAmountPortion = milestone.amountUsd - processingFeePortion
+    }
   }
 
   const released = await prisma.$transaction(async (tx) => {

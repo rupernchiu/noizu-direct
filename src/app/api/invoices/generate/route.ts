@@ -7,6 +7,7 @@ import { join } from 'path'
 import { NextResponse } from 'next/server'
 import React from 'react'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
+import { breakdownFromOrderSnapshot } from '@/lib/fees'
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -23,10 +24,20 @@ export async function POST(req: Request) {
   })
   if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // order.amountUsd is gross (subtotal + fee); back out the fee for receipt line items
-  const feeRate = await getProcessingFeeRate()
-  const processingFee = feeFromGross(order.amountUsd, feeRate)
-  const subtotal = order.amountUsd - processingFee
+  // Prefer the rail-aware snapshot stamped on the order at checkout (sprint
+  // 0.1+). Pre-snapshot orders fall back to the legacy 2.5% feeFromGross so
+  // historical receipts stay reproducible.
+  const snapshot = breakdownFromOrderSnapshot(order)
+  let subtotal: number
+  let processingFee: number
+  if (snapshot) {
+    subtotal = snapshot.subtotalUsdCents
+    processingFee = snapshot.buyerFeeUsdCents + snapshot.creatorTaxUsdCents
+  } else {
+    const feeRate = await getProcessingFeeRate()
+    processingFee = feeFromGross(order.amountUsd, feeRate)
+    subtotal = order.amountUsd - processingFee
+  }
   const total = order.amountUsd
 
   const invoiceCount = await prisma.invoice.count()

@@ -197,6 +197,65 @@ export function feesFromGross(
 }
 
 /**
+ * Order-shaped subset used by `breakdownFromOrderSnapshot`. Any object with
+ * the snapshot columns will satisfy this — works for prisma.order rows and
+ * lightweight `select` projections alike.
+ */
+export interface OrderFeeSnapshot {
+  amountUsd: number
+  paymentRail: string | null
+  subtotalUsd: number | null
+  buyerFeeUsd: number | null
+  creatorCommissionUsd: number | null
+  creatorTaxAmountUsd: number | null
+  creatorTaxRatePercent: number | null
+}
+
+/**
+ * Recover the rail-aware FeeBreakdown for a persisted order.
+ *
+ * Returns null when the order pre-dates the rail-aware migration (sprint 0.1)
+ * — i.e. its snapshot columns are still null. Callers that need a breakdown
+ * regardless should fall back to the legacy `feeFromGross` path explicitly so
+ * the legacy/rail-aware branching stays visible at the call site.
+ */
+export function breakdownFromOrderSnapshot(order: OrderFeeSnapshot): FeeBreakdown | null {
+  if (
+    order.paymentRail == null ||
+    order.subtotalUsd == null ||
+    order.buyerFeeUsd == null ||
+    order.creatorCommissionUsd == null
+  ) {
+    return null
+  }
+  const subtotalUsdCents = order.subtotalUsd
+  const buyerFeeUsdCents = order.buyerFeeUsd
+  const creatorCommissionUsdCents = order.creatorCommissionUsd
+  const creatorTaxUsdCents = order.creatorTaxAmountUsd ?? 0
+  const creatorTaxRatePercent = order.creatorTaxRatePercent ?? 0
+  const grossUsdCents = subtotalUsdCents + buyerFeeUsdCents + creatorTaxUsdCents
+  const buyerFeePercent = subtotalUsdCents > 0
+    ? (buyerFeeUsdCents / subtotalUsdCents) * 100
+    : 0
+  const creatorCommissionPercent = subtotalUsdCents > 0
+    ? (creatorCommissionUsdCents / subtotalUsdCents) * 100
+    : 0
+  return {
+    subtotalUsdCents,
+    buyerFeeUsdCents,
+    creatorTaxUsdCents,
+    creatorTaxRatePercent,
+    grossUsdCents,
+    creatorCommissionUsdCents,
+    creatorPayoutUsdCents: subtotalUsdCents - creatorCommissionUsdCents - creatorTaxUsdCents,
+    platformGrossUsdCents: buyerFeeUsdCents + creatorCommissionUsdCents,
+    paymentRail: order.paymentRail as PaymentRail,
+    buyerFeePercent,
+    creatorCommissionPercent,
+  }
+}
+
+/**
  * Read configured fee rates from PlatformSettings, falling back to the
  * 5/5.5/8 defaults when the columns aren't populated yet (pre-migration).
  *
