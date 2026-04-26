@@ -167,10 +167,10 @@ export default async function DashboardPage() {
   }
 
   const bannerStyles: Record<BannerTone, { bg: string; border: string; text: string; cta: string }> = {
-    red:   { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-300',    cta: 'bg-red-500 hover:bg-red-500/90 text-white' },
-    amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-200', cta: 'bg-yellow-500 hover:bg-yellow-500/90 text-black' },
-    blue:  { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   text: 'text-blue-200',   cta: 'bg-blue-500 hover:bg-blue-500/90 text-white' },
-    green: { bg: 'bg-green-500/10',  border: 'border-green-500/30',  text: 'text-green-200',  cta: 'bg-green-500 hover:bg-green-500/90 text-white' },
+    red:   { bg: 'bg-red-500/10',    border: 'border-red-500/30',    text: 'text-red-700 dark:text-red-300',       cta: 'bg-red-500 hover:bg-red-500/90 text-white' },
+    amber: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-800 dark:text-yellow-200', cta: 'bg-yellow-500 hover:bg-yellow-500/90 text-black' },
+    blue:  { bg: 'bg-blue-500/10',   border: 'border-blue-500/30',   text: 'text-blue-800 dark:text-blue-200',     cta: 'bg-blue-500 hover:bg-blue-500/90 text-white' },
+    green: { bg: 'bg-green-500/10',  border: 'border-green-500/30',  text: 'text-green-800 dark:text-green-200',   cta: 'bg-green-500 hover:bg-green-500/90 text-white' },
   }
 
   // Compute onboarding steps

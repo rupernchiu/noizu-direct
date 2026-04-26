@@ -63,13 +63,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
       <head>
-        {/* `next/script` with beforeInteractive renders into <head> server-side,
-            avoiding React's "script tag in component" warning that triggers
-            on a literal <script>. Theme must apply pre-paint to prevent FOUC. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
+        {/* Theme init must run pre-paint to prevent FOUC. React 19 strips the
+            nonce attribute client-side as a security hardening, so the SSR
+            HTML and the client tree differ — suppressHydrationWarning silences
+            that expected mismatch. */}
+        <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
       </head>
