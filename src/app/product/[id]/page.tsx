@@ -17,6 +17,9 @@ import {
   type RailProduct, type RailCreator, type RailArticle,
 } from '@/components/discovery/RecommendationRails'
 import { convertUsdCentsTo } from '@/lib/fx'
+import { headers } from 'next/headers'
+import { parseShippingMap, isPhysicalType, normalizeCountryToCode } from '@/lib/shipping'
+import { ShippingRatesPanel } from '@/components/product/ShippingRatesPanel'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -231,6 +234,37 @@ export default async function ProductPage({ params }: PageProps) {
 
   const images = parseImages(product.images)
   const isPhysical = product.type === 'PHYSICAL'
+
+  // ── Shipping resolution (sprint shipping-1) ────────────────────────────────
+  // Per-listing override beats creator default. Country detected from Vercel
+  // edge header; falls back to the buyer's saved address (if logged in) — but
+  // we don't have an address-on-User yet, so unauthenticated users with no
+  // header just see the "see all rates" path.
+  const showShipping = isPhysicalType(product.type)
+  let shippingPanelProps: {
+    rates: ReturnType<typeof parseShippingMap>
+    freeThresholdUsdCents: number | null
+    combinedShippingEnabled: boolean
+    detectedCountryCode: string | null
+    source: 'product' | 'creator'
+  } | null = null
+  if (showShipping) {
+    const productMap = parseShippingMap((product as any).shippingByCountry)
+    const creatorMap = parseShippingMap((product.creator as any).shippingByCountry)
+    const rates = productMap ?? creatorMap ?? {}
+    const source: 'product' | 'creator' = productMap ? 'product' : 'creator'
+    const freeThresholdUsdCents =
+      (product as any).shippingFreeThresholdUsd ??
+      (product.creator as any).shippingFreeThresholdUsd ??
+      null
+    const combinedShippingEnabled = (product.creator as any).combinedShippingEnabled ?? true
+    const hdrs = await headers()
+    const detectedCountryCode = normalizeCountryToCode(
+      hdrs.get('x-vercel-ip-country') ?? hdrs.get('cf-ipcountry') ?? null,
+    )
+    shippingPanelProps = { rates, freeThresholdUsdCents, combinedShippingEnabled, detectedCountryCode, source }
+  }
+
   const isPreOrder = (product as any).isPreOrder as boolean
   const inStock = isPreOrder || !isPhysical || (product.stock != null && product.stock > 0)
 
@@ -466,6 +500,16 @@ export default async function ProductPage({ params }: PageProps) {
                 </ul>
               )}
             </div>
+
+            {showShipping && shippingPanelProps && (
+              <ShippingRatesPanel
+                rates={shippingPanelProps.rates ?? {}}
+                freeThresholdUsdCents={shippingPanelProps.freeThresholdUsdCents}
+                combinedShippingEnabled={shippingPanelProps.combinedShippingEnabled}
+                detectedCountryCode={shippingPanelProps.detectedCountryCode}
+                source={shippingPanelProps.source}
+              />
+            )}
 
             {/* Button rows */}
             <div className="flex flex-col gap-2">

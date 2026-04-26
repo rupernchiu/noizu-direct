@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
 import { DigitalFilesUpload, type DigitalFile } from '@/components/ui/DigitalFilesUpload'
+import { Truck } from 'lucide-react'
+import { SHIPPING_ZONES, ROW_KEY, parseShippingMap, type ShippingRateMap } from '@/lib/shipping'
 
 const schema = z.object({
   title: z.string().min(3).max(100),
@@ -79,9 +81,11 @@ interface Product {
   commissionDepositPercent: number | null
   commissionRevisionsIncluded: number | null
   commissionTurnaroundDays: number | null
+  shippingByCountry: string | null
+  shippingFreeThresholdUsd: number | null
 }
 
-export function EditListingForm({ product }: { product: Product }) {
+export function EditListingForm({ product, creatorHasShipping }: { product: Product; creatorHasShipping: boolean }) {
   const router = useRouter()
   const [images, setImages] = useState<string[]>(() => {
     try { return JSON.parse(product.images) as string[] } catch { return [] }
@@ -98,6 +102,25 @@ export function EditListingForm({ product }: { product: Product }) {
   const [preOrderMessage, setPreOrderMessage] = useState(product.preOrderMessage ?? '')
   const [preOrderReleaseAt, setPreOrderReleaseAt] = useState(
     product.preOrderReleaseAt ? new Date(product.preOrderReleaseAt).toISOString().slice(0, 16) : ''
+  )
+  // Shipping cost override (separate from POD lead-time fields above).
+  // null map = "use creator default rates" (no override).
+  const initialShipMap = parseShippingMap(product.shippingByCountry)
+  const [shippingOverrideEnabled, setShippingOverrideEnabled] = useState(initialShipMap != null)
+  const [overrideZoneInputs, setOverrideZoneInputs] = useState<Record<string, string>>(() => {
+    const out: Record<string, string> = { 'domestic-my': '', 'sea-tier1': '', 'sea-tier2': '', row: '' }
+    if (!initialShipMap) return out
+    for (const z of SHIPPING_ZONES) {
+      const first = z.countries.find(c => initialShipMap[c as keyof ShippingRateMap] != null)
+      if (first != null) {
+        const cents = initialShipMap[first as keyof ShippingRateMap]!
+        out[z.key] = (cents / 100).toFixed(2)
+      }
+    }
+    return out
+  })
+  const [overrideFreeThreshold, setOverrideFreeThreshold] = useState<string>(
+    product.shippingFreeThresholdUsd != null ? (product.shippingFreeThresholdUsd / 100).toFixed(2) : ''
   )
 
   const {
@@ -151,6 +174,27 @@ export function EditListingForm({ product }: { product: Product }) {
       setError('Select a POD provider (set one up in POD Settings first)')
       return
     }
+    // Shipping override payload (PHYSICAL/POD only). null clears override.
+    let shippingByCountryPayload: Record<string, number> | null = null
+    let shippingFreeThresholdPayload: number | null = null
+    const isPhysicalLike = data.type === 'PHYSICAL' || data.type === 'POD'
+    if (isPhysicalLike && shippingOverrideEnabled) {
+      const map: Record<string, number> = {}
+      for (const z of SHIPPING_ZONES) {
+        const raw = (overrideZoneInputs[z.key] ?? '').trim()
+        if (raw === '') continue
+        const cents = Math.round(parseFloat(raw) * 100)
+        if (!Number.isFinite(cents) || cents < 0) continue
+        for (const c of z.countries) map[c] = cents
+      }
+      if (Object.keys(map).length > 0) shippingByCountryPayload = map
+      const t = overrideFreeThreshold.trim()
+      if (t !== '') {
+        const cents = Math.round(parseFloat(t) * 100)
+        if (Number.isFinite(cents) && cents >= 0) shippingFreeThresholdPayload = cents
+      }
+    }
+
     try {
       const res = await fetch(`/api/products/${product.id}`, {
         method: 'PATCH',
@@ -164,6 +208,8 @@ export function EditListingForm({ product }: { product: Product }) {
           isPreOrder,
           preOrderMessage: isPreOrder ? preOrderMessage : null,
           preOrderReleaseAt: isPreOrder && preOrderReleaseAt ? new Date(preOrderReleaseAt).toISOString() : null,
+          shippingByCountry: isPhysicalLike ? shippingByCountryPayload : null,
+          shippingFreeThresholdUsd: isPhysicalLike ? shippingFreeThresholdPayload : null,
         }),
       })
       if (!res.ok) {
@@ -392,6 +438,83 @@ export function EditListingForm({ product }: { product: Product }) {
               />
               <span className="text-sm text-foreground">Show provider name publicly on product page</span>
             </label>
+          </div>
+        )}
+
+        {(type === 'PHYSICAL' || type === 'POD') && (
+          <div className="space-y-3 rounded-lg bg-card border border-border p-4">
+            <div className="flex items-start gap-2">
+              <Truck className="size-4 text-foreground shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">Shipping cost (override)</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  By default this listing uses your <a href="/dashboard/shipping" className="text-primary hover:underline">creator shipping rates</a>.
+                  Override below if this item is unusually heavy or fragile.
+                </p>
+              </div>
+            </div>
+
+            {!creatorHasShipping && !shippingOverrideEnabled && (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                <p className="font-medium">You haven't set any shipping rates yet.</p>
+                <p className="mt-1">
+                  This listing won't be publishable until you either turn on the override below, or set
+                  defaults in <a href="/dashboard/shipping" className="underline">Dashboard → Shipping</a>.
+                </p>
+              </div>
+            )}
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={shippingOverrideEnabled}
+                onChange={e => setShippingOverrideEnabled(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary"
+              />
+              <span className="text-sm text-foreground">Use a different rate just for this listing</span>
+            </label>
+
+            {shippingOverrideEnabled && (
+              <div className="space-y-3 pt-1">
+                <div className="grid grid-cols-2 gap-3">
+                  {SHIPPING_ZONES.map(z => (
+                    <div key={z.key}>
+                      <label className="block text-[11px] text-muted-foreground mb-1">{z.label}</label>
+                      <div className="relative">
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs pointer-events-none">$</span>
+                        <input
+                          type="number"
+                          step="0.50"
+                          min="0"
+                          placeholder={z.key === 'row' ? '(empty=block)' : '(empty=use default)'}
+                          value={overrideZoneInputs[z.key] ?? ''}
+                          onChange={e => setOverrideZoneInputs(prev => ({ ...prev, [z.key]: e.target.value }))}
+                          className="w-full h-9 pl-6 pr-2 rounded-md bg-background border border-border text-sm text-foreground"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Free-shipping threshold (USD, optional)</label>
+                  <div className="relative w-32">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs pointer-events-none">$</span>
+                    <input
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="(none)"
+                      value={overrideFreeThreshold}
+                      onChange={e => setOverrideFreeThreshold(e.target.value)}
+                      className="w-full h-9 pl-6 pr-2 rounded-md bg-background border border-border text-sm text-foreground"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Empty zones fall through to <code className="text-foreground">{ROW_KEY}</code> if you set one. Otherwise buyers in those countries can't order this item.
+                </p>
+              </div>
+            )}
           </div>
         )}
 

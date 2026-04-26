@@ -28,6 +28,10 @@ Indicative numbers — assumes a USD 20 average order value (AOV), no destinatio
 
 Card and local-rail orders end up at similar margin once costs are absorbed. The buyer fee tier difference exists to *cover* the cost difference, not capture more margin from card buyers.
 
+### Shipping is pass-through
+
+Shipping cost is **not** part of the contribution math above. It's a creator-set fee that flows 100% to the creator at payout — we don't take commission on it, don't tax it, and don't reserve against it. The buyer pays `subtotal + buyer-fee + tax + shipping`; the creator nets `0.95 × subtotal + shipping`. Shipping is only refundable while the order is unshipped (escrowStatus = HELD); once the carrier is paid the creator keeps it. See [Shipping policy](shipping-policy).
+
 ## SWIFT payout impact
 
 For tier-3 SEA creators (VN/KH/MM/LA), payout is via SWIFT at USD 35 per wire (`DEFAULT_SWIFT_FEE_USD_CENTS` in [`src/lib/payout-rail.ts`](https://github.com/your-org/noizu-direct/blob/master/src/lib/payout-rail.ts)). Payout minimum is USD 100 (vs USD 10 local) to keep wire-fee drag below 35%.

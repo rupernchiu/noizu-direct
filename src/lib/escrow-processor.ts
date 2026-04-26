@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { createNotification } from '@/lib/notifications'
 import { releaseMilestone } from '@/lib/milestone-release'
 import { createRefund } from '@/lib/airwallex'
+import { computeMaxRefundableUsd } from '@/lib/shipping'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -519,9 +520,25 @@ export async function releaseEscrow(orderId: string, performedBy?: string, note?
   )
 }
 
-/** Refund escrow (full or partial) */
+/**
+ * Refund escrow (full or partial).
+ *
+ * Shipping rule: if the order has already shipped (escrowStatus past HELD),
+ * the shipping cost is retained by the creator — the carrier was paid by them.
+ * The caller can pass `order.amountUsd` for "full refund" and we will auto-cap
+ * to the refundable maximum. Chargebacks bypass this rule and always reverse
+ * the full amount; that path is in the Airwallex webhook handler.
+ */
 export async function refundEscrow(orderId: string, amount: number, performedBy: string, note?: string) {
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { dispute: true } })
+  const maxRefundable = computeMaxRefundableUsd(order)
+  if (amount > maxRefundable) {
+    // Caller likely passed `order.amountUsd` expecting a full refund. Cap it
+    // silently — the audit trail (escrowTransaction.amount + note below) is
+    // still accurate, and surfacing an error here would block dispute UIs
+    // that have no concept of the shipping carve-out.
+    amount = maxRefundable
+  }
   const isPartial = amount < order.amountUsd
   const now = new Date()
 
@@ -596,14 +613,20 @@ export async function refundEscrow(orderId: string, amount: number, performedBy:
     })
   }
 
+  const shippingRetained =
+    order.shippingCostUsd > 0 && amount === maxRefundable && maxRefundable < order.amountUsd
+  const shippingNote = shippingRetained
+    ? ` (shipping of USD ${(order.shippingCostUsd / 100).toFixed(2)} was retained because the order had already shipped)`
+    : ''
+
   await Promise.all([
     createNotification(order.buyerId, 'REFUND_ISSUED',
       'Refund issued',
-      `USD ${(amount / 100).toFixed(2)} has been refunded for order #${orderId.slice(-8).toUpperCase()}.`,
+      `USD ${(amount / 100).toFixed(2)} has been refunded for order #${orderId.slice(-8).toUpperCase()}${shippingNote}.`,
       orderId, '/account/orders'),
     createNotification(order.creatorId, 'DISPUTE_RESOLVED',
       'Dispute resolved',
-      `The dispute for order #${orderId.slice(-8).toUpperCase()} has been resolved. A refund of USD ${(amount / 100).toFixed(2)} was issued to the buyer.`,
+      `The dispute for order #${orderId.slice(-8).toUpperCase()} has been resolved. A refund of USD ${(amount / 100).toFixed(2)} was issued to the buyer${shippingNote}.`,
       orderId, '/dashboard/orders'),
   ])
 }

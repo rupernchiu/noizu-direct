@@ -83,6 +83,7 @@ If a creator wants to absorb their origin-tax burden into the listed price, the 
 - No FX markup beyond Airwallex's published spread
 - No "boost / promote" surcharge
 - No discount-code-on-creator surcharge (when admin issues a comp code, the platform absorbs it, not the creator)
+- **No fee on shipping** — creator-set shipping costs pass through 100% to the creator at payout. We also apply no tax to the shipping line. See [Shipping policy](shipping-policy).
 
 ## How the buyer sees it
 

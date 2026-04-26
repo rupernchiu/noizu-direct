@@ -107,8 +107,13 @@ async function handlePaymentSucceeded(intentId: string) {
     const creatorCommission = isRailAware ? order.creatorCommissionUsd! : 0
     // Phase 2.1 — withhold creator-tax from payout (Layer 1).
     const creatorTax = order.creatorTaxAmountUsd ?? 0
+    // Sprint shipping-1 — shipping pass-through. The full shipping amount the
+    // buyer paid is added to the creator's payout (no fee, no tax). On the
+    // legacy 2.5%-flat path, shipping has already been subtracted from the
+    // backed-out fee implicitly because the order amount included it pre-fee.
+    const shippingPassThrough = order.shippingCostUsd ?? 0
     const creatorAmount = isRailAware
-      ? order.subtotalUsd! - creatorCommission - creatorTax
+      ? order.subtotalUsd! - creatorCommission - creatorTax + shippingPassThrough
       : order.amountUsd - processingFee
 
     await prisma.transaction.create({
@@ -130,6 +135,8 @@ async function handlePaymentSucceeded(intentId: string) {
         // Phase 2.1 / 2.2 — tax snapshot on the transaction.
         creatorTaxUsd: creatorTax,
         buyerCountry: order.buyerCountry,
+        // Sprint shipping-1 — mirror snapshot for payout-time math.
+        shippingCostUsd: shippingPassThrough,
         // Commission funds are held as ESCROW until deposit/balance portions release
         status: isCommission ? 'ESCROW' : 'COMPLETED',
       },

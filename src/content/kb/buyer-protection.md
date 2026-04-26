@@ -51,6 +51,12 @@ Outcomes: full refund, partial refund, release-to-creator.
 
 Nothing extra. The 5.5% / 8% buyer fee includes the cost of running this protection.
 
+## Shipping in disputes
+
+- **Order disputed before shipping** (escrowStatus = HELD) → full refund including shipping cost. Creator hasn't paid the carrier yet.
+- **Order disputed after shipping** (escrowStatus past HELD) → shipping is **retained by the creator**. The carrier was paid; reversing that money would punish the creator for a service they actually rendered. Buyer's refund excludes the shipping line.
+- **Chargeback (any state)** → full reversal including shipping. The card network pulls everything back; we pause payout via `payoutBlocked` so the creator doesn't get paid the shipping pass-through either. Documented in the [Shipping policy](shipping-policy).
+
 ## Card chargebacks vs. our dispute path
 
 Buyers can always go straight to their card issuer (chargeback). We prefer they use our dispute first because:

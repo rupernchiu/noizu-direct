@@ -15,6 +15,11 @@ import {
   loadEnabledTaxCountries,
 } from '@/lib/destination-tax'
 import { convertUsdCentsTo } from '@/lib/fx'
+import {
+  combineCartShipping,
+  isPhysicalType,
+  normalizeCountryToCode,
+} from '@/lib/shipping'
 
 const ALL_RAILS: readonly PaymentRail[] = [...LOCAL_RAILS, ...CARD_RAILS] as const
 
@@ -82,7 +87,10 @@ export async function POST(req: Request) {
   // model snapshotted onto the Order; when null we keep the legacy flat 2.5%
   // path so older clients / non-checkout callers don't break.
   const selectedRail = parseRail(body.paymentRail)
-  const buyerCountry = shippingAddress?.country?.toUpperCase() ?? null
+  // shippingAddress.country can be a full country name ("Malaysia") from the
+  // checkout form. Normalize to ISO-2 so per-country lookups (tax, shipping)
+  // work consistently.
+  const buyerCountry = normalizeCountryToCode(shippingAddress?.country) ?? shippingAddress?.country?.toUpperCase() ?? null
 
   if (!cartSessionId) return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
 
@@ -141,6 +149,20 @@ export async function POST(req: Request) {
       },
     },
   })
+
+  // Per-creator shipping config — fetched here so groups can resolve their rate
+  // without an N+1. Indexed by creatorId (CreatorProfile.id).
+  const creatorIdsForShipping = Array.from(new Set(cartItems.map(i => i.product.creatorId)))
+  const shippingProfiles = await prisma.creatorProfile.findMany({
+    where: { id: { in: creatorIdsForShipping } },
+    select: {
+      id: true,
+      shippingByCountry: true,
+      shippingFreeThresholdUsd: true,
+      combinedShippingEnabled: true,
+    },
+  })
+  const shippingProfileById = new Map(shippingProfiles.map(p => [p.id, p]))
 
   if (cartItems.length === 0) return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
 
@@ -309,6 +331,10 @@ export async function POST(req: Request) {
     grandTotal += destinationTaxAggregate
   }
 
+  // Shipping aggregate added to grandTotal *after* fees/taxes — shipping itself
+  // is a pass-through and isn't subject to either. Computed during the per-group
+  // loop below; we add it here once that loop completes.
+
   // Clean up *stale* PENDING orders for this buyer before creating new ones.
   // M4 (F7): previously this blanket-deleted every PENDING order, which races
   // against a tab the same buyer left open — their in-flight payment intent
@@ -329,10 +355,46 @@ export async function POST(req: Request) {
 
   const createdOrderIds: string[] = []
 
+  let shippingAggregateUsd = 0
   for (const [, items] of creatorMap) {
     const groupSubtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0)
     const groupFee = Math.round((groupSubtotal / subtotal) * processingFee)
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
+
+    // ── Shipping snapshot (sprint shipping-1) ───────────────────────────────
+    // Plumbing-only: rate is set by the creator, the platform takes no fee on
+    // it, and the full amount is added to the creator payout at webhook time.
+    let groupShippingUsd = 0
+    let groupShippingFreeApplied = false
+    if (isPhysicalGroup) {
+      const creatorProfileId = items[0].product.creatorId
+      const sp = shippingProfileById.get(creatorProfileId)
+      const shipResult = combineCartShipping({
+        creatorShippingByCountry: sp?.shippingByCountry,
+        creatorShippingFreeThresholdUsd: sp?.shippingFreeThresholdUsd ?? null,
+        combinedShippingEnabled: sp?.combinedShippingEnabled ?? true,
+        destinationCountry: buyerCountry,
+        items: items.map(i => ({
+          productId: i.productId,
+          productShippingByCountry: (i.product as any).shippingByCountry,
+          productShippingFreeThresholdUsd: (i.product as any).shippingFreeThresholdUsd ?? null,
+          itemSubtotalUsdCents: i.product.price * i.quantity,
+          isPhysical: isPhysicalType(i.product.type),
+        })),
+      })
+      if (shipResult.blocked) {
+        const blockedTitles = shipResult.blockedItemIds
+          .map(id => items.find(it => it.productId === id)?.product.title ?? id)
+          .join(', ')
+        return NextResponse.json(
+          { error: `This creator hasn't set a shipping rate for your country (${buyerCountry ?? 'unknown'}) for: ${blockedTitles}` },
+          { status: 400 },
+        )
+      }
+      groupShippingUsd = shipResult.shippingUsdCents
+      groupShippingFreeApplied = shipResult.freeApplied
+      shippingAggregateUsd += groupShippingUsd
+    }
 
     // Each group only gets the discount belonging to its creator
     const groupDiscount = verifiedDiscountsByCreator.get(items[0].product.creatorId)
@@ -360,7 +422,7 @@ export async function POST(req: Request) {
       : 0
 
     const orderAmount =
-      groupSubtotal + groupFee + groupCreatorTaxUsd + groupDestinationTaxUsd
+      groupSubtotal + groupFee + groupCreatorTaxUsd + groupDestinationTaxUsd + groupShippingUsd
     const orderAmountUsd = orderAmount - groupDiscountShare
 
     // Rail-aware fee snapshot. Apportion the cart-level breakdown to each
@@ -416,6 +478,10 @@ export async function POST(req: Request) {
         reverseChargeApplied,
         buyerBusinessTaxId: reverseChargeApplied ? buyer?.businessTaxId ?? null : null,
         buyerCountry,
+        // Shipping snapshot (sprint shipping-1) — passes through to creator at payout
+        shippingCostUsd: groupShippingUsd,
+        shippingDestinationCountry: isPhysicalGroup ? buyerCountry : null,
+        shippingFreeApplied: groupShippingFreeApplied,
         // Commission fields
         commissionStatus: isCommissionGroup ? 'PENDING_ACCEPTANCE' : null,
         commissionAcceptDeadlineAt: isCommissionGroup
@@ -431,6 +497,10 @@ export async function POST(req: Request) {
     })
     createdOrderIds.push(order.id)
   }
+
+  // Add aggregate shipping (computed in the per-group loop above) to grandTotal
+  // before FX conversion. Shipping has no fee or tax component — pure pass-through.
+  grandTotal += shippingAggregateUsd
 
   // Convert grand total to the buyer's selected display currency
   const grandTotalDisplay = await convertToDisplayCurrency(grandTotal, currency)

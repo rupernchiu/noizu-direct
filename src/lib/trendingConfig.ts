@@ -1,5 +1,5 @@
 export const TRENDING_CONFIG = {
-  version: 3,
+  version: 4,
   weights: {
     orders:   0.40,
     wishlist: 0.25,
@@ -9,6 +9,11 @@ export const TRENDING_CONFIG = {
   },
   decayFactor: 0.95,
   windowDays: 7,
+  // Sprint shipping-1: small additive boost for products that qualify for free
+  // shipping at checkout (creator or product has set a free-ship threshold).
+  // Intentionally NOT part of `weights` because (a) it's a binary signal, not a
+  // 0–1 ratio, and (b) the weights-sum-to-1 invariant must hold.
+  freeShipBoost: 5,
 } as const
 
 // Sanity-check that weights sum to 1 (floating-point tolerance)

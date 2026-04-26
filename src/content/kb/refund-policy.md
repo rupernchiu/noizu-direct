@@ -36,7 +36,10 @@ After the window: dispute path closed automatically; manual support escalation o
 - **Item subtotal** — yes, always (refundable portion).
 - **Buyer fee (5.5% / 8%)** — refunded proportional to refund amount. We don't keep the buyer fee on a refunded order.
 - **Destination tax** — refunded with the order; reserve adjusts.
+- **Shipping cost** — refunded **only if the order has not yet shipped** (escrowStatus = HELD). Once tracking is added the carrier was paid and shipping is retained by the creator. **Chargebacks bypass this rule** — the card network reverses the full payment, including shipping, and the creator wears the loss via the existing `payoutBlocked` mechanism. See [Shipping policy](shipping-policy) for the carve-out detail.
 - **Card-network fees** — not refunded by Airwallex on refund (lost cost). Documented in unit economics as refund drag.
+
+The `refundEscrow()` helper in `src/lib/escrow-processor.ts` calls `computeMaxRefundableUsd(order)` from `src/lib/shipping.ts` to enforce the shipping carve-out automatically: if a caller passes the full `order.amountUsd` for an already-shipped order, the amount is silently capped to `amountUsd - shippingCostUsd` and the buyer notification flags the retention.
 
 ## Digital downloads — special rules
 

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { TRENDING_CONFIG } from '@/lib/trendingConfig'
+import { parseShippingMap } from '@/lib/shipping'
 
 export async function calculateTrending() {
   const now = new Date()
@@ -7,7 +8,19 @@ export async function calculateTrending() {
 
   const products = await prisma.product.findMany({
     where: { isActive: true, isTrendingSuppressed: false },
-    select: { id: true, manualBoost: true, creator: { select: { userId: true } } },
+    select: {
+      id: true,
+      manualBoost: true,
+      shippingByCountry: true,
+      shippingFreeThresholdUsd: true,
+      creator: {
+        select: {
+          userId: true,
+          shippingByCountry: true,
+          shippingFreeThresholdUsd: true,
+        },
+      },
+    },
   })
 
   let updated = 0
@@ -35,7 +48,17 @@ export async function calculateTrending() {
 }
 
 async function processTrendingBatch(
-  products: { id: string; manualBoost: number; creator: { userId: string } }[],
+  products: {
+    id: string
+    manualBoost: number
+    shippingByCountry: string | null
+    shippingFreeThresholdUsd: number | null
+    creator: {
+      userId: string
+      shippingByCountry: string | null
+      shippingFreeThresholdUsd: number | null
+    }
+  }[],
   now: Date,
   windowStart: Date,
 ) {
@@ -77,7 +100,17 @@ async function processTrendingBatch(
     const daysSinceActivity = Math.max(0, (now.getTime() - mostRecent.getTime()) / (24 * 60 * 60 * 1000))
     const decayedScore = raw * Math.pow(TRENDING_CONFIG.decayFactor, daysSinceActivity)
     const manualBoost = product.manualBoost
-    const finalScore = decayedScore + manualBoost
+
+    const productMap = parseShippingMap(product.shippingByCountry)
+    const creatorMap = parseShippingMap(product.creator.shippingByCountry)
+    const hasRates =
+      (productMap && Object.keys(productMap).length > 0) ||
+      (creatorMap && Object.keys(creatorMap).length > 0)
+    const freeThreshold =
+      product.shippingFreeThresholdUsd ?? product.creator.shippingFreeThresholdUsd ?? null
+    const freeShipBoost = hasRates && freeThreshold != null ? TRENDING_CONFIG.freeShipBoost : 0
+
+    const finalScore = decayedScore + manualBoost + freeShipBoost
 
     const breakdown = {
       orders_7d,
@@ -88,6 +121,7 @@ async function processTrendingBatch(
       raw,
       decay_applied: daysSinceActivity,
       manualBoost,
+      freeShipBoost,
       final: finalScore,
       version: TRENDING_CONFIG.version,
     }

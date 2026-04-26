@@ -7,6 +7,7 @@ import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 import { auth } from '@/lib/auth'
 import { rankProducts, deriveCategoryAffinity, type ScoredProduct } from '@/lib/discovery'
 import { isCreatorOwnedDigitalKey } from '@/lib/upload-validators'
+import { hasAnyShippingRate, isPhysicalType } from '@/lib/shipping'
 
 // Strict shape for a creator-supplied digital deliverable. The `.key` field
 // MUST live under the caller's own digital/<profileId>/ prefix — this is
@@ -199,6 +200,18 @@ export async function POST(req: Request) {
 
   if (body.type === 'POD' && !body.podProviderId) {
     return NextResponse.json({ error: 'A POD provider is required' }, { status: 400 })
+  }
+
+  // Block publish for PHYSICAL/POD listings without any shipping rate set
+  // (no per-listing override yet at create time, so check creator's defaults).
+  if (isPhysicalType(body.type) && !hasAnyShippingRate(profile.shippingByCountry)) {
+    return NextResponse.json(
+      {
+        error:
+          'Set shipping rates before publishing physical or POD listings. Open Dashboard → Shipping to add per-country rates.',
+      },
+      { status: 400 },
+    )
   }
 
   if (body.podProviderId) {

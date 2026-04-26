@@ -66,6 +66,7 @@ export const KB_MANIFEST: readonly KbSection[] = [
       { slug: 'fee-model',          title: 'Fee model',           blurb: '5/5.5/8 + rail-aware breakdown.' },
       { slug: 'buyer-protection',   title: 'Buyer protection',    blurb: 'What we cover, what we don\'t.' },
       { slug: 'refund-policy',      title: 'Refund policy',       blurb: 'Eligibility windows by category.' },
+      { slug: 'shipping-policy',    title: 'Shipping policy',     blurb: 'Per-country rates, combined shipping, free-ship boost, refund carve-out.' },
       { slug: 'storage-policy',     title: 'Storage policy',      blurb: 'Plans, quotas, grace, retention.' },
       { slug: 'terms-summary',      title: 'Terms summary',       blurb: 'Plain-English read of ToS + Creator Agreement.' },
     ],

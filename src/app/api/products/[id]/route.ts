@@ -4,6 +4,7 @@ import { requireCreator, verifyProductOwnership } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 import { isCreatorOwnedDigitalKey } from '@/lib/upload-validators'
+import { serializeShippingMap, type ShippingRateMap, ROW_KEY, SHIPPING_COUNTRIES, hasAnyShippingRate, isPhysicalType } from '@/lib/shipping'
 
 // Same strict shape as POST /api/products — see that file for context.
 const digitalFileSchema = z.object({
@@ -48,6 +49,33 @@ export async function PATCH(
     })
     if (!provider) {
       return NextResponse.json({ error: 'Invalid POD provider' }, { status: 400 })
+    }
+  }
+
+  // Block publish for PHYSICAL/POD listings unless either the product override
+  // OR the creator default has at least one shipping rate. We allow the edit
+  // when isActive isn't being flipped to true, so creators can still tweak
+  // unpublished/archived drafts.
+  if (body.isActive === true && isPhysicalType(product.type)) {
+    const incomingProductMap = body.shippingByCountry !== undefined
+      ? body.shippingByCountry
+      : product.shippingByCountry
+    let creatorDefault: string | null = null
+    if (!hasAnyShippingRate(incomingProductMap as any)) {
+      const creator = await prisma.creatorProfile.findUnique({
+        where: { id: product.creatorId },
+        select: { shippingByCountry: true },
+      })
+      creatorDefault = creator?.shippingByCountry ?? null
+    }
+    if (!hasAnyShippingRate(incomingProductMap as any) && !hasAnyShippingRate(creatorDefault)) {
+      return NextResponse.json(
+        {
+          error:
+            'Set shipping rates before publishing physical or POD listings. Add per-country rates in this listing or in Dashboard → Shipping.',
+        },
+        { status: 400 },
+      )
     }
   }
 
@@ -103,6 +131,32 @@ export async function PATCH(
       }),
       ...(body.podExternalUrl !== undefined && {
         podExternalUrl: body.podExternalUrl == null ? null : (body.podExternalUrl as string),
+      }),
+      // Per-listing shipping overrides (sprint shipping-1).
+      // null on either field means inherit from CreatorProfile.
+      ...(body.shippingByCountry !== undefined && {
+        shippingByCountry: (() => {
+          const v = body.shippingByCountry
+          if (v == null || v === '') return null
+          if (typeof v !== 'object' || Array.isArray(v)) return null
+          const validKeys = new Set<string>([ROW_KEY, ...SHIPPING_COUNTRIES.map(c => c.code)])
+          const cleaned: ShippingRateMap = {}
+          for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+            const key = k.toUpperCase()
+            if (!validKeys.has(key)) continue
+            if (val == null || val === '') continue
+            const num = Number(val)
+            if (!Number.isFinite(num) || num < 0 || num > 50_000) continue
+            cleaned[key as keyof ShippingRateMap] = Math.round(num)
+          }
+          return serializeShippingMap(cleaned)
+        })(),
+      }),
+      ...(body.shippingFreeThresholdUsd !== undefined && {
+        shippingFreeThresholdUsd:
+          body.shippingFreeThresholdUsd == null || body.shippingFreeThresholdUsd === ''
+            ? null
+            : Math.round(Number(body.shippingFreeThresholdUsd)),
       }),
       // Commission fields
       ...(body.commissionDepositPercent !== undefined && {
