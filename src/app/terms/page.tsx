@@ -19,7 +19,7 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | noizu.direct',
+  title: 'Terms of Service',
   description:
     'The agreement between noizu.direct and the buyers, creators, and visitors who use the platform.',
   alternates: { canonical: 'https://noizu.direct/terms' },

@@ -105,7 +105,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavLink href="/dashboard/pod-settings"><Printer className="size-4" />POD Settings</NavLink>
       <NavLink href="/dashboard/popup"><Zap className="size-4" />Popup</NavLink>
       <NavLink href="/dashboard/discount-codes"><Tag className="size-4" />Discount Codes</NavLink>
-      <NavLink href="/dashboard/verification">
+      <NavLink href="/dashboard/settings/kyc">
         <ShieldCheck className="size-4" />
         Verification
         {kycIncomplete && (
@@ -161,7 +161,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 <div>
                   <p className="font-semibold text-amber-300">Your store is unverified</p>
                   <p className="mt-0.5">Complete your identity verification to receive a Verified badge. Buyers can see your store is unverified until you do.</p>
-                  <Link href="/dashboard/verification" className="inline-block mt-2 text-xs font-semibold underline hover:text-amber-300 transition-colors">
+                  <Link href="/dashboard/settings/kyc" className="inline-block mt-2 text-xs font-semibold underline hover:text-amber-300 transition-colors">
                     Complete verification →
                   </Link>
                 </div>

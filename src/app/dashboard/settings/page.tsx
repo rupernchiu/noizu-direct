@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { User, Video, Printer, Zap, Tag, ShieldCheck, FileCheck2 } from 'lucide-react'
 
-export const metadata = { title: 'Settings | noizu.direct' }
+export const metadata = { title: 'Settings' }
 
 const links = [
   { href: '/dashboard/profile',             label: 'Profile',          icon: User,        desc: 'Public store info, socials, avatars, banner' },
@@ -11,7 +11,7 @@ const links = [
   { href: '/dashboard/pod-settings',        label: 'POD Settings',     icon: Printer,     desc: 'Print-on-demand providers & shipping times' },
   { href: '/dashboard/popup',               label: 'Popup',            icon: Zap,         desc: 'Visitor popup & campaign CTA' },
   { href: '/dashboard/discount-codes',      label: 'Discount Codes',   icon: Tag,         desc: 'Promo codes for your store' },
-  { href: '/dashboard/verification',        label: 'Verification',     icon: ShieldCheck, desc: 'Identity & payout verification' },
+  { href: '/dashboard/settings/kyc',        label: 'Verification',     icon: ShieldCheck, desc: 'Identity & payout verification' },
   { href: '/dashboard/settings/kyc',         label: 'KYC Documents',    icon: FileCheck2,  desc: 'View or replace your identity documents (append-only)' },
 ]
 

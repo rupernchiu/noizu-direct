@@ -20,12 +20,12 @@ export async function generateMetadata({
 
   if (meta) {
     return {
-      title: `${meta.h1} | noizu.direct`,
+      title: `${meta.h1}`,
       description: meta.description,
       keywords: meta.keywords,
       alternates: { canonical: `https://noizu.direct/marketplace?category=${meta.slug}` },
       openGraph: {
-        title: `${meta.h1} | noizu.direct`,
+        title: `${meta.h1}`,
         description: meta.description,
         url: `https://noizu.direct/marketplace?category=${meta.slug}`,
         images: [{ url: meta.ogImage, width: 1200, height: 630, alt: meta.h1 }],
@@ -34,11 +34,11 @@ export async function generateMetadata({
   }
 
   return {
-    title: 'Browse Creator Products | noizu.direct Marketplace',
+    title: 'Browse Creator Products',
     description: 'Discover original art, doujin, cosplay prints and merch from Southeast Asian creators. Shop digital downloads and physical products.',
     alternates: { canonical: 'https://noizu.direct/marketplace' },
     openGraph: {
-      title: 'Browse Creator Products | noizu.direct Marketplace',
+      title: 'Browse Creator Products',
       description: 'Discover original art, doujin, cosplay prints and merch from Southeast Asian creators.',
       url: 'https://noizu.direct/marketplace',
       images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'noizu.direct Marketplace' }],

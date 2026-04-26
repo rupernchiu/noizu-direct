@@ -12,7 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 
-export const metadata = { title: 'How commissions work | noizu.direct' }
+export const metadata = { title: 'How commissions work' }
 
 type Step = {
   icon: React.ElementType

@@ -28,12 +28,12 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'How Escrow Works | Buyer & Seller Protection | noizu.direct',
+  title: 'How Escrow Works | Buyer & Seller Protection',
   description:
     'Your payment is held safely until both sides confirm the transaction. Fraud protection for buyers, chargeback protection for creators. Published release windows by product type.',
   alternates: { canonical: 'https://noizu.direct/escrow' },
   openGraph: {
-    title: 'How Escrow Works | noizu.direct',
+    title: 'How Escrow Works',
     description:
       'Escrow-protected payments. Buyer fraud guarantee. Seller chargeback protection. Clear release windows.',
     url: 'https://noizu.direct/escrow',

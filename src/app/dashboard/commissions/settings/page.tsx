@@ -6,7 +6,7 @@ import { CommissionSettingsForm } from './CommissionSettingsForm'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
 
-export const metadata = { title: 'Commission settings | noizu.direct' }
+export const metadata = { title: 'Commission settings' }
 
 type PricingTier = { tier: string; price: number; description: string }
 

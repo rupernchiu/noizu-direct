@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | noizu.direct',
+  title: 'Privacy Policy',
   description:
     'How noizu.direct collects, uses, and protects the personal information of buyers, creators, and visitors to the platform.',
   alternates: { canonical: 'https://noizu.direct/privacy' },

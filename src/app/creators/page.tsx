@@ -10,11 +10,11 @@ import {
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Discover SEA Creators | noizu.direct',
+  title: 'Discover SEA Creators',
   description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on noizu.direct. Support independent SEA creators.',
   alternates: { canonical: 'https://noizu.direct/creators' },
   openGraph: {
-    title: 'Discover SEA Creators | noizu.direct',
+    title: 'Discover SEA Creators',
     description: 'Browse Southeast Asian cosplayers, illustrators, doujin artists, and prop makers on noizu.direct.',
     url: 'https://noizu.direct/creators',
     images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'SEA Creators on noizu.direct' }],

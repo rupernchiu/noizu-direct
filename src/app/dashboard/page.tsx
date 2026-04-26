@@ -142,14 +142,14 @@ export default async function DashboardPage() {
       tone: 'red',
       title: 'Your KYC application was rejected',
       body: creatorApp?.rejectionReason || 'Review the rejection reason and resubmit to unlock payouts.',
-      cta: { label: 'Resubmit application', href: '/creator/apply' },
+      cta: { label: 'Resubmit application', href: '/start-selling' },
     }
   } else if (appStatus === 'DRAFT') {
     banner = {
       tone: 'amber',
       title: 'Finish your creator application to receive payouts',
       body: 'You can list products and accept orders, but earnings are held in escrow until KYC is approved.',
-      cta: { label: 'Resume application', href: '/creator/apply' },
+      cta: { label: 'Resume application', href: '/start-selling' },
     }
   } else if (appStatus === 'SUBMITTED' || appStatus === 'UNDER_REVIEW') {
     banner = {
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
       tone: 'amber',
       title: 'Add your payout details',
       body: 'Your KYC is approved, but we need a payout destination before we can release earnings.',
-      cta: { label: 'Set up payouts', href: '/dashboard/payouts' },
+      cta: { label: 'Set up payouts', href: '/dashboard/earnings/payout' },
     }
   }
 

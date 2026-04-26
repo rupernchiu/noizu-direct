@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { FileText, Briefcase, Layers } from 'lucide-react'
 
-export const metadata = { title: 'Commissions | noizu.direct admin' }
+export const metadata = { title: 'Admin · Commissions' }
 
 function fmt(cents: number) {
   return `$${(cents / 100).toFixed(2)}`

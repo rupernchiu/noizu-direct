@@ -17,7 +17,7 @@ function buildCsp(nonce: string): string {
     // (script-src stays hardened with the nonce + strict-dynamic).
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "img-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://images.unsplash.com https://picsum.photos https://fastly.picsum.photos https://i.ytimg.com https://img.youtube.com https://*.airwallex.com",
+    "img-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://images.unsplash.com https://picsum.photos https://fastly.picsum.photos https://i.ytimg.com https://img.youtube.com https://*.airwallex.com https://c.clarity.ms",
     "media-src 'self' blob: data: https://*.r2.dev https://*.r2.cloudflarestorage.com https://www.w3schools.com",
     "connect-src 'self' https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.clarity.ms https://c.clarity.ms https://*.airwallex.com",
     "frame-ancestors 'self'",

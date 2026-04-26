@@ -32,12 +32,12 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Creator Handbook | noizu.direct',
+  title: 'Creator Handbook',
   description:
     'A visual handbook for noizu.direct creators — onboarding, pricing, escrow, content policy, discovery, and playbooks.',
   alternates: { canonical: 'https://noizu.direct/creator-handbook' },
   openGraph: {
-    title: 'Creator Handbook | noizu.direct',
+    title: 'Creator Handbook',
     description:
       'Everything a creator needs on noizu.direct — at a glance.',
     url: 'https://noizu.direct/creator-handbook',

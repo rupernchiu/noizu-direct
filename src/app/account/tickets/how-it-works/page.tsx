@@ -13,7 +13,7 @@ import {
   Ticket,
 } from 'lucide-react'
 
-export const metadata = { title: 'How tickets work | noizu.direct' }
+export const metadata = { title: 'How tickets work' }
 
 type Step = {
   icon: React.ElementType

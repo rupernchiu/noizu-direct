@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, HardDrive } from 'lucide-react'
 import { SubscribeForm } from './SubscribeForm'
 
-export const metadata = { title: 'Upgrade storage | noizu.direct' }
+export const metadata = { title: 'Upgrade storage' }
 
 function gb(bytes: number) {
   if (bytes >= 1024 * 1024 * 1024) return `${Math.round(bytes / (1024 * 1024 * 1024))} GB`

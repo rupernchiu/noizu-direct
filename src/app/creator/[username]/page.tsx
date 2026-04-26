@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const tags: string[] = (() => { try { return JSON.parse(creator.categoryTags) } catch { return [] } })()
   const tagStr = tags.length > 0 ? tags.slice(0, 2).join(' & ') + ' ' : ''
-  const title = `${creator.displayName} — ${tagStr}Creator | noizu.direct`
+  const title = `${creator.displayName} — ${tagStr}Creator`
   const description = creator.bio
     ? `${creator.bio.slice(0, 120)}${creator.bio.length > 120 ? '…' : ''} — Browse ${creator.displayName}'s products on noizu.direct.`
     : `Browse products by ${creator.displayName} on noizu.direct, the SEA creator marketplace.`

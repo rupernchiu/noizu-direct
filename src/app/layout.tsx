@@ -63,17 +63,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`h-full ${poppins.variable}`} suppressHydrationWarning>
       <head>
-        {/* Plain <script> rather than Next's <Script> — beforeInteractive
-            needs to run in <head> synchronously. suppressHydrationWarning is
-            required because browsers strip the `nonce` attribute from the
-            DOM after parsing (CSP spec), so React's client-side attribute
-            reflection reads "" while the server rendered the real value. The
-            mismatch is cosmetic; the script already executed against the
-            original nonce in <head>. */}
-        <script
+        {/* `next/script` with beforeInteractive renders into <head> server-side,
+            avoiding React's "script tag in component" warning that triggers
+            on a literal <script>. Theme must apply pre-paint to prevent FOUC. */}
+        <Script
           id="theme-init"
+          strategy="beforeInteractive"
           nonce={nonce}
-          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: themeInitScript }}
         />
       </head>

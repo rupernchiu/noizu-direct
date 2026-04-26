@@ -20,12 +20,12 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Help Centre | noizu.direct',
+  title: 'Help Centre',
   description:
     'Guides, answers, and support for buyers and creators on noizu.direct. Orders, payments, shipping, commissions, account, and trust & safety — all in one place.',
   alternates: { canonical: 'https://noizu.direct/help' },
   openGraph: {
-    title: 'Help Centre | noizu.direct',
+    title: 'Help Centre',
     description:
       'Guides and answers for buyers and creators on the noizu.direct marketplace.',
     url: 'https://noizu.direct/help',

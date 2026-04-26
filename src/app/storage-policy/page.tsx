@@ -20,12 +20,12 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Storage Policy | noizu.direct',
+  title: 'Storage Policy',
   description:
     'Where noizu.direct stores data and creator files, how long we keep it, how we encrypt and back it up, and how you can request export or deletion. Malaysia primary, EEA replicas.',
   alternates: { canonical: 'https://noizu.direct/storage-policy' },
   openGraph: {
-    title: 'Storage Policy | noizu.direct',
+    title: 'Storage Policy',
     description:
       'Data and file storage practices for the noizu.direct marketplace — regions, encryption, retention, recovery, deletion.',
     url: 'https://noizu.direct/storage-policy',

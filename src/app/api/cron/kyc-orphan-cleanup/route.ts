@@ -29,7 +29,7 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:7000'
 // ── Email template for day-5 reminder ────────────────────────────────────────
 
 function reminderHtml(name: string): string {
-  const resumeUrl = `${baseUrl}/creator/apply`
+  const resumeUrl = `${baseUrl}/start-selling`
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"></head>
 <body style="margin:0;padding:0;background:#0a0a0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0f;padding:40px 16px;">

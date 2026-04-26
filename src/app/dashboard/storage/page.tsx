@@ -5,7 +5,7 @@ import { StorageClient } from './StorageClient'
 import { getUserQuota } from '@/lib/storage-quota'
 import type { StorageFile, StorageBreakdown } from '@/app/api/creator/storage/route'
 
-export const metadata = { title: 'Storage Manager | noizu.direct' }
+export const metadata = { title: 'Storage Manager' }
 
 export default async function StoragePage() {
   const session = await auth()

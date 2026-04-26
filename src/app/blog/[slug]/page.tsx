@@ -49,7 +49,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: 'article',
       images: [{ url: ogImage, width: 800, height: 400, alt: `${title} — noizu.direct Articles` }],
       authors: post.author?.name ? [post.author.name] : undefined,
-      publishedTime: post.publishedAt?.toISOString(),
+      publishedTime: post.publishedAt
+        ? (post.publishedAt instanceof Date ? post.publishedAt : new Date(post.publishedAt)).toISOString()
+        : undefined,
     },
     twitter: {
       card: 'summary_large_image',
@@ -71,6 +73,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   if (!post || post.status !== 'PUBLISHED') notFound()
   if (!cachedPost) await setCached(cacheKey, post, CACHE_TTL.blogPost)
 
+  // Redis JSON-serialises Date fields as strings; rehydrate when reading from
+  // cache so downstream `.toISOString()` calls don't blow up. Skip for fresh
+  // DB hits (already real Dates).
+  const publishedAt = post.publishedAt
+    ? (post.publishedAt instanceof Date ? post.publishedAt : new Date(post.publishedAt))
+    : null
+  const updatedAt = post.updatedAt instanceof Date ? post.updatedAt : new Date(post.updatedAt)
+
   // Increment view count (fire and forget)
   prisma.post.update({ where: { id: post.id }, data: { viewCount: { increment: 1 } } }).catch(() => {})
 
@@ -85,8 +95,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     image: post.coverImage ? { '@type': 'ImageObject', url: post.coverImage, width: 800, height: 400 } : undefined,
     author: { '@type': 'Person', name: 'noizu.direct' },
     publisher: { '@type': 'Organization', name: 'noizu.direct', logo: { '@type': 'ImageObject', url: 'https://noizu.direct/logo.png' } },
-    datePublished: post.publishedAt?.toISOString(),
-    dateModified: post.updatedAt?.toISOString(),
+    datePublished: publishedAt?.toISOString(),
+    dateModified: updatedAt.toISOString(),
     mainEntityOfPage: { '@type': 'WebPage', '@id': `https://noizu.direct/blog/${post.slug}` },
     keywords: (() => { try { return (JSON.parse(post.tags) as string[]).join(', ') } catch { return '' } })(),
     articleSection: 'Creator Community',
@@ -146,8 +156,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
           <div>
             <p className="text-sm text-foreground">{post.author.name}</p>
-            {post.publishedAt && (
-              <p className="text-xs text-muted-foreground">{new Date(post.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            {publishedAt && (
+              <p className="text-xs text-muted-foreground">{publishedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
             )}
           </div>
         </div>

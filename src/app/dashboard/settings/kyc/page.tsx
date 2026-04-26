@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { ShieldCheck, ArrowLeft } from 'lucide-react'
 import { KycSettingsClient, type KycSlot } from './KycSettingsClient'
 
-export const metadata = { title: 'KYC documents | noizu.direct' }
+export const metadata = { title: 'KYC documents' }
 
 type KycCategory = 'id_front' | 'id_back' | 'selfie'
 const CATEGORIES: KycCategory[] = ['id_front', 'id_back', 'selfie']

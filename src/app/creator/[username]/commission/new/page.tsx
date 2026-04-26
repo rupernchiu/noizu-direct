@@ -12,7 +12,7 @@ interface PageProps { params: Promise<{ username: string }> }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { username } = await params
-  return { title: `Request commission — ${username} | noizu.direct`, robots: { index: false } }
+  return { title: `Request commission — ${username}`, robots: { index: false } }
 }
 
 export default async function NewCommissionRequestPage({ params }: PageProps) {

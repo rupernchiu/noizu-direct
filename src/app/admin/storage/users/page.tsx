@@ -5,7 +5,7 @@ import { HardDrive, Gift } from 'lucide-react'
 import { GrantBonusForm } from './GrantBonusForm'
 import { Pagination } from '@/components/ui/Pagination'
 
-export const metadata = { title: 'Storage users | noizu.direct admin' }
+export const metadata = { title: 'Admin · Storage users' }
 
 const PER_PAGE = 50
 

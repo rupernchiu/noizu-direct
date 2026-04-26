@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Join as a Creator | noizu.direct',
+  title: 'Join as a Creator',
   robots: { index: false, follow: true },
 }
 

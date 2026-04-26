@@ -5,11 +5,11 @@ import { getCached, setCached, CACHE_KEYS, CACHE_TTL } from '@/lib/redis'
 import { Pagination } from '@/components/ui/Pagination'
 
 export const metadata: Metadata = {
-  title: 'Articles & Creator Stories | noizu.direct',
+  title: 'Articles & Creator Stories',
   description: 'News, guides, creator spotlights, and shop picks from the noizu.direct community. Tips for SEA cosplayers, doujin artists, and indie creators.',
   alternates: { canonical: 'https://noizu.direct/blog' },
   openGraph: {
-    title: 'Articles & Creator Stories | noizu.direct',
+    title: 'Articles & Creator Stories',
     description: 'News, guides, and creator spotlights from the noizu.direct community.',
     url: 'https://noizu.direct/blog',
     images: [{ url: '/images/og-default.jpg', width: 1200, height: 630, alt: 'noizu.direct Articles' }],
@@ -365,7 +365,7 @@ export default async function BlogPage({
                 const prod = item.product
                 const img = firstImage(prod.images)
                 return (
-                  <Link key={`product-${prod.id}-${i}`} href={`/products/${prod.id}`} className="group">
+                  <Link key={`product-${prod.id}-${i}`} href={`/product/${prod.id}`} className="group">
                     <article className="rounded-xl overflow-hidden bg-card border border-secondary/30 hover:border-secondary/60 transition-colors h-full flex flex-col">
                       <div className="relative">
                         {img ? (
@@ -459,7 +459,7 @@ export default async function BlogPage({
                     const img = firstImage(p.images)
                     return (
                       <li key={p.id}>
-                        <Link href={`/products/${p.id}`} className="flex items-center gap-3 group">
+                        <Link href={`/product/${p.id}`} className="flex items-center gap-3 group">
                           {img ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={img} alt={p.title} className="w-14 h-14 rounded-lg object-cover shrink-0 border border-border" />

@@ -21,12 +21,12 @@ import {
 } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Fees & Payouts | noizu.direct',
+  title: 'Fees & Payouts',
   description:
     'Flat 5% platform fee. 2.5% buyer processing. No listing fees, no subscriptions, no surprises. 0% during launch through 31 October 2026.',
   alternates: { canonical: 'https://noizu.direct/fees-payouts' },
   openGraph: {
-    title: 'Fees & Payouts | noizu.direct',
+    title: 'Fees & Payouts',
     description:
       'One number to remember: 5%. Buyer pays 2.5% processing. Zero during launch.',
     url: 'https://noizu.direct/fees-payouts',
