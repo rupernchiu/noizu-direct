@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
-import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield, Gavel, FolderLock, FileSearch, Percent } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield, Gavel, FolderLock, FileSearch, Percent, LifeBuoy } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
 import { AdminMobileNav } from './AdminMobileNav'
 
@@ -32,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       { href: '/admin/chargebacks',          label: 'Chargebacks',      group: 'Main' },
       { href: '/admin/disputes',             label: 'Disputes',         group: 'Main' },
       { href: '/admin/fraud',                label: 'Fraud',            group: 'Main' },
+      { href: '/admin/cs',                   label: 'CS Workbench',     group: 'Main' },
       { href: '/admin/discounts',            label: 'Discounts',        group: 'Main' },
       { href: '/admin/emails',               label: 'Emails',           group: 'Main' },
       { href: '/admin/cms',                  label: 'CMS',              group: 'Main' },
@@ -81,6 +82,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <NavLink href="/admin/chargebacks"><AlertTriangle className="size-4" />Chargebacks</NavLink>
                   <NavLink href="/admin/disputes"><Gavel className="size-4" />Disputes</NavLink>
                   <NavLink href="/admin/fraud"><Shield className="size-4" />Fraud</NavLink>
+                  <NavLink href="/admin/cs"><LifeBuoy className="size-4" />CS Workbench</NavLink>
                   <NavLink href="/admin/discounts"><Percent className="size-4" />Discounts</NavLink>
                   <NavLink href="/admin/emails"><Mail className="size-4" />Emails</NavLink>
                   <NavLink href="/admin/cms"><FileText className="size-4" />CMS</NavLink>
