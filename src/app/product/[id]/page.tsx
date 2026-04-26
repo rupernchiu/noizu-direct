@@ -16,6 +16,7 @@ import {
   ProductRail, CreatorRail, ArticleRail, dailyShuffle,
   type RailProduct, type RailCreator, type RailArticle,
 } from '@/components/discovery/RecommendationRails'
+import { convertUsdCentsTo } from '@/lib/fx'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!product) return {}
 
   const images: string[] = (() => { try { return JSON.parse(product.images) } catch { return [] } })()
-  const price = `RM${(product.price / 100).toFixed(2)} MYR`
+  const price = `USD ${(product.price / 100).toFixed(2)}`
   const delivery = product.type === 'DIGITAL' ? 'Instant digital download.' : 'Ships from Southeast Asia.'
   const description = `${product.description ? product.description.slice(0, 100) + '. ' : ''}By ${product.creator.displayName}. ${price}. ${delivery}`
   const title = `${product.title} by ${product.creator.displayName}`
@@ -66,7 +67,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 function formatPrice(cents: number): string {
-  return `RM${(cents / 100).toFixed(2)}`
+  return `$${(cents / 100).toFixed(2)}`
+}
+
+// SEA-buyer hint currencies. We render small "≈ MYR X · SGD Y" copy under the
+// USD price so a Malaysian or Singaporean buyer can eyeball the spend without
+// having to flip the checkout selector. Server-rendered using the same FX
+// helper that powers the checkout converter, so the numbers don't drift.
+const PRODUCT_PAGE_HINT_CURRENCIES = ['MYR', 'SGD'] as const
+
+async function getPriceHints(amountUsdCents: number): Promise<Array<{ code: string; formatted: string }>> {
+  const out: Array<{ code: string; formatted: string }> = []
+  for (const code of PRODUCT_PAGE_HINT_CURRENCIES) {
+    try {
+      const { displayAmount } = await convertUsdCentsTo(amountUsdCents, code)
+      const major = displayAmount / 100
+      const formatted = new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: code,
+        maximumFractionDigits: 2,
+      }).format(major)
+      out.push({ code, formatted })
+    } catch {
+      // FX upstream down — skip this currency rather than failing the page render.
+    }
+  }
+  return out
 }
 
 function parseImages(raw: string): string[] {
@@ -113,6 +139,8 @@ export default async function ProductPage({ params }: PageProps) {
   })
 
   if (!product) notFound()
+
+  const priceHints = await getPriceHints(product.price)
 
   const recommendations = await prisma.productRecommendation.findMany({
     where: { sourceProductId: product.id },
@@ -229,7 +257,7 @@ export default async function ProductPage({ params }: PageProps) {
       '@type': 'Offer',
       url: `https://noizu.direct/product/${product.id}`,
       price: (product.price / 100).toFixed(2),
-      priceCurrency: 'MYR',
+      priceCurrency: 'USD',
       availability: jsonLdInStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: { '@type': 'Person', name: product.creator.displayName },
@@ -315,7 +343,12 @@ export default async function ProductPage({ params }: PageProps) {
 
             {/* Price */}
             <div className="flex flex-col gap-1">
-              <span className="text-3xl font-bold text-primary">{formatPrice(product.price)}</span>
+              <span className="text-3xl font-bold text-primary">{formatPrice(product.price)} <span className="text-base font-normal text-muted-foreground">USD</span></span>
+              {priceHints.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  ≈ {priceHints.map(h => h.formatted).join(' · ')}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground">A 2.5% processing fee is added at checkout</span>
             </div>
 
