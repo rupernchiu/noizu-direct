@@ -794,6 +794,12 @@ export function CheckoutPageClient({ groups: initialGroups, hasPhysical: initial
                     <span className="text-success">−{formatPrice(liveDiscount)}</span>
                   </div>
                 )}
+                {liveHasPhysical && (
+                  <div className="flex items-center justify-between text-sm" title="Sellers set their item prices to include domestic shipping. Cross-border or expedited shipping may be coordinated directly with the seller.">
+                    <span className="text-muted-foreground">Shipping</span>
+                    <span className="text-foreground">Included by seller</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Processing fee (2.5%)</span>
                   <span className="text-foreground">{formatPrice(liveProcessingFee)}</span>
