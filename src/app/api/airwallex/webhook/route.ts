@@ -740,7 +740,7 @@ async function handleRefundUpdate(obj: Record<string, any>, succeeded: boolean) 
 
   await prisma.auditEvent.create({
     data: {
-      actorId: 'system',
+      actorId: null,
       actorName: 'Airwallex Webhook',
       action: succeeded ? 'orders.refund.succeeded' : 'orders.refund.failed',
       entityType: 'Order',
@@ -769,7 +769,7 @@ async function handleTransferFailed(transferId: string, failureReason?: string) 
 
   await prisma.auditEvent.create({
     data: {
-      actorId: 'system',
+      actorId: null,
       actorName: 'Airwallex Webhook',
       action: 'payouts.failed',
       entityType: 'Payout',
@@ -927,6 +927,21 @@ export async function POST(req: NextRequest) {
         .catch(() => {})
     }
     console.error('[airwallex/webhook] handler failed', { event: event.name, intentId, err })
+    // Side-effect outbox: write a durable audit row so admins can spot
+    // repeating failures via /admin/staff/audit instead of having to grep
+    // serverless logs. Best-effort — don't let an audit insert mask the
+    // original failure on the way out.
+    await prisma.auditEvent.create({
+      data: {
+        actorId: null,
+        actorName: 'Airwallex Webhook',
+        action: 'webhook.handler.failed',
+        entityType: 'WebhookEvent',
+        entityId: eventId ?? intentId ?? 'unknown',
+        entityLabel: event.name ?? 'unknown',
+        reason: (err instanceof Error ? err.message : String(err)).slice(0, 500),
+      },
+    }).catch((auditErr: unknown) => console.error('[airwallex/webhook] audit write failed', auditErr))
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   }
 
