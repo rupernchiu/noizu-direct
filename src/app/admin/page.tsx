@@ -69,6 +69,21 @@ export default async function AdminOverviewPage() {
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-foreground">Overview</h2>
 
+      <Link
+        href="/admin/kb"
+        className="block rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors p-4"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Business knowledgebase</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Full reference: what we do, how we operate, fee model, integrations, glossary. Hand to AI or onboard humans.
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-primary whitespace-nowrap">Open →</span>
+        </div>
+      </Link>
+
       {/* Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-card rounded-xl p-4 border border-border">

@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { NavLink } from '@/components/ui/NavLink'
-import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield, Gavel, FolderLock, FileSearch, Percent, LifeBuoy } from 'lucide-react'
+import { LayoutDashboard, Users, Package, ShoppingBag, DollarSign, FileText, Megaphone, Settings, Image, Zap, Menu, HardDrive, Tag, ScrollText, ClipboardList, UserCog, ListChecks, ShieldCheck, Tags, Mail, Star, TrendingUp, AlertTriangle, Shield, Gavel, FolderLock, FileSearch, Percent, LifeBuoy, BookOpen } from 'lucide-react'
 import { loadStaffActor, can } from '@/lib/staffPolicy'
 import { AdminMobileNav } from './AdminMobileNav'
 
@@ -23,6 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (showMainNav) {
     mobileNavItems.push(
       { href: '/admin',                      label: 'Overview',         group: 'Main' },
+      { href: '/admin/kb',                   label: 'Knowledgebase',    group: 'Main' },
       { href: '/admin/creators',             label: 'Creators',         group: 'Main' },
       { href: '/admin/products',             label: 'Products',         group: 'Main' },
       { href: '/admin/orders',               label: 'Orders',           group: 'Main' },
@@ -73,6 +74,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {showMainNav && (
                 <>
                   <NavLink href="/admin"><LayoutDashboard className="size-4" />Overview</NavLink>
+                  <NavLink href="/admin/kb"><BookOpen className="size-4" />Knowledgebase</NavLink>
                   <NavLink href="/admin/creators"><Users className="size-4" />Creators</NavLink>
                   <NavLink href="/admin/products"><Package className="size-4" />Products</NavLink>
                   <NavLink href="/admin/orders"><ShoppingBag className="size-4" />Orders</NavLink>

@@ -197,3 +197,33 @@ button:not(:disabled) {
 [aria-invalid="true"]:not(:focus) {
   border-color: var(--destructive);
 }
+
+/* Knowledgebase article prose — admin-only, render markdown output */
+.kb-prose {
+  color: var(--foreground);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.kb-prose h1 { font-size: 1.5rem; font-weight: 700; margin: 1.75rem 0 0.75rem; color: var(--foreground); }
+.kb-prose h2 { font-size: 1.25rem; font-weight: 700; margin: 1.5rem 0 0.5rem; color: var(--foreground); border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
+.kb-prose h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 0.4rem; color: var(--foreground); }
+.kb-prose h4 { font-size: 0.95rem; font-weight: 600; margin: 1rem 0 0.3rem; color: var(--foreground); }
+.kb-prose p { margin: 0.6rem 0; }
+.kb-prose ul, .kb-prose ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+.kb-prose ul { list-style: disc; }
+.kb-prose ol { list-style: decimal; }
+.kb-prose li { margin: 0.2rem 0; }
+.kb-prose li > ul, .kb-prose li > ol { margin-top: 0.2rem; margin-bottom: 0.2rem; }
+.kb-prose a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.kb-prose a:hover { text-decoration-thickness: 2px; }
+.kb-prose code { background: var(--card); padding: 0.1rem 0.35rem; border-radius: 4px; font-size: 0.85em; font-family: ui-monospace, SFMono-Regular, monospace; border: 1px solid var(--border); }
+.kb-prose pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; overflow-x: auto; margin: 0.75rem 0; }
+.kb-prose pre code { background: transparent; border: none; padding: 0; font-size: 0.85em; }
+.kb-prose blockquote { border-left: 3px solid var(--border); padding: 0.25rem 0 0.25rem 1rem; margin: 0.75rem 0; color: var(--muted-foreground); font-style: italic; }
+.kb-prose hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+.kb-prose table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.9rem; }
+.kb-prose th, .kb-prose td { border: 1px solid var(--border); padding: 0.4rem 0.65rem; text-align: left; vertical-align: top; }
+.kb-prose th { background: var(--card); font-weight: 600; }
+.kb-prose strong { color: var(--foreground); font-weight: 600; }
+.kb-prose em { font-style: italic; }
+.kb-prose img { max-width: 100%; border-radius: 6px; margin: 0.5rem 0; }
