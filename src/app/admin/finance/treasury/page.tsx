@@ -35,6 +35,7 @@ const KIND_ICON: Record<string, React.ElementType> = {
   MARKETING: Megaphone,
   TAX_DESTINATION: Receipt,
   TAX_CREATOR_WITHHOLDING: Receipt,
+  TAX_ORIGIN: Receipt,
   REFUND_FLOAT: Wallet,
 }
 
@@ -43,6 +44,7 @@ const KIND_LABEL: Record<string, string> = {
   MARKETING: 'Marketing',
   TAX_DESTINATION: 'Tax (destination)',
   TAX_CREATOR_WITHHOLDING: 'Tax (creator withholding)',
+  TAX_ORIGIN: 'Tax (creator origin / PPh)',
   REFUND_FLOAT: 'Refund float',
 }
 

@@ -84,6 +84,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <NavLink href="/dashboard/tickets"><Ticket className="size-4" />Tickets</NavLink>
       <NavLink href="/dashboard/earnings"><DollarSign className="size-4" />Earnings</NavLink>
       <NavLink href="/dashboard/statement"><FileText className="size-4" />Statement</NavLink>
+      <NavLink href="/dashboard/finance/tax"><FileText className="size-4" />Tax & Earnings</NavLink>
       <NavLink href="/dashboard/fans"><Users className="size-4" />Fans</NavLink>
       <div className="my-2 h-px bg-border" />
       <NavLink href="/dashboard/support"><Heart className="size-4" />Support</NavLink>

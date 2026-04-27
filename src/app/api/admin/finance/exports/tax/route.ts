@@ -1,14 +1,15 @@
+import React from 'react'
 import { NextResponse } from 'next/server'
+import { renderToBuffer } from '@react-pdf/renderer'
 import { requireAdmin } from '@/lib/guards'
 import { prisma } from '@/lib/prisma'
 import { jurisdictionFor } from '@/lib/tax-thresholds'
+import { AdminTaxLedger } from '@/lib/pdf/AdminTaxLedger'
 
-// Per-country tax filing CSV — invoice-level ledger formatted for handoff to a
-// tax agent. Format is a generic marketplace-facilitator return: one row per
-// transaction with date, gross, buyer fee, currency. Real authority forms
-// (MY SST-02, SG GST F5) are filled by the agent using this as the source.
+// Per-country tax filing report — invoice-level ledger formatted for handoff
+// to a tax agent. CSV is the default; PDF is rendered via AdminTaxLedger.
 //
-// GET /api/admin/finance/exports/tax?country=MY&year=2026
+// GET /api/admin/finance/exports/tax?country=MY&year=2026&format=csv|pdf
 export async function GET(req: Request) {
   const session = await requireAdmin()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -16,6 +17,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url)
   const country = url.searchParams.get('country')?.toUpperCase()
   const yearParam = url.searchParams.get('year')
+  const format = (url.searchParams.get('format') ?? 'csv').toLowerCase()
   if (!country) return NextResponse.json({ error: 'country query param required' }, { status: 400 })
   const j = jurisdictionFor(country)
   if (!j) return NextResponse.json({ error: `Unknown jurisdiction: ${country}` }, { status: 400 })
@@ -61,6 +63,50 @@ export async function GET(req: Request) {
       },
     },
   }).catch(() => [])
+
+  if (format === 'pdf') {
+    let totalGrossUsd = 0
+    let totalDestinationTaxUsd = 0
+    const rows = txs.map((t) => {
+      const dest = t.order?.destinationTaxAmountUsd ?? 0
+      totalGrossUsd += t.grossAmountUsd
+      totalDestinationTaxUsd += dest
+      return {
+        transactionId: t.id,
+        orderId: t.orderId,
+        createdAt: t.createdAt.toISOString(),
+        paymentRail: t.paymentRail ?? null,
+        grossUsd: t.grossAmountUsd,
+        destinationTaxUsd: dest,
+        destinationTaxRate: t.order?.destinationTaxRatePercent ?? null,
+        reverseChargeApplied: !!t.order?.reverseChargeApplied,
+      }
+    })
+    const generatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ') + ' UTC'
+    const buffer = await (renderToBuffer as any)(
+      React.createElement(AdminTaxLedger, {
+        data: {
+          country: j.country,
+          countryName: j.countryName,
+          taxLabel: j.taxLabel,
+          ratePercent: j.ratePercent,
+          year,
+          totalGrossUsd,
+          totalDestinationTaxUsd,
+          txCount: txs.length,
+          rows,
+        },
+        generatedAt,
+      }),
+    )
+    return new Response(buffer as unknown as BodyInit, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="tax-${country}-${year}.pdf"`,
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
 
   const headers = [
     'transaction_id',

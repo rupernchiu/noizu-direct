@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
+import { computeOriginTax } from '@/lib/origin-tax'
 import { createQuoteBackingProduct } from '@/lib/commissions'
 import { createNotification } from '@/lib/notifications'
 
@@ -63,13 +64,40 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const rates = await getFeeRatesFromSettings()
   const creatorProfile = await prisma.creatorProfile.findUnique({
     where: { id: quote.creatorId },
-    select: { taxRegistered: true, taxRatePercent: true, taxJurisdiction: true },
+    select: {
+      taxRegistered: true,
+      taxRatePercent: true,
+      taxJurisdiction: true,
+      payoutCountry: true,
+    },
   })
-  const creatorTaxRate = creatorProfile?.taxRegistered
+  // Phase 4 — creator origin country snapshot. Prefer `payoutCountry` (where the
+  // money lands), fall back to `taxJurisdiction`. Locked onto Order.creatorCountry
+  // so PPh attribution survives later profile changes. Mirrors the resolution in
+  // src/app/api/airwallex/payment-intent/route.ts.
+  const creatorCountry = (creatorProfile?.payoutCountry ?? creatorProfile?.taxJurisdiction ?? null)
+    ?.toUpperCase() ?? null
+
+  // Layer 1 origin tax (PPh) takes precedence over the Phase 2.1 sales-tax
+  // markup-and-withhold path. PPh is *withheld from creator only* — never marked
+  // up onto the buyer — so when the creator's country has an active origin-tax
+  // rule (ID at launch), we compute fees with creatorTaxRate=0 to keep the
+  // buyer's gross PPh-free, then snapshot the PPh withholding into
+  // creatorTaxAmountUsd. This mirrors the web-checkout branch in
+  // src/app/api/airwallex/payment-intent/route.ts (lines 445-463).
+  const originTax = computeOriginTax(creatorCountry, quote.amountUsd, 'COMMISSION')
+  const isPphPath = originTax.amountUsd > 0
+
+  const declaredTaxRate = creatorProfile?.taxRegistered
     ? (creatorProfile.taxRatePercent ?? 0)
     : 0
-  const breakdown = calculateFees(quote.amountUsd, 'CARD', rates, creatorTaxRate)
+  const buyerSideTaxRate = isPphPath ? 0 : declaredTaxRate
+  const breakdown = calculateFees(quote.amountUsd, 'CARD', rates, buyerSideTaxRate)
   const orderAmountUsd = breakdown.grossUsdCents
+  const orderCreatorTaxUsd = isPphPath ? originTax.amountUsd : breakdown.creatorTaxUsdCents
+  const orderCreatorTaxRate = isPphPath
+    ? originTax.rate * 100
+    : (declaredTaxRate > 0 ? declaredTaxRate : 0)
   const now = new Date()
 
   const backingProduct = await createQuoteBackingProduct({
@@ -116,8 +144,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         subtotalUsd: breakdown.subtotalUsdCents,
         buyerFeeUsd: breakdown.buyerFeeUsdCents,
         creatorCommissionUsd: breakdown.creatorCommissionUsdCents,
-        creatorTaxAmountUsd: breakdown.creatorTaxUsdCents,
-        creatorTaxRatePercent: creatorTaxRate > 0 ? creatorTaxRate : null,
+        // Phase 2.1 / Phase 4 — Layer 1 creator tax snapshot.
+        // For ID creators (or any country with a `creatorOriginTax` rule):
+        //   PPh Final 0.5% withholding (Phase 4) — withheld from creator only,
+        //   buyer is NOT marked up.
+        // For taxRegistered creators in non-PPh countries:
+        //   sales-tax markup-and-withhold (Phase 2.1) — buyer pays the markup,
+        //   we withhold the same amount from the creator.
+        creatorTaxAmountUsd: orderCreatorTaxUsd,
+        creatorTaxRatePercent: orderCreatorTaxRate > 0 ? orderCreatorTaxRate : null,
+        // Phase 4 — creator country snapshot drives the webhook's PPh accrual
+        // into the TAX_ORIGIN/{country} reserve when payment confirms.
+        creatorCountry,
       },
     })
     if (quote.isMilestoneBased) {

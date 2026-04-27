@@ -4,6 +4,8 @@ import { getNewCreatorExtraDays } from '@/lib/creator-trust'
 import { getProcessingFeeRate, feeFromGross } from '@/lib/platform-fees'
 import { listPaymentConsents } from '@/lib/airwallex'
 import { rollStorageRenewalPeriod } from '@/lib/storage-renewal'
+import { accrueOriginTaxForOrder } from '@/lib/reserves'
+import { countryFor } from '@/lib/countries'
 import { openOrAttachTicket, TicketBlockedError } from '@/lib/tickets'
 import { Resend } from 'resend'
 import crypto from 'crypto'
@@ -132,7 +134,9 @@ async function handlePaymentSucceeded(intentId: string) {
         subtotalUsd: order.subtotalUsd,
         buyerFeeUsd: order.buyerFeeUsd,
         creatorCommissionUsd: order.creatorCommissionUsd,
-        // Phase 2.1 / 2.2 — tax snapshot on the transaction.
+        // Phase 2.1 / 2.2 / 4 — tax snapshot on the transaction. For ID
+        // creators, creatorTaxUsd is the PPh Final 0.5% withholding aggregated
+        // per-order; the platform owes the same amount to DJP.
         creatorTaxUsd: creatorTax,
         buyerCountry: order.buyerCountry,
         // Sprint shipping-1 — mirror snapshot for payout-time math.
@@ -141,6 +145,32 @@ async function handlePaymentSucceeded(intentId: string) {
         status: isCommission ? 'ESCROW' : 'COMPLETED',
       },
     })
+
+    // Phase 4 — accrue Layer 1 origin tax (PPh) into the per-country reserve.
+    // The amount is already deducted from `creatorAmount` above; this entry
+    // makes the corresponding liability visible on the treasury dashboard.
+    // Only fires when (a) creatorTax > 0, (b) we have a snapshotted country,
+    // and (c) the country actually has an origin-tax rule defined — this
+    // prevents Phase 2.1 sales-tax-markup amounts (creator's own SST/VAT,
+    // not platform-remitted) from leaking into the TAX_ORIGIN reserve.
+    // Best-effort: a reserve-accrual failure must not block the webhook from
+    // completing the order.
+    const originRuleForOrder = countryFor(order.creatorCountry)?.creatorOriginTax
+    if (creatorTax > 0 && order.creatorCountry && originRuleForOrder) {
+      await accrueOriginTaxForOrder({
+        creatorCountry: order.creatorCountry,
+        amountUsd: creatorTax,
+        orderId: order.id,
+        creatorId: order.creatorId,
+      }).catch((err) =>
+        console.error('[airwallex/webhook] origin-tax accrual failed', {
+          orderId: order.id,
+          country: order.creatorCountry,
+          amountUsd: creatorTax,
+          err,
+        }),
+      )
+    }
 
     // Auto-open (or reuse) a ticket linked to this order. Idempotent via orderId
     // unique constraint — commission orders already have a ticket from quote/accept.

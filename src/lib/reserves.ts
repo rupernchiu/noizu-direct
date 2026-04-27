@@ -14,6 +14,11 @@ export type ReserveKind =
   | 'MARKETING'
   | 'TAX_DESTINATION'
   | 'TAX_CREATOR_WITHHOLDING'
+  // Phase 4 (2026-04-27) — Layer 1 origin-tax holding bucket. Per-country scope
+  // (e.g. scope='ID' for Indonesia PPh Final 0.5%). Accrued at Transaction
+  // create time in the Airwallex webhook from `Order.creatorTaxAmountUsd`;
+  // drained when admin remits to the creator's tax authority.
+  | 'TAX_ORIGIN'
   | 'REFUND_FLOAT'
 
 // Default policy rates (admin can override per reserve in PlatformReserve.notes
@@ -186,6 +191,47 @@ export async function accrueMarketingReserveForDay(dayStart: Date, dayEnd: Date)
     reserveId: reserve.id,
     amountUsd: accrual,
     reason: `Daily marketing accrual ${dayStart.toISOString().slice(0, 10)} (2% of $${(gmv / 100).toFixed(2)} GMV)`,
+  })
+}
+
+/**
+ * Phase 4 — Layer 1 origin-tax accrual (per-order).
+ *
+ * Called from the Airwallex webhook when a Transaction is created for an order
+ * whose `creatorTaxAmountUsd` is non-zero (Indonesia PPh Final at launch).
+ * Idempotency comes from the caller: the webhook's order-claim updateMany
+ * guarantees a single COMPLETED Transaction per order, so this helper can be
+ * invoked unconditionally inside that flow.
+ *
+ * Pass an existing transaction client to chain into the same DB transaction
+ * as the Transaction.create() — keeps the reserve and the ledger in sync
+ * even if a later step in the same handler fails.
+ */
+export async function accrueOriginTaxForOrder(opts: {
+  creatorCountry: string
+  amountUsd: number
+  orderId: string
+  creatorId?: string
+  tx?: Prisma.TransactionClient
+}) {
+  const { creatorCountry, amountUsd, orderId, creatorId, tx } = opts
+  if (amountUsd <= 0 || !creatorCountry) return null
+  const scope = creatorCountry.toUpperCase()
+  // ensureReserve currently uses the global prisma client (it lives outside
+  // the caller's tx context). Reserves are upserted; the accrual is the only
+  // mutation that needs to participate in the caller's transaction.
+  const reserve = await ensureReserve({
+    kind: 'TAX_ORIGIN',
+    scope,
+    label: `Origin tax (${scope}) — withheld from creator payouts`,
+  })
+  return recordAccrual({
+    reserveId: reserve.id,
+    amountUsd,
+    reason: `PPh withholding on order ${orderId} (${scope})`,
+    refOrderId: orderId,
+    refUserId: creatorId,
+    tx,
   })
 }
 

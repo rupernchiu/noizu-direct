@@ -14,6 +14,7 @@ import {
   destinationTaxFromMap,
   loadEnabledTaxCountries,
 } from '@/lib/destination-tax'
+import { computeOriginTax, type OriginTaxListingType } from '@/lib/origin-tax'
 import { convertUsdCentsTo } from '@/lib/fx'
 import {
   combineCartShipping,
@@ -241,14 +242,22 @@ export async function POST(req: Request) {
       taxRegistered: true,
       taxRatePercent: true,
       taxJurisdiction: true,
+      payoutCountry: true,
     },
   })
   const creatorTaxByUserId = new Map<string, { rate: number; jurisdiction: string | null }>()
+  // Phase 4 — creator's resolved origin country for PPh attribution. Prefer
+  // payoutCountry (where the money lands), fall back to taxJurisdiction. Locked
+  // onto Order.creatorCountry at order creation; PPh attaches to the snapshot
+  // even if the creator later changes country in their profile.
+  const creatorCountryByUserId = new Map<string, string | null>()
   for (const p of creatorTaxProfiles) {
     creatorTaxByUserId.set(p.userId, {
       rate: p.taxRegistered ? (p.taxRatePercent ?? 0) : 0,
       jurisdiction: p.taxRegistered ? (p.taxJurisdiction ?? null) : null,
     })
+    const resolved = (p.payoutCountry ?? p.taxJurisdiction ?? null)
+    creatorCountryByUserId.set(p.userId, resolved ? resolved.toUpperCase() : null)
   }
 
   // Phase 2.2 — destination tax. We mark up the buyer's checkout total by the
@@ -275,13 +284,23 @@ export async function POST(req: Request) {
     feeBreakdown = calculateFees(discountedSubtotal, selectedRail, rates, 0)
     processingFee = feeBreakdown.buyerFeeUsdCents
     // Compute aggregate creator-tax across all groups, post-discount.
+    //
+    // Phase 4: Layer 1 origin tax (PPh) is *withheld from creator only* — never
+    // marked up onto the buyer. So when a creator's country has an active
+    // origin-tax rule (ID at launch), we skip the buyer-side markup for that
+    // group. The Phase 2.1 markup-and-withhold path only applies to creators
+    // who self-declared `taxRegistered=true` AND whose country has no PPh.
     for (const item of cartItems) {
-      const tax = creatorTaxByUserId.get(item.product.creator.userId)
+      const creatorUserId = item.product.creator.userId
+      const tax = creatorTaxByUserId.get(creatorUserId)
       if (!tax || tax.rate <= 0) continue
+      const creatorCountry = creatorCountryByUserId.get(creatorUserId) ?? null
+      const originRule = computeOriginTax(creatorCountry, 1, 'PHYSICAL')
+      if (originRule.amountUsd > 0) continue  // PPh path — no buyer markup
       const itemSubtotal = item.product.price * item.quantity
-      const discount = verifiedDiscountsByCreator.get(item.product.creator.userId)?.amount ?? 0
+      const discount = verifiedDiscountsByCreator.get(creatorUserId)?.amount ?? 0
       const creatorAllItems = cartItems.filter(
-        (ci) => ci.product.creator.userId === item.product.creator.userId,
+        (ci) => ci.product.creator.userId === creatorUserId,
       )
       const creatorSubtotal = creatorAllItems.reduce(
         (s, ci) => s + ci.product.price * ci.quantity,
@@ -404,12 +423,44 @@ export async function POST(req: Request) {
     // Phase 2.1 — creator-tax markup. The creator's declared tax rate is
     // applied to their post-discount subtotal; the same amount is withheld
     // from their payout (handled in webhook-side Transaction creation).
-    const creatorTaxInfo = creatorTaxByUserId.get(items[0].product.creator.userId)
+    //
+    // Phase 4 — Layer 1 origin tax (PPh) takes precedence when the creator's
+    // country has an active origin-tax rule. PPh is *withheld only* — not
+    // marked up onto the buyer. For ID creators (the only PPh country at
+    // launch), `creatorTaxAmountUsd` / `creatorTaxRatePercent` snapshot the
+    // PPh withholding instead of the Phase 2.1 sales-tax markup.
+    const groupCreatorUserId = items[0].product.creator.userId
+    const creatorTaxInfo = creatorTaxByUserId.get(groupCreatorUserId)
+    const groupCreatorCountry = creatorCountryByUserId.get(groupCreatorUserId) ?? null
     const groupDiscountedSubtotal = Math.max(0, groupSubtotal - groupDiscountShare)
-    const groupCreatorTaxRate = creatorTaxInfo?.rate ?? 0
-    const groupCreatorTaxUsd = groupCreatorTaxRate > 0
-      ? Math.round(groupDiscountedSubtotal * (groupCreatorTaxRate / 100))
-      : 0
+    // Pick a representative listing type for the group. PPh's ALL_PAYOUTS rule
+    // (ID) is type-independent, so the choice only matters for the future
+    // ROYALTY_OR_SERVICES scaffold. Prefer non-physical when the group is mixed.
+    const groupListingType: OriginTaxListingType = (
+      items.find(i => i.product.type === 'COMMISSION') ? 'COMMISSION'
+        : items.find(i => i.product.type === 'DIGITAL') ? 'DIGITAL'
+        : items.find(i => i.product.type === 'POD') ? 'POD'
+        : 'PHYSICAL'
+    )
+    const originTax = computeOriginTax(
+      groupCreatorCountry,
+      groupDiscountedSubtotal,
+      groupListingType,
+    )
+    let groupCreatorTaxRate: number
+    let groupCreatorTaxUsd: number
+    if (originTax.amountUsd > 0) {
+      // Phase 4 — Layer 1 PPh withholding (e.g. ID 0.5%). Stored as percent for
+      // parity with Phase 2.1's existing ratePercent column.
+      groupCreatorTaxRate = originTax.rate * 100
+      groupCreatorTaxUsd = originTax.amountUsd
+    } else {
+      // Phase 2.1 — creator's self-declared sales-tax markup-and-withhold.
+      groupCreatorTaxRate = creatorTaxInfo?.rate ?? 0
+      groupCreatorTaxUsd = groupCreatorTaxRate > 0
+        ? Math.round(groupDiscountedSubtotal * (groupCreatorTaxRate / 100))
+        : 0
+    }
 
     // Phase 2.2 — apportion destination-tax across creator groups by their
     // share of the discounted cart subtotal.
@@ -419,8 +470,12 @@ export async function POST(req: Request) {
         )
       : 0
 
+    // PPh is *withheld from creator only* — it must not inflate the buyer's
+    // gross. Phase 2.1 sales-tax markup, by contrast, IS added to the buyer's
+    // gross (the buyer is paying for the tax the creator will remit).
+    const groupCreatorTaxBuyerSide = originTax.amountUsd > 0 ? 0 : groupCreatorTaxUsd
     const orderAmount =
-      groupSubtotal + groupFee + groupCreatorTaxUsd + groupDestinationTaxUsd + groupShippingUsd
+      groupSubtotal + groupFee + groupCreatorTaxBuyerSide + groupDestinationTaxUsd + groupShippingUsd
     const orderAmountUsd = orderAmount - groupDiscountShare
 
     // Rail-aware fee snapshot. Apportion the cart-level breakdown to each
@@ -465,9 +520,14 @@ export async function POST(req: Request) {
         subtotalUsd: groupSubtotalUsd,
         buyerFeeUsd: groupBuyerFeeUsd,
         creatorCommissionUsd: groupCreatorCommissionUsd,
-        // Phase 2.1 — creator-tax (Layer 1 markup-and-withhold)
+        // Phase 2.1 / Phase 4 — Layer 1 creator origin tax.
+        // For ID creators: PPh Final 0.5% withholding (Phase 4).
+        // For taxRegistered creators outside PPh countries: sales-tax markup-and-withhold (Phase 2.1).
         creatorTaxAmountUsd: groupCreatorTaxUsd,
         creatorTaxRatePercent: groupCreatorTaxRate > 0 ? groupCreatorTaxRate : null,
+        // Phase 4 — creator country snapshot (locked at order time, drives PPh
+        // attribution even if creator later changes country in their profile).
+        creatorCountry: groupCreatorCountry,
         // Phase 2.2 — destination tax (Layer 2 platform-collected)
         destinationTaxAmountUsd: groupDestinationTaxUsd,
         destinationTaxRatePercent: destinationTaxLine?.ratePercent ?? null,
