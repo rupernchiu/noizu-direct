@@ -173,8 +173,13 @@ export default async function DashboardPage() {
     green: { bg: 'bg-green-500/10',  border: 'border-green-500/30',  text: 'text-green-800 dark:text-green-200',   cta: 'bg-green-500 hover:bg-green-500/90 text-white' },
   }
 
-  // Compute onboarding steps
+  // Compute onboarding steps. Tax qualification is the gating step for the
+  // rest of the storefront setup (Phase 3 of the 2026-04-27 tax architecture
+  // build). Surfacing it as the first item keeps the existing checklist UX
+  // working without forcing a redirect-once gate at the layout level.
+  const taxOnboardingDone = !!(profile as any).taxOnboardingAcknowledgedAt
   const onboardingSteps = [
+    { id: 'tax', label: 'Complete tax qualification', completed: taxOnboardingDone, href: '/dashboard/onboarding/tax' },
     { id: 'avatar', label: 'Add profile photo', completed: !!profile.avatar, href: '/dashboard/profile' },
     { id: 'banner', label: 'Add banner image', completed: !!profile.bannerImage, href: '/dashboard/profile' },
     { id: 'bio', label: 'Write your bio', completed: !!(profile.bio && profile.bio.length > 20), href: '/dashboard/profile' },

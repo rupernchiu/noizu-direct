@@ -9,8 +9,18 @@
 // We also raise the payout minimum to USD 100 for SWIFT to keep the
 // fee-to-payout ratio sensible (a USD 10 payout with a USD 30 SWIFT fee
 // would net the creator nothing).
+//
+// 2026-04-27: country list now derived from src/lib/countries.ts (any
+// country with payoutRail === 'SWIFT'). The Set shape is preserved so
+// existing call-sites don't break.
 
-export const SWIFT_COUNTRIES = new Set(['VN', 'KH', 'MM', 'LA'])
+import { COUNTRIES } from '@/lib/countries'
+
+export const SWIFT_COUNTRIES: Set<string> = new Set(
+  Object.values(COUNTRIES)
+    .filter((c) => c.payoutRail === 'SWIFT')
+    .map((c) => c.iso2),
+)
 
 export type PayoutRail = 'LOCAL' | 'SWIFT'
 

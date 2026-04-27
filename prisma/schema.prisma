@@ -160,6 +160,22 @@ model CreatorProfile {
   taxId                  String? // SST/GST/VAT registration number
   taxRatePercent         Float? // overrides PlatformSettings.defaultCreatorTaxRatePercent
   taxJurisdiction        String? // ISO-3166 alpha-2; falls back to payoutCountry
+  // ── Tax architecture (2026-04-27, migration 0013) ──
+  // Captured at post-approval onboarding (`/dashboard/onboarding/tax`).
+  // creatorClassification gates whether sales-tax opt-in is even available.
+  creatorClassification         String?      // 'INDIVIDUAL' | 'REGISTERED_BUSINESS'
+  taxOnboardingAcknowledgedAt   DateTime?
+  taxOnboardingTosVersion       String?      // e.g. "2026-04-27"
+  // Creator's own sales tax — opt-in agency-collect (Phase 7 activates).
+  // Platform collects at checkout, passes through gross in payout, creator
+  // remits to their own tax authority. Approval queue gates collection.
+  collectsSalesTax              Boolean      @default(false)
+  salesTaxRate                  Float?       // e.g. 0.06
+  salesTaxLabel                 String?      // 'SST' | 'GST' | 'VAT'
+  salesTaxStatus                String       @default("NONE") // NONE|REQUESTED|APPROVED|REJECTED
+  salesTaxApprovedAt            DateTime?
+  salesTaxApprovedBy            String?      // admin user id
+  salesTaxCertificateUrl        String?      // upload of reg cert
   // ── Shipping V2 (2026-04-27): per-product rates, creator-level only keeps cart prefs ──
   // shippingByCountry is soft-deprecated — kept nullable for backfill safety; runtime
   // reads only Product.shippingByCountry. May be reused in future as a "starting-point
@@ -392,6 +408,20 @@ model Order {
   creatorTaxRatePercent          Float? // creator's rate at order time
   reverseChargeApplied           Boolean   @default(false) // B2B reverse-charge flag (sprint 2.3)
   buyerBusinessTaxId             String? // buyer's tax ID if B2B reverse-charge claimed
+  // ── Tax architecture (2026-04-27, migration 0013) ──
+  // creatorCountry: ISO-2 snapshot at order creation. Drives PPh attribution
+  // even if creator later changes country in their profile. Mirrors buyerCountry.
+  creatorCountry                 String?
+  // Creator's own sales tax (Layer 1.5 — agency-collected, passed through gross).
+  creatorSalesTaxAmountUsd       Int       @default(0)
+  creatorSalesTaxRatePercent     Float?
+  creatorSalesTaxLabel           String?   // 'SST' | 'GST' | 'VAT'
+  // Platform fee tax — buyer side (taxes our buyer service fee in buyer's country).
+  platformFeeBuyerTaxUsd         Int       @default(0)
+  platformFeeBuyerTaxRate        Float?
+  // Platform fee tax — creator side (taxes our commission in creator's country).
+  platformFeeCreatorTaxUsd       Int       @default(0)
+  platformFeeCreatorTaxRate      Float?
   // ── Shipping snapshot (sprint shipping-1) ──
   // Snapshotted at intent creation; passes through to creator (no platform fee).
   // Refunded if escrowStatus is still HELD; retained if TRACKING_ADDED+.
@@ -990,8 +1020,28 @@ model PlatformSettings {
   // Layer 1 personal-tax markup default for self-declared registered creators
   // (overridden per-creator via CreatorProfile.taxRatePercent if set).
   defaultCreatorTaxRatePercent   Float   @default(0.0)
+  // ── Platform fee tax (2026-04-27, migration 0013) ──
+  // Per-country admin-flipped config for taxing the platform's own commission
+  // and/or buyer service fee. JSON: { [iso2]: { enabled, rate, label, sides: ('BUYER'|'CREATOR')[] } }
+  // All countries default disabled at launch; admin enables per country once
+  // platform crosses local registration threshold.
+  platformFeeTax                 String  @default("{}")
   maintenanceMode                Boolean @default(false)
   maintenanceMessage             String?
+}
+
+// ── Creator Waitlist (2026-04-27, migration 0013) ────────────────────────────
+// Captures email + ISO-2 country for creators in not-yet-supported countries
+// (Tier 2/3 + ROW). Admin watches concentration; opens countries when demand
+// justifies tax-agent and KYC setup. notifiedAt set when activation reaches them.
+model CreatorWaitlist {
+  id         String    @id @default(cuid())
+  email      String
+  country    String    // ISO-2
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+
+  @@index([country])
 }
 
 model NavItem {

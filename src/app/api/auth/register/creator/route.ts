@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { clientIp, rateLimit, rateLimitHeaders } from '@/lib/rate-limit'
 import { BCRYPT_COST } from '@/lib/auth'
+import { enabledCreatorCountries } from '@/lib/countries'
 
 const schema = z.object({
   name: z.string().min(2),
@@ -17,6 +18,10 @@ const schema = z.object({
   displayName: z.string().min(2).max(60),
   bio: z.string().max(500).optional(),
   categoryTags: z.array(z.string()).min(1),
+  // Phase 3 (2026-04-27 tax architecture spec): country must be in the
+  // creator-onboarding-enabled list. Anything else routes the user to the
+  // creator-waitlist endpoint at the page layer instead.
+  country: z.string().length(2),
 })
 
 // Match the rate limit on /api/auth/register (5/hr/IP). The previous
@@ -41,8 +46,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
     }
 
-    const { name, email, password, username, displayName, bio, categoryTags } = parsed.data
+    const { name, email, password, username, displayName, bio, categoryTags, country } = parsed.data
     const normalizedEmail = email.trim().toLowerCase()
+    const normalizedCountry = country.toUpperCase()
+    const enabledIso2 = new Set(enabledCreatorCountries().map((c) => c.iso2))
+    if (!enabledIso2.has(normalizedCountry)) {
+      return NextResponse.json(
+        { error: 'Selected country is not currently open for creator onboarding.' },
+        { status: 400 },
+      )
+    }
 
     const existingEmail = await prisma.user.findUnique({ where: { email: normalizedEmail } })
     if (existingEmail) {
@@ -84,6 +97,7 @@ export async function POST(req: NextRequest) {
         username,
         bio: bio ?? '',
         categoryTags: JSON.stringify(categoryTags),
+        country: normalizedCountry,
         submittedAt: new Date(),
       },
     })

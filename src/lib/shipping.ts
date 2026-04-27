@@ -10,21 +10,43 @@
 // creator-level (cart-wide concepts).
 //
 // Rates are stored as USD cents.
+//
+// 2026-04-27: country list now derived from src/lib/countries.ts (single
+// source of truth). The exported shape (SHIPPING_COUNTRIES, ShippingCountryCode)
+// is preserved so existing call-sites don't break.
 
-export const SHIPPING_COUNTRIES = [
-  { code: 'MY', name: 'Malaysia',    zone: 'SEA-Tier1' },
-  { code: 'SG', name: 'Singapore',   zone: 'SEA-Tier1' },
-  { code: 'PH', name: 'Philippines', zone: 'SEA-Tier1' },
-  { code: 'ID', name: 'Indonesia',   zone: 'SEA-Tier1' },
-  { code: 'TH', name: 'Thailand',    zone: 'SEA-Tier1' },
-  { code: 'VN', name: 'Vietnam',     zone: 'SEA-Tier2' },
-  { code: 'KH', name: 'Cambodia',    zone: 'SEA-Tier2' },
-  { code: 'MM', name: 'Myanmar',     zone: 'SEA-Tier2' },
-  { code: 'LA', name: 'Laos',        zone: 'SEA-Tier2' },
-  { code: 'BN', name: 'Brunei',      zone: 'SEA-Tier1' },
-] as const
+import { COUNTRIES } from '@/lib/countries'
 
-export type ShippingCountryCode = typeof SHIPPING_COUNTRIES[number]['code']
+// Const-asserted code list — Tier 1 SEA in the historical iteration order.
+// We keep this hand-rolled (rather than computed) so ShippingCountryCode
+// stays a literal-string union, which other files rely on for type narrowing.
+const SHIPPING_COUNTRY_CODES = ['MY', 'SG', 'PH', 'ID', 'TH', 'VN', 'KH', 'MM', 'LA', 'BN'] as const
+
+export type ShippingCountryCode = typeof SHIPPING_COUNTRY_CODES[number]
+
+export interface ShippingCountry {
+  code: ShippingCountryCode
+  name: string
+  zone: 'SEA-Tier1' | 'SEA-Tier2'
+}
+
+function shippingZoneLabel(
+  zone: 'domestic-my' | 'sea-tier1' | 'sea-tier2' | 'row',
+): 'SEA-Tier1' | 'SEA-Tier2' {
+  return zone === 'sea-tier2' ? 'SEA-Tier2' : 'SEA-Tier1'
+}
+
+export const SHIPPING_COUNTRIES: readonly ShippingCountry[] = SHIPPING_COUNTRY_CODES.map((code) => {
+  const c = COUNTRIES[code]
+  if (!c) {
+    throw new Error(`countries.ts is missing required shipping country ${code}`)
+  }
+  return {
+    code,
+    name: c.name,
+    zone: shippingZoneLabel(c.shippingZone),
+  }
+})
 
 export const ROW_KEY = 'ROW' as const
 

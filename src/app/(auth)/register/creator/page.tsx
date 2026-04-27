@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
+import { COUNTRIES, enabledCreatorCountries } from '@/lib/countries'
 
 const CATEGORY_OPTIONS = [
   'Digital Art',
@@ -16,6 +17,15 @@ const CATEGORY_OPTIONS = [
   'Merch',
   'Stickers',
 ] as const
+
+// Tier-1 countries (sorted) for the dropdown. Phase 3 of the tax architecture
+// build (2026-04-27 spec). Anyone outside Tier 1 hits the waitlist modal.
+const TIER1_COUNTRIES = enabledCreatorCountries()
+  .map((c) => ({ iso2: c.iso2, name: c.name }))
+  .sort((a, b) => a.name.localeCompare(b.name))
+const ALL_COUNTRIES = Object.values(COUNTRIES)
+  .map((c) => ({ iso2: c.iso2, name: c.name }))
+  .sort((a, b) => a.name.localeCompare(b.name))
 
 const step1Schema = z
   .object({
@@ -38,7 +48,19 @@ const step2Schema = z.object({
   displayName: z.string().min(2, 'At least 2 characters').max(60, 'At most 60 characters'),
   bio: z.string().max(500, 'At most 500 characters').optional(),
   categoryTags: z.array(z.string()).min(1, 'Select at least one category'),
+  country: z
+    .string()
+    .length(2, 'Pick your country')
+    .refine((v) => TIER1_COUNTRIES.some((c) => c.iso2 === v), {
+      message: 'Country not currently open — please join the waitlist.',
+    }),
 })
+
+const waitlistSchema = z.object({
+  email: z.string().email('Enter a valid email'),
+  country: z.string().length(2, 'Pick a country'),
+})
+type WaitlistData = z.infer<typeof waitlistSchema>
 
 type Step1Data = z.infer<typeof step1Schema>
 type Step2Data = z.infer<typeof step2Schema>
@@ -46,6 +68,7 @@ type Step2Data = z.infer<typeof step2Schema>
 export default function CreatorRegisterPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2>(1)
   const [step1Data, setStep1Data] = useState<Step1Data | null>(null)
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
 
   const {
     register: registerStep1,
@@ -61,7 +84,7 @@ export default function CreatorRegisterPage() {
     formState: { errors: errors2, isSubmitting: isStep2Submitting },
   } = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
-    defaultValues: { categoryTags: [] },
+    defaultValues: { categoryTags: [], country: TIER1_COUNTRIES[0]?.iso2 ?? 'MY' },
   })
 
   const watchedTags = watch('categoryTags') ?? []
@@ -95,6 +118,7 @@ export default function CreatorRegisterPage() {
           displayName: data.displayName,
           bio: data.bio,
           categoryTags: data.categoryTags,
+          country: data.country,
         }),
       })
 
@@ -296,6 +320,37 @@ export default function CreatorRegisterPage() {
               )}
             </div>
 
+            <div className="space-y-1">
+              <label htmlFor="country" className="text-sm font-medium text-foreground">
+                Country of residence
+              </label>
+              <select
+                id="country"
+                {...registerStep2('country')}
+                className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
+              >
+                {TIER1_COUNTRIES.map((c) => (
+                  <option key={c.iso2} value={c.iso2}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              {errors2.country && (
+                <p role="alert" className="text-sm text-destructive mt-1">{errors2.country.message}</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Don&apos;t see your country?{' '}
+                <button
+                  type="button"
+                  onClick={() => setWaitlistOpen(true)}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Join the waitlist
+                </button>
+                .
+              </p>
+            </div>
+
             <div className="space-y-2">
               <p className="text-sm font-medium text-foreground">Categories</p>
               <div className="flex flex-wrap gap-2">
@@ -347,6 +402,111 @@ export default function CreatorRegisterPage() {
             Log in
           </Link>
         </div>
+      </div>
+      {waitlistOpen && (
+        <WaitlistModal onClose={() => setWaitlistOpen(false)} />
+      )}
+    </div>
+  )
+}
+
+// ─── Waitlist modal ──────────────────────────────────────────────────────────
+
+function WaitlistModal({ onClose }: { onClose: () => void }) {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<WaitlistData>({
+    resolver: zodResolver(waitlistSchema),
+    defaultValues: { email: '', country: ALL_COUNTRIES[0]?.iso2 ?? 'MY' },
+  })
+
+  async function onValid(data: WaitlistData) {
+    try {
+      const res = await fetch('/api/creator-waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        toast.error(body.error ?? 'Could not join waitlist. Please try again.')
+        return
+      }
+      toast.success("You're on the waitlist — we'll email you when your country opens.")
+      onClose()
+    } catch {
+      toast.error('Network error — please try again.')
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="register-waitlist-title"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-card rounded-2xl border border-border p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <h2 id="register-waitlist-title" className="text-lg font-bold text-foreground">
+            Join the creator waitlist
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            We&apos;ll let you know as soon as we open creator onboarding for your country.
+          </p>
+        </div>
+        <form onSubmit={handleSubmit(onValid)} className="space-y-3">
+          <div className="space-y-1">
+            <label htmlFor="rwl-email" className="text-sm font-medium text-foreground">Email</label>
+            <input
+              id="rwl-email"
+              type="email"
+              placeholder="you@example.com"
+              {...register('email')}
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
+            />
+            {errors.email && (
+              <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+            )}
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="rwl-country" className="text-sm font-medium text-foreground">Country</label>
+            <select
+              id="rwl-country"
+              {...register('country')}
+              className="w-full px-3 py-2 rounded-lg bg-surface border border-border text-foreground placeholder:text-muted-foreground focus-visible:border-primary outline-none transition-colors"
+            >
+              {ALL_COUNTRIES.map((c) => (
+                <option key={c.iso2} value={c.iso2}>{c.name}</option>
+              ))}
+            </select>
+            {errors.country && (
+              <p className="text-sm text-destructive mt-1">{errors.country.message}</p>
+            )}
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 border border-border text-muted-foreground hover:text-foreground hover:border-primary font-semibold py-2.5 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? 'Joining…' : 'Join waitlist'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   )
