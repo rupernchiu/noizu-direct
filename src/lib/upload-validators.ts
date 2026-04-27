@@ -20,6 +20,7 @@ export const UPLOAD_FOLDER_ALLOWLIST = new Set<string>([
   'identity',
   'dispute-evidence',
   'message-attachment',
+  'tax-cert',
   'other',
 ])
 

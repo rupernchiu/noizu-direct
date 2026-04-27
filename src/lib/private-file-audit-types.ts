@@ -7,6 +7,7 @@ export type PrivateFileCategory =
   | 'dispute-evidence'
   | 'message-attachment'
   | 'kyc'
+  | 'tax-cert'
 
 export type ActorType = 'STAFF' | 'OWNER' | 'SYSTEM'
 
@@ -68,5 +69,6 @@ export function categoryFromPath(segments: string[]): PrivateFileCategory | null
   if (first === 'dispute-evidence' || first === 'dispute_evidence') return 'dispute-evidence'
   if (first === 'message-attachment' || first === 'message_attachment') return 'message-attachment'
   if (first === 'kyc') return 'kyc'
+  if (first === 'tax-cert' || first === 'tax_cert') return 'tax-cert'
   return null
 }

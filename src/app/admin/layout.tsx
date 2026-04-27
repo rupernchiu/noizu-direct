@@ -45,6 +45,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       { href: '/admin/storage/pricing',      label: 'Storage Pricing',  group: 'Storage' },
       { href: '/admin/agreements',           label: 'Agreements',       group: 'Platform' },
       { href: '/admin/creators/applications', label: 'Applications',    group: 'Platform' },
+      { href: '/admin/creators/sales-tax-applications', label: 'Sales tax applications', group: 'Platform' },
       { href: '/admin/private-files/housekeeping', label: 'KYC Housekeeping', group: 'Platform' },
       { href: '/admin/reviews',              label: 'Reviews',          group: 'Platform' },
       { href: '/admin/kb',                   label: 'Knowledgebase',    group: 'Platform' },
@@ -99,6 +100,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <p className="hidden md:block px-2 py-0.5 text-[11px] uppercase text-muted-foreground font-medium select-none" style={{ letterSpacing: '0.08em' }}>Platform</p>
                   <NavLink href="/admin/agreements"><ScrollText className="size-4" />Agreements</NavLink>
                   <NavLink href="/admin/creators/applications"><ClipboardList className="size-4" />Applications</NavLink>
+                  <NavLink href="/admin/creators/sales-tax-applications"><Percent className="size-4" />Sales tax applications</NavLink>
                   <NavLink href="/admin/private-files/housekeeping"><FolderLock className="size-4" />KYC Housekeeping</NavLink>
                   <NavLink href="/admin/reviews"><Star className="size-4" />Reviews</NavLink>
                   <NavLink href="/admin/kb"><BookOpen className="size-4" />Knowledgebase</NavLink>

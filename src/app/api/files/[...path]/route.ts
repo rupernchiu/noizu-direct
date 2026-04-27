@@ -43,6 +43,7 @@ const STREAMED_PRIVATE_CATEGORIES = new Set<PrivateFileCategory>([
   'dispute-evidence',
   'message-attachment',
   'kyc',
+  'tax-cert',
 ])
 
 // identity + dispute-evidence require a reason from staff.
@@ -51,6 +52,7 @@ const STAFF_REASON_REQUIRED: Record<PrivateFileCategory, boolean> = {
   'dispute-evidence':  true,
   'message-attachment': false, // routine CS work; reason optional
   kyc:                 true,
+  'tax-cert':          true,
 }
 
 // Map category → permission shortcode required of staff.
@@ -59,6 +61,7 @@ const STAFF_PERM: Record<PrivateFileCategory, string> = {
   kyc:                 'kyc.review',
   'dispute-evidence':  'disputes.review',
   'message-attachment': 'disputes.review',
+  'tax-cert':          'kyc.review',
 }
 
 type AuthDecision =
@@ -299,6 +302,21 @@ async function decide(args: {
     return { allow: false, status: 403, reason: 'Forbidden' }
   }
 
+  if (category === 'tax-cert') {
+    // Path is /api/files/tax-cert/<userId>/<filename> — owner self-view only.
+    // Sales-tax certificate uploads belong to the creator who submitted them.
+    // Admin/staff access flows through the staff/admin branches above.
+    const pathUserId = segments[1]
+    if (pathUserId && pathUserId === userId) {
+      return {
+        allow: true,
+        actor: { type: 'OWNER', id: userId, name: userName },
+        targetUserId: userId,
+      }
+    }
+    return { allow: false, status: 403, reason: 'Forbidden' }
+  }
+
   if (category === 'dispute-evidence') {
     const ev = await prisma.disputeEvidence.findFirst({
       where: { viewerUrl },
@@ -398,6 +416,10 @@ async function inferTargetUserId(
         select: { uploaderId: true },
       })
       return att?.uploaderId ?? null
+    }
+    if (category === 'tax-cert') {
+      // Owner is encoded as path segment 1: tax-cert/<userId>/<filename>.
+      return segments[1] ?? null
     }
   } catch {
     return null

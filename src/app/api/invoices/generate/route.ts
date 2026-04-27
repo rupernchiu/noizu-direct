@@ -27,12 +27,17 @@ export async function POST(req: Request) {
   // Prefer the rail-aware snapshot stamped on the order at checkout (sprint
   // 0.1+). Pre-snapshot orders fall back to the legacy 2.5% feeFromGross so
   // historical receipts stay reproducible.
+  //
+  // Phase 8 — under the new escrow framing the receipt renders the creator
+  // tax (Phase 2.1 markup) and platform fees as separate conditional lines.
+  // We therefore pass the PURE buyer fee in `processingFee` here; the receipt
+  // component renders any creator tax / Phase 8 lines from their own props.
   const snapshot = breakdownFromOrderSnapshot(order)
   let subtotal: number
   let processingFee: number
   if (snapshot) {
     subtotal = snapshot.subtotalUsdCents
-    processingFee = snapshot.buyerFeeUsdCents + snapshot.creatorTaxUsdCents
+    processingFee = snapshot.buyerFeeUsdCents
   } else {
     const feeRate = await getProcessingFeeRate()
     processingFee = feeFromGross(order.amountUsd, feeRate)
@@ -56,6 +61,20 @@ export async function POST(req: Request) {
       total,
       currency: order.displayCurrency,
       orderId: order.id,
+      // Phase 8 — escrow framing extras (all optional; render only when > 0).
+      shippingUsd: order.shippingCostUsd,
+      discountUsd: order.discountAmount,
+      creatorSalesTaxUsd: order.creatorSalesTaxAmountUsd,
+      creatorSalesTaxRate: order.creatorSalesTaxRatePercent,
+      creatorSalesTaxLabel: order.creatorSalesTaxLabel,
+      platformFeeBuyerTaxUsd: order.platformFeeBuyerTaxUsd,
+      platformFeeBuyerTaxRate: order.platformFeeBuyerTaxRate,
+      destinationTaxUsd: order.destinationTaxAmountUsd,
+      destinationTaxRatePercent: order.destinationTaxRatePercent,
+      destinationTaxCountry: order.destinationTaxCountry,
+      creatorTaxUsd: order.creatorTaxAmountUsd,
+      creatorTaxRatePercent: order.creatorTaxRatePercent,
+      reverseChargeApplied: order.reverseChargeApplied,
     })
   )
 

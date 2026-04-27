@@ -12,7 +12,17 @@ export default async function BuyerOrderDetailPage({ params }: { params: Promise
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
-      product: { select: { title: true, type: true, images: true, podProviderId: true } },
+      product: {
+        select: {
+          title: true,
+          type: true,
+          images: true,
+          podProviderId: true,
+          // Phase 8 — creator displayName powers the "FROM CREATOR" header
+          // on the escrow-framed receipt.
+          creator: { select: { displayName: true, username: true } },
+        },
+      },
       buyer: { select: { name: true } },
       dispute: { select: { id: true, reason: true, status: true, createdAt: true } },
     },

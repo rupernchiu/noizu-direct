@@ -58,6 +58,8 @@ const PRIVATE_PREFIXES = [
   'message-attachment/',
   'message_attachment/',
   'kyc/',
+  'tax-cert/',
+  'tax_cert/',
 ]
 
 /** Infer visibility from key when caller doesn't pass it explicitly. */

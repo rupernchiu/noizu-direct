@@ -15,6 +15,7 @@ interface Order {
   // Pricing breakdown (Phase 3.3 — surface tax & discount lines on receipt)
   subtotalUsd: number | null
   buyerFeeUsd: number | null
+  shippingCostUsd: number
   discountAmount: number
   creatorTaxAmountUsd: number
   creatorTaxRatePercent: number | null
@@ -23,10 +24,22 @@ interface Order {
   destinationTaxCountry: string | null
   reverseChargeApplied: boolean
   buyerBusinessTaxId: string | null
+  // Phase 8 — escrow-framed receipt: new conditional tax lines
+  creatorSalesTaxAmountUsd: number
+  creatorSalesTaxRatePercent: number | null
+  creatorSalesTaxLabel: string | null
+  platformFeeBuyerTaxUsd: number
+  platformFeeBuyerTaxRate: number | null
+  buyerCountry: string | null
   displayCurrency: string
   displayAmount: number
   exchangeRate: number
-  product: { title: string; type: string; images: string }
+  product: {
+    title: string
+    type: string
+    images: string
+    creator?: { displayName: string | null; username: string } | null
+  }
   dispute: { id: string; reason: string; status: string; createdAt: Date } | null
 }
 
@@ -219,77 +232,226 @@ export default function OrderDetailClient({ order, trackingUrl, courierDisplayNa
   )
 }
 
+function fmtUsd(cents: number): string {
+  return `USD ${(cents / 100).toFixed(2)}`
+}
+
 function PricingBreakdown({ order }: { order: Order }) {
-  const subtotal = order.subtotalUsd ?? Math.max(0, order.amountUsd - (order.buyerFeeUsd ?? 0) - order.creatorTaxAmountUsd - order.destinationTaxAmountUsd)
+  // Phase 8 — escrow-framed buyer receipt. Two attribution sections (FROM
+  // CREATOR / FROM noizu.direct) precede the conditional tax lines. Lines
+  // with amount = 0 are NOT rendered (no "$0.00" placeholders).
+  const buyerFeeUsd = order.buyerFeeUsd ?? 0
+  const shippingUsd = order.shippingCostUsd ?? 0
+  const subtotal =
+    order.subtotalUsd ??
+    Math.max(
+      0,
+      order.amountUsd -
+        buyerFeeUsd -
+        order.creatorTaxAmountUsd -
+        order.destinationTaxAmountUsd -
+        order.creatorSalesTaxAmountUsd -
+        order.platformFeeBuyerTaxUsd -
+        shippingUsd,
+    )
+
   const hasDiscount = order.discountAmount > 0
-  const hasBuyerFee = (order.buyerFeeUsd ?? 0) > 0
+  const hasBuyerFee = buyerFeeUsd > 0
+  const hasShipping = shippingUsd > 0
   const hasCreatorTax = order.creatorTaxAmountUsd > 0
+  const hasCreatorSalesTax = order.creatorSalesTaxAmountUsd > 0
+  const hasPlatformFeeBuyerTax = order.platformFeeBuyerTaxUsd > 0
   const hasDestinationTax = order.destinationTaxAmountUsd > 0
   const hasReverseCharge = order.reverseChargeApplied
   const showDisplayCurrency = order.displayCurrency !== 'USD' && order.displayAmount > 0
 
-  // If everything is legacy (no rail-aware breakdown captured) we fall back to
-  // the simple total-only view that was here before.
-  if (order.subtotalUsd === null && !hasCreatorTax && !hasDestinationTax) {
+  // Legacy fallback: if no rail-aware breakdown captured AND no Phase 2/8 tax
+  // lines, show the simple total-only view that was here before.
+  if (
+    order.subtotalUsd === null &&
+    !hasCreatorTax &&
+    !hasDestinationTax &&
+    !hasCreatorSalesTax &&
+    !hasPlatformFeeBuyerTax
+  ) {
     return (
       <div className="bg-card border border-border rounded-xl p-5">
         <h2 className="font-semibold text-foreground text-sm mb-3">Order total</h2>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Total paid</span>
-          <span className="text-foreground font-medium">USD {(order.amountUsd / 100).toFixed(2)}</span>
+          <span className="text-foreground font-medium">{fmtUsd(order.amountUsd)}</span>
         </div>
       </div>
     )
   }
 
+  const creatorPortion = subtotal + shippingUsd
+  const creatorDisplayName =
+    order.product.creator?.displayName ?? order.product.creator?.username ?? 'Creator'
+  // Tax base hint for the creator's own sales tax line (subtotal + shipping
+  // per spec §11.4). We display just the dollar value, no per-line %-derivation.
+  const creatorSalesTaxBase = subtotal + shippingUsd
+  const creatorSalesTaxLabel = order.creatorSalesTaxLabel ?? 'Sales tax'
+  const platformFeeTaxLabel = 'Service-fee tax'
+  const destinationTaxLabel = order.destinationTaxCountry
+    ? `${order.destinationTaxCountry} ${order.destinationTaxRatePercent ? '' : 'tax'}`.trim()
+    : 'Destination tax'
+
+  function fmtPercent(rateDecimalOrPercent: number | null, isDecimal: boolean): string {
+    if (rateDecimalOrPercent == null) return ''
+    const pct = isDecimal ? rateDecimalOrPercent * 100 : rateDecimalOrPercent
+    // Strip trailing .0 for clean labels like "6%", keep "6.5%".
+    return Number.isInteger(pct) ? `${pct}%` : `${pct.toFixed(2).replace(/\.?0+$/, '')}%`
+  }
+
   return (
     <div className="bg-card border border-border rounded-xl p-5">
-      <h2 className="font-semibold text-foreground text-sm mb-3">Pricing breakdown</h2>
-      <div className="space-y-1.5 text-sm">
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span className="text-foreground">USD {(subtotal / 100).toFixed(2)}</span>
+      <h2 className="font-semibold text-foreground text-sm mb-4">Receipt</h2>
+
+      {/* FROM CREATOR section — listing + shipping (creator's money) */}
+      <div className="space-y-2 mb-4">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          From creator{creatorDisplayName ? ` (${creatorDisplayName})` : ''}
+        </p>
+        <div className="space-y-1.5 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Listing price</span>
+            <span className="text-foreground">{fmtUsd(subtotal)}</span>
+          </div>
+          {hasShipping && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Shipping (fulfilled by creator)</span>
+              <span className="text-foreground">{fmtUsd(shippingUsd)}</span>
+            </div>
+          )}
+          {hasShipping && (
+            <div className="flex justify-between text-xs pt-1 border-t border-border/50">
+              <span className="text-muted-foreground">Subtotal — creator&apos;s portion</span>
+              <span className="text-muted-foreground">{fmtUsd(creatorPortion)}</span>
+            </div>
+          )}
+          {hasDiscount && (
+            <div className="flex justify-between text-success">
+              <span>Discount</span>
+              <span>− {fmtUsd(order.discountAmount)}</span>
+            </div>
+          )}
         </div>
-        {hasDiscount && (
-          <div className="flex justify-between text-success">
-            <span>Discount</span>
-            <span>− USD {(order.discountAmount / 100).toFixed(2)}</span>
-          </div>
-        )}
-        {hasCreatorTax && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              Creator tax{order.creatorTaxRatePercent ? ` (${order.creatorTaxRatePercent}%)` : ''}
-            </span>
-            <span className="text-foreground">USD {(order.creatorTaxAmountUsd / 100).toFixed(2)}</span>
-          </div>
-        )}
-        {hasDestinationTax && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">
-              {order.destinationTaxCountry ? `${order.destinationTaxCountry} ` : ''}Tax
-              {order.destinationTaxRatePercent ? ` (${order.destinationTaxRatePercent}%)` : ''}
-            </span>
-            <span className="text-foreground">USD {(order.destinationTaxAmountUsd / 100).toFixed(2)}</span>
-          </div>
-        )}
-        {hasBuyerFee && (
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Processing fee</span>
-            <span className="text-foreground">USD {((order.buyerFeeUsd ?? 0) / 100).toFixed(2)}</span>
-          </div>
-        )}
-        <div className="flex justify-between pt-2 mt-2 border-t border-border font-semibold">
-          <span className="text-foreground">Total</span>
-          <span className="text-foreground">USD {(order.amountUsd / 100).toFixed(2)}</span>
-        </div>
-        {showDisplayCurrency && (
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Charged in {order.displayCurrency}</span>
-            <span>{order.displayCurrency} {(order.displayAmount / 100).toFixed(2)}</span>
-          </div>
-        )}
       </div>
+
+      {/* FROM noizu.direct section — service fee (platform's money) */}
+      {hasBuyerFee && (
+        <div className="space-y-2 mb-4">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            From noizu.direct (escrow &amp; payment service)
+          </p>
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Service fee</span>
+              <span className="text-foreground">{fmtUsd(buyerFeeUsd)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subtotal of buyer's bill before tax lines */}
+      <div className="flex justify-between text-sm pt-3 border-t border-border">
+        <span className="text-muted-foreground">Subtotal</span>
+        <span className="text-foreground">
+          {fmtUsd(creatorPortion + buyerFeeUsd - order.discountAmount)}
+        </span>
+      </div>
+
+      {/* Conditional tax lines — render only when amount > 0 */}
+      {(hasCreatorSalesTax || hasPlatformFeeBuyerTax || hasDestinationTax || hasCreatorTax) && (
+        <div className="mt-3 space-y-1.5 text-sm">
+          {hasCreatorSalesTax && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Seller&apos;s {creatorSalesTaxLabel}
+                  {order.creatorSalesTaxRatePercent != null
+                    ? ` (${fmtPercent(order.creatorSalesTaxRatePercent, true)})`
+                    : ''}
+                  {' '}
+                  on {fmtUsd(creatorSalesTaxBase)}
+                </span>
+                <span className="text-foreground">{fmtUsd(order.creatorSalesTaxAmountUsd)}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 pl-1">
+                Collected by noizu.direct on behalf of the creator and remitted under their tax ID.
+              </p>
+            </>
+          )}
+          {hasPlatformFeeBuyerTax && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {platformFeeTaxLabel}
+                  {order.platformFeeBuyerTaxRate != null
+                    ? ` (${fmtPercent(order.platformFeeBuyerTaxRate, true)})`
+                    : ''}
+                  {' '}
+                  on {fmtUsd(buyerFeeUsd)}
+                </span>
+                <span className="text-foreground">{fmtUsd(order.platformFeeBuyerTaxUsd)}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 pl-1">
+                noizu.direct&apos;s escrow service includes this tax, remitted to the local tax authority.
+              </p>
+            </>
+          )}
+          {hasDestinationTax && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  {destinationTaxLabel}
+                  {order.destinationTaxRatePercent != null
+                    ? ` (${fmtPercent(order.destinationTaxRatePercent, false)})`
+                    : ''}
+                </span>
+                <span className="text-foreground">{fmtUsd(order.destinationTaxAmountUsd)}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground/80 pl-1">
+                Collected by noizu.direct as deemed supplier and remitted to the local tax authority.
+              </p>
+            </>
+          )}
+          {hasCreatorTax && !hasCreatorSalesTax && (
+            // Phase 2.1 self-declared markup (legacy path) — only render when
+            // the new Phase 8 sales-tax line isn't already showing for the same
+            // creator (would double-attribute).
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                Creator tax
+                {order.creatorTaxRatePercent != null
+                  ? ` (${fmtPercent(order.creatorTaxRatePercent, false)})`
+                  : ''}
+              </span>
+              <span className="text-foreground">{fmtUsd(order.creatorTaxAmountUsd)}</span>
+            </div>
+          )}
+          {hasReverseCharge && (
+            <p className="text-[11px] text-muted-foreground/80 pl-1 italic">
+              Reverse-charge B2B (no tax collected; buyer self-accounts).
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Total */}
+      <div className="flex justify-between pt-3 mt-3 border-t border-border font-semibold text-sm">
+        <span className="text-foreground">Total</span>
+        <span className="text-foreground">{fmtUsd(order.amountUsd)}</span>
+      </div>
+      {showDisplayCurrency && (
+        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+          <span>Charged in {order.displayCurrency}</span>
+          <span>{order.displayCurrency} {(order.displayAmount / 100).toFixed(2)}</span>
+        </div>
+      )}
+
+      {/* Reverse-charge full disclosure (replaces old block — kept for B2B context) */}
       {hasReverseCharge && (
         <p className="mt-3 text-xs text-muted-foreground border-t border-border pt-3">
           Reverse-charge VAT: tax has been zeroed because you provided a business
@@ -297,6 +459,13 @@ function PricingBreakdown({ order }: { order: Order }) {
           self-assessing the tax in your jurisdiction.
         </p>
       )}
+
+      {/* Escrow disclosure footer (src/content/legal/escrow-disclosure.md, abbreviated) */}
+      <p className="mt-4 text-[11px] text-muted-foreground border-t border-border pt-3 leading-relaxed">
+        noizu.direct provides escrow and payment-handling for this transaction. Goods are
+        sold and shipped by the creator. Tax line items are itemized and clearly attributed
+        to the responsible party. Lines that don&apos;t apply to your purchase aren&apos;t shown.
+      </p>
     </div>
   )
 }

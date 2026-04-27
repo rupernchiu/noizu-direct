@@ -27,7 +27,7 @@ const QUOTA_COUNTED_CATEGORIES = new Set([
 // are ephemeral (30-day retention cron) and shouldn't eat into a creator's
 // durable plan allocation.
 
-const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment'])
+const PRIVATE_CATEGORIES = new Set(['identity', 'dispute_evidence', 'message_attachment', 'tax_cert', 'tax-cert'])
 
 // H6 — map upload `category` to the KycUpload.category enum string we store.
 const KYC_CATEGORY_MAP: Record<string, 'id_front' | 'id_back' | 'selfie'> = {
@@ -41,6 +41,8 @@ const SIZE_LIMITS: Record<string, number> = {
   identity:            10 * 1024 * 1024,
   dispute_evidence:     5 * 1024 * 1024,
   message_attachment:   5 * 1024 * 1024,
+  'tax_cert':           5 * 1024 * 1024,
+  'tax-cert':           5 * 1024 * 1024,
   product_image:        5 * 1024 * 1024,
   portfolio:            5 * 1024 * 1024,
   profile_avatar:       2 * 1024 * 1024,
@@ -130,7 +132,7 @@ export async function POST(req: Request) {
   // ── M18 — magic-byte sniff for identity originals ─────────────────────────
   // Identity/private categories keep the raw bytes (no sharp re-encode), so
   // we must validate the actual bytes rather than trusting file.type.
-  if (category === 'identity' || category === 'dispute_evidence') {
+  if (category === 'identity' || category === 'dispute_evidence' || category === 'tax-cert' || category === 'tax_cert') {
     const sniffed = sniffFirstBytes(rawBuffer)
     if (!sniffed || !IDENTITY_MAGIC_ALLOW.has(sniffed)) {
       console.warn('[upload] magic-byte mismatch on private upload', {
@@ -192,7 +194,9 @@ export async function POST(req: Request) {
   if (isPrivate) {
     // H6 — scope identity uploads under the uploading user's id so later
     // submissions can be regex-validated even if the DB row path fails.
-    if (category === 'identity') {
+    // tax-cert follows the same per-user-scoped layout for the same reason
+    // (the file route grants owner self-view via path segment 1).
+    if (category === 'identity' || category === 'tax-cert' || category === 'tax_cert') {
       r2Key     = `private/${folder}/${userId}/${filename}`
       publicUrl = `/api/files/${folder}/${userId}/${filename}`
     } else {

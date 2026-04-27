@@ -15,6 +15,11 @@ import {
   loadEnabledTaxCountries,
 } from '@/lib/destination-tax'
 import { computeOriginTax, type OriginTaxListingType } from '@/lib/origin-tax'
+import {
+  computeCreatorSalesTax,
+  computePlatformFeeTax,
+  loadPlatformFeeTaxRules,
+} from '@/lib/platform-fee-tax'
 import { convertUsdCentsTo } from '@/lib/fx'
 import {
   combineCartShipping,
@@ -243,9 +248,31 @@ export async function POST(req: Request) {
       taxRatePercent: true,
       taxJurisdiction: true,
       payoutCountry: true,
+      // Phase 8 — creator's own sales tax (Layer 1.5, agency-collect).
+      // All five gates must pass for `creatorSalesTaxAmountUsd` to populate;
+      // see `src/lib/platform-fee-tax.ts::computeCreatorSalesTax`.
+      creatorClassification: true,
+      taxId: true,
+      collectsSalesTax: true,
+      salesTaxStatus: true,
+      salesTaxRate: true,
+      salesTaxLabel: true,
     },
   })
   const creatorTaxByUserId = new Map<string, { rate: number; jurisdiction: string | null }>()
+  // Phase 8 — keep the full sales-tax profile addressable per creator-userId
+  // so the per-group loop can compute their agency-collect markup.
+  const creatorSalesTaxProfileByUserId = new Map<
+    string,
+    {
+      creatorClassification: string | null
+      taxId: string | null
+      collectsSalesTax: boolean
+      salesTaxStatus: string
+      salesTaxRate: number | null
+      salesTaxLabel: string | null
+    }
+  >()
   // Phase 4 — creator's resolved origin country for PPh attribution. Prefer
   // payoutCountry (where the money lands), fall back to taxJurisdiction. Locked
   // onto Order.creatorCountry at order creation; PPh attaches to the snapshot
@@ -258,7 +285,20 @@ export async function POST(req: Request) {
     })
     const resolved = (p.payoutCountry ?? p.taxJurisdiction ?? null)
     creatorCountryByUserId.set(p.userId, resolved ? resolved.toUpperCase() : null)
+    creatorSalesTaxProfileByUserId.set(p.userId, {
+      creatorClassification: p.creatorClassification,
+      taxId: p.taxId,
+      collectsSalesTax: p.collectsSalesTax,
+      salesTaxStatus: p.salesTaxStatus,
+      salesTaxRate: p.salesTaxRate,
+      salesTaxLabel: p.salesTaxLabel,
+    })
   }
+
+  // Phase 8 — load platform-fee-tax rules once per request. Map is keyed by
+  // ISO-2; default {} means no country has crossed registration threshold yet
+  // so every per-group call returns 0 and the receipt suppresses the line.
+  const platformFeeTaxRules = await loadPlatformFeeTaxRules()
 
   // Phase 2.2 — destination tax. We mark up the buyer's checkout total by the
   // jurisdiction's consumption-tax rate when (a) the buyer's country has a
@@ -374,6 +414,10 @@ export async function POST(req: Request) {
   const createdOrderIds: string[] = []
 
   let shippingAggregateUsd = 0
+  // Phase 8 — aggregate the new buyer-side tax lines across all creator groups
+  // so they can be added to the cart-level grandTotal for FX conversion.
+  let creatorSalesTaxAggregateUsd = 0
+  let platformFeeBuyerTaxAggregateUsd = 0
   for (const [, items] of creatorMap) {
     const groupSubtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0)
     const groupFee = Math.round((groupSubtotal / subtotal) * processingFee)
@@ -474,9 +518,6 @@ export async function POST(req: Request) {
     // gross. Phase 2.1 sales-tax markup, by contrast, IS added to the buyer's
     // gross (the buyer is paying for the tax the creator will remit).
     const groupCreatorTaxBuyerSide = originTax.amountUsd > 0 ? 0 : groupCreatorTaxUsd
-    const orderAmount =
-      groupSubtotal + groupFee + groupCreatorTaxBuyerSide + groupDestinationTaxUsd + groupShippingUsd
-    const orderAmountUsd = orderAmount - groupDiscountShare
 
     // Rail-aware fee snapshot. Apportion the cart-level breakdown to each
     // creator group by its USD subtotal share so per-group splits sum to the
@@ -493,6 +534,67 @@ export async function POST(req: Request) {
         groupDiscountedSubtotal * (feeBreakdown.creatorCommissionPercent / 100),
       )
     }
+
+    // ── Phase 8: creator's own sales tax (Layer 1.5, agency-collect) ────────
+    // Activates only when the creator's profile clears all five gates
+    // (REGISTERED_BUSINESS + taxId + collectsSalesTax + APPROVED + non-null
+    // rate). Tax base = subtotal + shipping (per spec §11.4). Buyer pays it.
+    const groupSalesTaxProfile = creatorSalesTaxProfileByUserId.get(groupCreatorUserId)
+    const creatorSalesTax = groupSalesTaxProfile
+      ? computeCreatorSalesTax(
+          groupSalesTaxProfile,
+          groupDiscountedSubtotal,
+          groupShippingUsd,
+        )
+      : { rate: 0, amountUsd: 0, label: null as string | null }
+
+    // ── Phase 8: platform fee tax (Layer 3, threshold-gated) ────────────────
+    // Buyer-side: tax on the buyer service fee, applied in buyer's country.
+    // Creator-side: tax on the commission deducted at payout, applied in
+    // creator's country. Both are 0 unless admin has flipped the country on
+    // in PlatformSettings.platformFeeTax with the matching `sides` entry.
+    //
+    // Per spec §11 the tax applies ONLY to platform fees — never to listing
+    // price, shipping, or any pass-through. We compute against the snapshotted
+    // `groupBuyerFeeUsd` / `groupCreatorCommissionUsd` (rail-aware path) when
+    // available, falling back to the legacy flat fee otherwise.
+    const buyerFeeForTaxBase = groupBuyerFeeUsd ?? groupFee
+    const creatorCommissionForTaxBase = groupCreatorCommissionUsd ?? 0
+    const platformFeeBuyerTax = computePlatformFeeTax(
+      platformFeeTaxRules,
+      'BUYER',
+      buyerCountry,
+      buyerFeeForTaxBase,
+    )
+    const platformFeeCreatorTax = computePlatformFeeTax(
+      platformFeeTaxRules,
+      'CREATOR',
+      groupCreatorCountry,
+      creatorCommissionForTaxBase,
+    )
+
+    // Buyer's bill includes:
+    //   subtotal + service fee + (optional creator-tax markup, Phase 2.1)
+    //   + (Phase 8) creator's own sales tax — buyer pays it
+    //   + (Phase 8) platform-fee BUYER-side tax — buyer pays it
+    //   + destination tax (Layer 2)
+    //   + shipping (pass-through)
+    //
+    // Platform-fee CREATOR-side tax is deducted from creator's payout, NOT
+    // added to the buyer's bill. Snapshotted onto Order for payout-time
+    // settlement only.
+    const orderAmount =
+      groupSubtotal +
+      groupFee +
+      groupCreatorTaxBuyerSide +
+      creatorSalesTax.amountUsd +
+      platformFeeBuyerTax.amountUsd +
+      groupDestinationTaxUsd +
+      groupShippingUsd
+    const orderAmountUsd = orderAmount - groupDiscountShare
+
+    creatorSalesTaxAggregateUsd += creatorSalesTax.amountUsd
+    platformFeeBuyerTaxAggregateUsd += platformFeeBuyerTax.amountUsd
 
     const order = await prisma.order.create({
       data: {
@@ -528,6 +630,18 @@ export async function POST(req: Request) {
         // Phase 4 — creator country snapshot (locked at order time, drives PPh
         // attribution even if creator later changes country in their profile).
         creatorCountry: groupCreatorCountry,
+        // Phase 8 — creator's own sales tax (Layer 1.5, agency-collect).
+        // Zero unless creator's profile cleared all five gates; snapshotted
+        // here so the receipt and payout settlement see a stable value.
+        creatorSalesTaxAmountUsd: creatorSalesTax.amountUsd,
+        creatorSalesTaxRatePercent: creatorSalesTax.amountUsd > 0 ? creatorSalesTax.rate : null,
+        creatorSalesTaxLabel: creatorSalesTax.amountUsd > 0 ? creatorSalesTax.label : null,
+        // Phase 8 — platform fee tax (Layer 3, threshold-gated per country).
+        // Buyer side adds to buyer's bill; creator side deducts from payout.
+        platformFeeBuyerTaxUsd: platformFeeBuyerTax.amountUsd,
+        platformFeeBuyerTaxRate: platformFeeBuyerTax.amountUsd > 0 ? platformFeeBuyerTax.rate : null,
+        platformFeeCreatorTaxUsd: platformFeeCreatorTax.amountUsd,
+        platformFeeCreatorTaxRate: platformFeeCreatorTax.amountUsd > 0 ? platformFeeCreatorTax.rate : null,
         // Phase 2.2 — destination tax (Layer 2 platform-collected)
         destinationTaxAmountUsd: groupDestinationTaxUsd,
         destinationTaxRatePercent: destinationTaxLine?.ratePercent ?? null,
@@ -559,6 +673,14 @@ export async function POST(req: Request) {
   // Add aggregate shipping (computed in the per-group loop above) to grandTotal
   // before FX conversion. Shipping has no fee or tax component — pure pass-through.
   grandTotal += shippingAggregateUsd
+
+  // Phase 8 — add the new buyer-side tax aggregates to grandTotal. Each is
+  // 0 unless activation conditions are met (creator's profile gates for
+  // sales tax; PlatformSettings flip for the buyer's country for platform-
+  // fee tax). The creator-side platform-fee tax is intentionally NOT added —
+  // it's a creator payout deduction only.
+  grandTotal += creatorSalesTaxAggregateUsd
+  grandTotal += platformFeeBuyerTaxAggregateUsd
 
   // Convert grand total to the buyer's selected display currency
   const grandTotalDisplay = await convertToDisplayCurrency(grandTotal, currency)

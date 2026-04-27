@@ -4,6 +4,11 @@ import { prisma } from '@/lib/prisma'
 import { createPaymentIntent, decideThreeDsAction } from '@/lib/airwallex'
 import { calculateFees, getFeeRatesFromSettings } from '@/lib/fees'
 import { computeOriginTax } from '@/lib/origin-tax'
+import {
+  computeCreatorSalesTax,
+  computePlatformFeeTax,
+  loadPlatformFeeTaxRules,
+} from '@/lib/platform-fee-tax'
 import { createQuoteBackingProduct } from '@/lib/commissions'
 import { createNotification } from '@/lib/notifications'
 
@@ -69,8 +74,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       taxRatePercent: true,
       taxJurisdiction: true,
       payoutCountry: true,
+      // Phase 8 — creator's own sales tax (Layer 1.5, agency-collect).
+      creatorClassification: true,
+      taxId: true,
+      collectsSalesTax: true,
+      salesTaxStatus: true,
+      salesTaxRate: true,
+      salesTaxLabel: true,
     },
   })
+  // Phase 8 — buyer country snapshot for platform-fee BUYER-side tax.
+  // Commissions are services (no shipping form), so the strongest country
+  // signal we have on the buyer is their `businessTaxCountry` (if they're
+  // B2B). When null, the buyer-side platform fee tax returns 0 — line is
+  // suppressed. Acceptable scaffolding behavior at launch.
+  const buyerProfile = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { businessTaxCountry: true },
+  })
+  const buyerCountry = buyerProfile?.businessTaxCountry?.toUpperCase() ?? null
   // Phase 4 — creator origin country snapshot. Prefer `payoutCountry` (where the
   // money lands), fall back to `taxJurisdiction`. Locked onto Order.creatorCountry
   // so PPh attribution survives later profile changes. Mirrors the resolution in
@@ -93,11 +115,53 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     : 0
   const buyerSideTaxRate = isPphPath ? 0 : declaredTaxRate
   const breakdown = calculateFees(quote.amountUsd, 'CARD', rates, buyerSideTaxRate)
-  const orderAmountUsd = breakdown.grossUsdCents
   const orderCreatorTaxUsd = isPphPath ? originTax.amountUsd : breakdown.creatorTaxUsdCents
   const orderCreatorTaxRate = isPphPath
     ? originTax.rate * 100
     : (declaredTaxRate > 0 ? declaredTaxRate : 0)
+
+  // ── Phase 8: creator's own sales tax (Layer 1.5, agency-collect) ──────────
+  // Commissions are services — no shipping pass-through, so the tax base is
+  // just the discounted subtotal. Activates only when the creator's profile
+  // clears all five gates.
+  const creatorSalesTax = creatorProfile
+    ? computeCreatorSalesTax(
+        {
+          creatorClassification: creatorProfile.creatorClassification,
+          taxId: creatorProfile.taxId,
+          collectsSalesTax: creatorProfile.collectsSalesTax,
+          salesTaxStatus: creatorProfile.salesTaxStatus,
+          salesTaxRate: creatorProfile.salesTaxRate,
+          salesTaxLabel: creatorProfile.salesTaxLabel,
+        },
+        breakdown.subtotalUsdCents,
+        0,
+      )
+    : { rate: 0, amountUsd: 0, label: null as string | null }
+
+  // ── Phase 8: platform fee tax (Layer 3, threshold-gated) ──────────────────
+  // Buyer side = tax on buyer service fee (`breakdown.buyerFeeUsdCents`) in
+  // buyer's country. Creator side = tax on commission deducted at payout
+  // (`breakdown.creatorCommissionUsdCents`) in creator's country.
+  const platformFeeTaxRules = await loadPlatformFeeTaxRules()
+  const platformFeeBuyerTax = computePlatformFeeTax(
+    platformFeeTaxRules,
+    'BUYER',
+    buyerCountry,
+    breakdown.buyerFeeUsdCents,
+  )
+  const platformFeeCreatorTax = computePlatformFeeTax(
+    platformFeeTaxRules,
+    'CREATOR',
+    creatorCountry,
+    breakdown.creatorCommissionUsdCents,
+  )
+
+  // Buyer pays: existing breakdown gross + creator's own sales tax + platform-
+  // fee buyer-side tax. Creator-side platform fee tax is NOT added — it's a
+  // payout-time deduction.
+  const orderAmountUsd =
+    breakdown.grossUsdCents + creatorSalesTax.amountUsd + platformFeeBuyerTax.amountUsd
   const now = new Date()
 
   const backingProduct = await createQuoteBackingProduct({
@@ -156,6 +220,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // Phase 4 — creator country snapshot drives the webhook's PPh accrual
         // into the TAX_ORIGIN/{country} reserve when payment confirms.
         creatorCountry,
+        buyerCountry,
+        // Phase 8 — creator's own sales tax (Layer 1.5, agency-collect).
+        // Zero unless creator's profile cleared all five gates.
+        creatorSalesTaxAmountUsd: creatorSalesTax.amountUsd,
+        creatorSalesTaxRatePercent: creatorSalesTax.amountUsd > 0 ? creatorSalesTax.rate : null,
+        creatorSalesTaxLabel: creatorSalesTax.amountUsd > 0 ? creatorSalesTax.label : null,
+        // Phase 8 — platform fee tax (Layer 3, threshold-gated per country).
+        platformFeeBuyerTaxUsd: platformFeeBuyerTax.amountUsd,
+        platformFeeBuyerTaxRate: platformFeeBuyerTax.amountUsd > 0 ? platformFeeBuyerTax.rate : null,
+        platformFeeCreatorTaxUsd: platformFeeCreatorTax.amountUsd,
+        platformFeeCreatorTaxRate: platformFeeCreatorTax.amountUsd > 0 ? platformFeeCreatorTax.rate : null,
       },
     })
     if (quote.isMilestoneBased) {
