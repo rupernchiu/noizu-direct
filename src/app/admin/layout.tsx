@@ -23,7 +23,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (showMainNav) {
     mobileNavItems.push(
       { href: '/admin',                      label: 'Overview',         group: 'Main' },
-      { href: '/admin/kb',                   label: 'Knowledgebase',    group: 'Main' },
       { href: '/admin/creators',             label: 'Creators',         group: 'Main' },
       { href: '/admin/products',             label: 'Products',         group: 'Main' },
       { href: '/admin/orders',               label: 'Orders',           group: 'Main' },
@@ -48,6 +47,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       { href: '/admin/creators/applications', label: 'Applications',    group: 'Platform' },
       { href: '/admin/private-files/housekeeping', label: 'KYC Housekeeping', group: 'Platform' },
       { href: '/admin/reviews',              label: 'Reviews',          group: 'Platform' },
+      { href: '/admin/kb',                   label: 'Knowledgebase',    group: 'Platform' },
     )
   }
   if (showStaffSection) {
@@ -74,7 +74,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {showMainNav && (
                 <>
                   <NavLink href="/admin"><LayoutDashboard className="size-4" />Overview</NavLink>
-                  <NavLink href="/admin/kb"><BookOpen className="size-4" />Knowledgebase</NavLink>
                   <NavLink href="/admin/creators"><Users className="size-4" />Creators</NavLink>
                   <NavLink href="/admin/products"><Package className="size-4" />Products</NavLink>
                   <NavLink href="/admin/orders"><ShoppingBag className="size-4" />Orders</NavLink>
@@ -102,6 +101,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                   <NavLink href="/admin/creators/applications"><ClipboardList className="size-4" />Applications</NavLink>
                   <NavLink href="/admin/private-files/housekeeping"><FolderLock className="size-4" />KYC Housekeeping</NavLink>
                   <NavLink href="/admin/reviews"><Star className="size-4" />Reviews</NavLink>
+                  <NavLink href="/admin/kb"><BookOpen className="size-4" />Knowledgebase</NavLink>
                 </>
               )}
               {showStaffSection && (
