@@ -12,11 +12,9 @@ export async function calculateTrending() {
       id: true,
       manualBoost: true,
       shippingByCountry: true,
-      shippingFreeThresholdUsd: true,
       creator: {
         select: {
           userId: true,
-          shippingByCountry: true,
           shippingFreeThresholdUsd: true,
         },
       },
@@ -52,10 +50,8 @@ async function processTrendingBatch(
     id: string
     manualBoost: number
     shippingByCountry: string | null
-    shippingFreeThresholdUsd: number | null
     creator: {
       userId: string
-      shippingByCountry: string | null
       shippingFreeThresholdUsd: number | null
     }
   }[],
@@ -102,12 +98,8 @@ async function processTrendingBatch(
     const manualBoost = product.manualBoost
 
     const productMap = parseShippingMap(product.shippingByCountry)
-    const creatorMap = parseShippingMap(product.creator.shippingByCountry)
-    const hasRates =
-      (productMap && Object.keys(productMap).length > 0) ||
-      (creatorMap && Object.keys(creatorMap).length > 0)
-    const freeThreshold =
-      product.shippingFreeThresholdUsd ?? product.creator.shippingFreeThresholdUsd ?? null
+    const hasRates = productMap != null && Object.keys(productMap).length > 0
+    const freeThreshold = product.creator.shippingFreeThresholdUsd ?? null
     const freeShipBoost = hasRates && freeThreshold != null ? TRENDING_CONFIG.freeShipBoost : 0
 
     const finalScore = decayedScore + manualBoost + freeShipBoost

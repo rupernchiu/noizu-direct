@@ -160,12 +160,12 @@ model CreatorProfile {
   taxId                  String? // SST/GST/VAT registration number
   taxRatePercent         Float? // overrides PlatformSettings.defaultCreatorTaxRatePercent
   taxJurisdiction        String? // ISO-3166 alpha-2; falls back to payoutCountry
-  // ── Shipping (sprint shipping-1) ──
-  // JSON map of ISO-3166 alpha-2 → USD cents, e.g. {"MY":700,"SG":1200,"ROW":2500}.
-  // Buyer's country is looked up; if absent (and no ROW key), checkout is blocked.
-  // Per-Product overrides may replace this for individual listings.
-  shippingByCountry      String? // JSON: { [iso2|"ROW"]: usdCents }
-  shippingFreeThresholdUsd Int? // null = no free-ship threshold
+  // ── Shipping V2 (2026-04-27): per-product rates, creator-level only keeps cart prefs ──
+  // shippingByCountry is soft-deprecated — kept nullable for backfill safety; runtime
+  // reads only Product.shippingByCountry. May be reused in future as a "starting-point
+  // template" creators can bulk-apply when adding new listings.
+  shippingByCountry      String? // JSON: { [iso2|"ROW"]: usdCents } — DEPRECATED, do not read
+  shippingFreeThresholdUsd Int? // null = no free-ship threshold (creator-level, cart-wide)
   combinedShippingEnabled Boolean  @default(true) // multi-item carts: charge highest-rate item only
   createdAt              DateTime  @default(now())
 
@@ -237,10 +237,10 @@ model Product {
   shippingSG                  Int? // LEAD TIME (days), not cost
   shippingPH                  Int? // LEAD TIME (days), not cost
   shippingIntl                Int? // LEAD TIME (days), not cost
-  // ── Per-listing shipping cost override (sprint shipping-1) ──
-  // null means inherit from CreatorProfile.shippingByCountry / shippingFreeThresholdUsd.
+  // ── Per-product shipping rates (Shipping V2, 2026-04-27) ──
+  // Sole source of truth. PHYSICAL/POD listings must have ≥1 entry to publish.
+  // null/empty = no shipping configured (publish guard blocks PHYSICAL/POD).
   shippingByCountry           String? // JSON: { [iso2|"ROW"]: usdCents }
-  shippingFreeThresholdUsd    Int?
   showProviderPublic          Boolean   @default(false)
   podExternalUrl              String?
   sizeVariants                String? // JSON array of size strings

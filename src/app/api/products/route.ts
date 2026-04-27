@@ -7,7 +7,7 @@ import { invalidateCache, invalidatePattern, CACHE_KEYS } from '@/lib/redis'
 import { auth } from '@/lib/auth'
 import { rankProducts, deriveCategoryAffinity, type ScoredProduct } from '@/lib/discovery'
 import { isCreatorOwnedDigitalKey } from '@/lib/upload-validators'
-import { hasAnyShippingRate, isPhysicalType } from '@/lib/shipping'
+import { hasAnyShippingRate, isPhysicalType, parseShippingMap, serializeShippingMap, type ShippingRateMap } from '@/lib/shipping'
 
 // Strict shape for a creator-supplied digital deliverable. The `.key` field
 // MUST live under the caller's own digital/<profileId>/ prefix — this is
@@ -172,6 +172,8 @@ export async function POST(req: Request) {
     commissionDepositPercent?: number | null
     commissionRevisionsIncluded?: number | null
     commissionTurnaroundDays?: number | null
+    // Shipping V2 (per-product) — required for PHYSICAL/POD before publish
+    shippingByCountry?: Record<string, number> | null
   }
 
   if (body.type === 'DIGITAL' && (!body.digitalFiles || body.digitalFiles.length === 0)) {
@@ -202,16 +204,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'A POD provider is required' }, { status: 400 })
   }
 
-  // Block publish for PHYSICAL/POD listings without any shipping rate set
-  // (no per-listing override yet at create time, so check creator's defaults).
-  if (isPhysicalType(body.type) && !hasAnyShippingRate(profile.shippingByCountry)) {
-    return NextResponse.json(
-      {
-        error:
-          'Set shipping rates before publishing physical or POD listings. Open Dashboard → Shipping to add per-country rates.',
-      },
-      { status: 400 },
-    )
+  // Shipping V2: PHYSICAL/POD listings carry their own per-country rates.
+  // Block publish if the payload doesn't include at least one country rate.
+  let serializedShipping: string | null = null
+  if (isPhysicalType(body.type)) {
+    const sanitized: ShippingRateMap | null = body.shippingByCountry
+      ? parseShippingMap(JSON.stringify(body.shippingByCountry))
+      : null
+    if (!sanitized || !hasAnyShippingRate(serializeShippingMap(sanitized))) {
+      return NextResponse.json(
+        {
+          error:
+            'Set at least one country shipping rate before publishing this listing. Use the shipping section on the listing form.',
+        },
+        { status: 400 },
+      )
+    }
+    serializedShipping = serializeShippingMap(sanitized)
   }
 
   if (body.podProviderId) {
@@ -260,6 +269,8 @@ export async function POST(req: Request) {
         body.type === 'COMMISSION' ? (body.commissionRevisionsIncluded ?? 2) : null,
       commissionTurnaroundDays:
         body.type === 'COMMISSION' ? (body.commissionTurnaroundDays ?? 14) : null,
+      // Shipping V2 (per-product)
+      shippingByCountry: serializedShipping,
     },
   })
 

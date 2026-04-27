@@ -1,25 +1,45 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Truck, Info, CheckCircle2, AlertTriangle, Globe } from 'lucide-react'
+// /dashboard/shipping — Shipping V2 CRUD master view (2026-04-27).
+//
+// Top: cart-level prefs (free-ship threshold + combined-cart toggle) — these
+// stay creator-wide because they only make sense at cart level.
+// Below: all PHYSICAL/POD listings with their current per-country rates and
+// inline edit (same component used on the listing form).
+
+import { useState, useEffect, useCallback } from 'react'
+import { Truck, CheckCircle2, AlertTriangle, Pencil, X, Save, Loader2 } from 'lucide-react'
 import {
   SHIPPING_COUNTRIES,
-  SHIPPING_ZONES,
-  SHIPPING_BENCHMARKS,
   ROW_KEY,
+  parseShippingMap,
   type ShippingRateMap,
+  shippingCoversAllSEA,
 } from '@/lib/shipping'
+import { ShippingRateInputs } from '@/components/dashboard/ShippingRateInputs'
 
-interface Settings {
-  rates: ShippingRateMap
+interface CartPrefs {
   freeThresholdUsdCents: number | null
   combinedShippingEnabled: boolean
 }
 
-const ZONE_FLAGS: Record<string, string> = {
-  MY: 'MY', SG: 'SG', PH: 'PH', ID: 'ID', TH: 'TH',
-  VN: 'VN', KH: 'KH', MM: 'MM', LA: 'LA', BN: 'BN',
-  ROW: 'ROW',
+interface ListingRow {
+  id: string
+  title: string
+  type: string
+  isActive: boolean
+  shippingByCountry: string | null
+}
+
+function ratesSummary(map: ShippingRateMap | null): string {
+  if (!map || Object.keys(map).length === 0) return 'Not set'
+  const parts: string[] = []
+  for (const c of SHIPPING_COUNTRIES) {
+    const v = map[c.code as keyof ShippingRateMap]
+    if (v != null) parts.push(`${c.code} $${(v / 100).toFixed(2)}`)
+  }
+  if (map[ROW_KEY] != null) parts.push(`ROW $${(map[ROW_KEY]! / 100).toFixed(2)}`)
+  return parts.slice(0, 4).join(' · ') + (parts.length > 4 ? ` · +${parts.length - 4} more` : '')
 }
 
 function dollarsFromCents(cents: number | null | undefined): string {
@@ -27,319 +47,287 @@ function dollarsFromCents(cents: number | null | undefined): string {
   return (cents / 100).toFixed(2)
 }
 
-function centsFromDollars(input: string): number | null {
-  const trimmed = input.trim()
-  if (trimmed === '') return null
-  const num = parseFloat(trimmed)
-  if (!Number.isFinite(num) || num < 0) return null
-  return Math.round(num * 100)
-}
-
-export default function ShippingSettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null)
+export default function ShippingDashboardPage() {
+  const [prefs, setPrefs] = useState<CartPrefs | null>(null)
+  const [listings, setListings] = useState<ListingRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [perCountryMode, setPerCountryMode] = useState(false)
-  // Zone inputs (USD dollars as strings, so users can clear them)
-  const [zoneInputs, setZoneInputs] = useState<Record<string, string>>({
-    'domestic-my': '',
-    'sea-tier1': '',
-    'sea-tier2': '',
-    row: '',
-  })
-  // Per-country override inputs
-  const [countryInputs, setCountryInputs] = useState<Record<string, string>>({})
+  const [savingPrefs, setSavingPrefs] = useState(false)
+  const [prefsSavedAt, setPrefsSavedAt] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
   const [freeThresholdInput, setFreeThresholdInput] = useState('')
   const [combinedEnabled, setCombinedEnabled] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/dashboard/shipping')
-    if (res.ok) {
-      const data = await res.json() as Settings
-      setSettings(data)
-      const inputs: Record<string, string> = {}
-      for (const c of SHIPPING_COUNTRIES) inputs[c.code] = dollarsFromCents(data.rates[c.code as keyof ShippingRateMap])
-      inputs[ROW_KEY] = dollarsFromCents(data.rates[ROW_KEY])
-      setCountryInputs(inputs)
-      // Detect per-country mode if any zone members differ from each other
-      const isUniform = SHIPPING_ZONES.every(z => {
-        const vals = z.countries.map(c => data.rates[c as keyof ShippingRateMap]).filter(v => v != null)
-        if (vals.length === 0) return true
-        return vals.every(v => v === vals[0])
-      })
-      setPerCountryMode(!isUniform)
-      // Pre-fill zone inputs from first country in each zone
-      const zi: Record<string, string> = {}
-      for (const z of SHIPPING_ZONES) {
-        const first = z.countries.find(c => data.rates[c as keyof ShippingRateMap] != null)
-        zi[z.key] = first ? dollarsFromCents(data.rates[first as keyof ShippingRateMap]) : ''
-      }
-      setZoneInputs(zi)
+    const [prefsRes, listingsRes] = await Promise.all([
+      fetch('/api/dashboard/shipping'),
+      fetch('/api/dashboard/listings?shippingOnly=1'),
+    ])
+    if (prefsRes.ok) {
+      const data = await prefsRes.json() as CartPrefs
+      setPrefs(data)
       setFreeThresholdInput(dollarsFromCents(data.freeThresholdUsdCents))
       setCombinedEnabled(data.combinedShippingEnabled)
+    }
+    if (listingsRes.ok) {
+      const data = await listingsRes.json() as { listings: ListingRow[] }
+      setListings(data.listings.filter(l => l.type === 'PHYSICAL' || l.type === 'POD'))
     }
     setLoading(false)
   }, [])
 
   useEffect(() => { void load() }, [load])
 
-  const expandedRates = useMemo<Record<string, number | null>>(() => {
-    const out: Record<string, number | null> = {}
-    if (perCountryMode) {
-      for (const c of SHIPPING_COUNTRIES) out[c.code] = centsFromDollars(countryInputs[c.code] ?? '')
-      out[ROW_KEY] = centsFromDollars(countryInputs[ROW_KEY] ?? '')
-    } else {
-      for (const z of SHIPPING_ZONES) {
-        const cents = centsFromDollars(zoneInputs[z.key] ?? '')
-        for (const c of z.countries) out[c] = cents
-      }
+  async function savePrefs() {
+    setSavingPrefs(true)
+    const trimmed = freeThresholdInput.trim()
+    const cents = trimmed === '' ? null : Math.round(parseFloat(trimmed) * 100)
+    const body = {
+      freeThresholdUsdCents: cents,
+      combinedShippingEnabled: combinedEnabled,
     }
-    return out
-  }, [perCountryMode, zoneInputs, countryInputs])
-
-  const coverageCount = Object.values(expandedRates).filter(v => v != null).length
-  const seaCovered = SHIPPING_COUNTRIES.every(c => expandedRates[c.code] != null) || expandedRates[ROW_KEY] != null
-  const noRates = coverageCount === 0
-
-  async function handleSave() {
-    setSaving(true)
-    const cleanRates: ShippingRateMap = {}
-    for (const [k, v] of Object.entries(expandedRates)) {
-      if (v != null) cleanRates[k as keyof ShippingRateMap] = v
-    }
-    const freeCents = centsFromDollars(freeThresholdInput)
     const res = await fetch('/api/dashboard/shipping', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        rates: cleanRates,
-        freeThresholdUsdCents: freeCents,
-        combinedShippingEnabled: combinedEnabled,
-      }),
+      body: JSON.stringify(body),
     })
+    setSavingPrefs(false)
     if (res.ok) {
-      setSavedAt(Date.now())
-      void load()
+      setPrefsSavedAt(Date.now())
+      const data = await res.json() as CartPrefs
+      setPrefs(data)
+      setTimeout(() => setPrefsSavedAt(null), 2000)
     }
-    setSaving(false)
   }
 
-  if (loading || !settings) {
-    return <div className="max-w-3xl mx-auto py-8 px-4 text-sm text-muted-foreground">Loading shipping settings…</div>
+  async function saveListing(id: string, rates: ShippingRateMap | null) {
+    const res = await fetch(`/api/products/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ shippingByCountry: rates }),
+    })
+    if (res.ok) {
+      const updated = await res.json() as ListingRow
+      setListings(prev => prev.map(l => l.id === id ? { ...l, shippingByCountry: updated.shippingByCountry } : l))
+      setEditingId(null)
+      return true
+    }
+    const err = await res.json().catch(() => ({})) as { error?: string }
+    alert(err.error ?? 'Failed to save')
+    return false
+  }
+
+  if (loading || !prefs) {
+    return <div className="p-6 text-muted-foreground">Loading…</div>
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="flex items-start gap-3 mb-2">
-        <Truck className="size-6 text-foreground shrink-0 mt-1" />
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Shipping Rates</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Tell buyers what you'll charge to ship a single item to their country. We charge no fee on shipping — every cent flows back to you at payout.
-          </p>
+    <div className="max-w-4xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Truck className="size-6" /> Shipping
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Per-product rates live on each listing. This page lets you edit them all from one place,
+          plus the two cart-wide preferences below.
+        </p>
+      </div>
+
+      {/* Cart-level preferences */}
+      <div className="rounded-lg border border-border bg-card p-5 space-y-4">
+        <div className="flex items-start gap-2">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">Cart-wide preferences</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Apply to a buyer&apos;s entire cart from your store, not individual listings.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Free-shipping threshold (USD)
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                placeholder="(none)"
+                value={freeThresholdInput}
+                onChange={e => setFreeThresholdInput(e.target.value)}
+                className="w-full h-9 pl-7 pr-3 rounded-md bg-background border border-border text-sm text-foreground"
+              />
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Carts at or above this subtotal ship free. Empty = always charge shipping.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+              Multi-item carts
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer h-9">
+              <input
+                type="checkbox"
+                checked={combinedEnabled}
+                onChange={e => setCombinedEnabled(e.target.checked)}
+                className="w-4 h-4 rounded border-border accent-primary"
+              />
+              <span className="text-sm text-foreground">Charge highest-rate item only (combined)</span>
+            </label>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Off = sum every item&apos;s rate. Combined is friendlier but assumes you can pack together.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            type="button"
+            onClick={savePrefs}
+            disabled={savingPrefs}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-white text-sm font-medium disabled:opacity-50"
+          >
+            {savingPrefs ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+            Save preferences
+          </button>
+          {prefsSavedAt && <span className="text-xs text-emerald-500">Saved.</span>}
         </div>
       </div>
 
-      {/* How it works callout */}
-      <div className="rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 my-4">
-        <div className="flex gap-3">
-          <Info className="size-4 text-blue-500 shrink-0 mt-0.5" />
-          <div className="text-xs text-foreground/80 leading-relaxed">
-            <p className="font-semibold text-blue-500 mb-1">How shipping works on noizu.direct</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>You set the rate. We pass the full amount to you — no platform fee, no tax on shipping.</li>
-              <li>Cart with multiple items from you? We charge the highest rate (combined shipping). You can disable below.</li>
-              <li>Buyers in countries you haven't priced see a "Cannot ship to your country" message. They can't check out.</li>
-              <li>Refund rules: if the order hasn't been marked shipped, shipping is refunded. Once shipped, shipping is retained.</li>
-            </ul>
+      {/* Listings CRUD table */}
+      <div>
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Per-listing rates</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Each PHYSICAL or POD listing carries its own per-country rates. Buyers in countries you don&apos;t cover can&apos;t order that item.
+            </p>
           </div>
+          <a href="/dashboard/listings/new" className="text-xs text-primary hover:underline">+ New listing</a>
         </div>
-      </div>
 
-      {/* Coverage badge */}
-      {!noRates && seaCovered && (
-        <div className="flex items-center gap-2 text-sm text-emerald-500 mb-4">
-          <CheckCircle2 className="size-4" />
-          You're covered for {SHIPPING_COUNTRIES.length} SEA countries{expandedRates[ROW_KEY] != null ? ' + Rest of World' : ''}.
-        </div>
-      )}
-      {noRates && (
-        <div className="flex items-center gap-2 text-sm text-amber-500 mb-4">
-          <AlertTriangle className="size-4" />
-          No rates set yet — physical & POD listings can't be published until at least one country has a rate.
-        </div>
-      )}
-
-      {/* Mode toggle */}
-      <div className="flex items-center justify-between rounded-lg border border-border bg-card p-3 mb-4">
-        <div className="text-sm">
-          <p className="font-semibold text-foreground">{perCountryMode ? 'Per-country rates' : 'By zone (recommended)'}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {perCountryMode
-              ? 'Set a different rate for every country — fine for advanced setups.'
-              : '5 rates fan out to 10 countries. Switch to per-country if your couriers vary.'}
-          </p>
-        </div>
-        <button
-          suppressHydrationWarning
-          onClick={() => setPerCountryMode(p => !p)}
-          className="text-xs px-3 py-1.5 rounded-md border border-border bg-surface text-foreground hover:bg-accent"
-        >
-          {perCountryMode ? 'Use zones' : 'Use per-country'}
-        </button>
-      </div>
-
-      {/* Zone inputs */}
-      {!perCountryMode && (
-        <div className="rounded-xl border border-border bg-card p-5 mb-4">
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Rates (USD per order)</p>
-          <div className="flex flex-col gap-4">
-            {SHIPPING_ZONES.map(z => (
-              <div key={z.key}>
-                <div className="flex items-baseline justify-between mb-1.5">
-                  <label className="text-sm font-medium text-foreground">{z.label}</label>
-                  {(() => {
-                    const bench = SHIPPING_BENCHMARKS[z.countries[0] as string]
-                    if (!bench) return null
-                    return (
-                      <span className="text-[11px] text-muted-foreground">
-                        Typical: ${(bench.lowUsdCents / 100).toFixed(2)} – ${(bench.highUsdCents / 100).toFixed(2)}
-                      </span>
-                    )
-                  })()}
-                </div>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-                  <input
-                    suppressHydrationWarning
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    placeholder={z.key === 'row' ? '(leave empty to block ROW)' : ''}
-                    value={zoneInputs[z.key] ?? ''}
-                    onChange={e => setZoneInputs(prev => ({ ...prev, [z.key]: e.target.value }))}
-                    className="w-full h-10 pl-7 pr-3 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">{z.helper}</p>
-              </div>
-            ))}
+        {listings.length === 0 && (
+          <div className="rounded-lg border border-border bg-card p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              No physical or POD listings yet. <a href="/dashboard/listings/new" className="text-primary hover:underline">Create one</a> to set shipping rates.
+            </p>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Per-country inputs */}
-      {perCountryMode && (
-        <div className="rounded-xl border border-border bg-card p-5 mb-4">
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Rates per country (USD)</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {[...SHIPPING_COUNTRIES.map(c => ({ code: c.code, name: c.name })), { code: ROW_KEY, name: 'Rest of World' }].map(({ code, name }) => (
-              <div key={code}>
-                <label className="block text-xs text-muted-foreground mb-1">{ZONE_FLAGS[code]} {name}</label>
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs pointer-events-none">$</span>
-                  <input
-                    suppressHydrationWarning
-                    type="number"
-                    step="0.50"
-                    min="0"
-                    value={countryInputs[code] ?? ''}
-                    onChange={e => setCountryInputs(prev => ({ ...prev, [code]: e.target.value }))}
-                    className="w-full h-9 pl-6 pr-2 rounded-md border border-border bg-surface text-foreground text-sm"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        <div className="space-y-2">
+          {listings.map(listing => {
+            const map = parseShippingMap(listing.shippingByCountry)
+            const hasRates = map != null && Object.keys(map).length > 0
+            const fullyCovered = shippingCoversAllSEA(listing.shippingByCountry)
+            const isEditing = editingId === listing.id
 
-      {/* Combined shipping + free threshold */}
-      <div className="rounded-xl border border-border bg-card p-5 mb-4">
-        <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-3">Combined shipping</p>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            suppressHydrationWarning
-            type="checkbox"
-            checked={combinedEnabled}
-            onChange={e => setCombinedEnabled(e.target.checked)}
-            className="mt-1"
-          />
-          <div className="text-sm">
-            <p className="text-foreground font-medium">Charge highest item rate when buyers order multiple things from me</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Most fans appreciate this. Uncheck if you really do mail items separately.</p>
-          </div>
-        </label>
-
-        <div className="border-t border-border my-4" />
-
-        <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-2">Free shipping threshold</p>
-        <p className="text-xs text-muted-foreground mb-2">When a buyer's cart with you reaches this amount, shipping becomes free. Trending boost included.</p>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">$</span>
-            <input
-              suppressHydrationWarning
-              type="number"
-              step="1"
-              min="0"
-              placeholder="(none)"
-              value={freeThresholdInput}
-              onChange={e => setFreeThresholdInput(e.target.value)}
-              className="w-32 h-10 pl-7 pr-3 rounded-md border border-border bg-surface text-foreground text-sm"
-            />
-          </div>
-          <span className="text-xs text-muted-foreground">Leave blank for no free-shipping promo.</span>
-        </div>
-      </div>
-
-      {/* Live preview */}
-      <div className="rounded-xl border border-border bg-surface p-5 mb-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Globe className="size-4 text-foreground" />
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Buyer preview</p>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {SHIPPING_COUNTRIES.map(c => {
-            const cents = expandedRates[c.code]
-            const fallback = expandedRates[ROW_KEY]
-            const effective = cents ?? fallback
             return (
-              <div key={c.code} className="text-xs flex items-center justify-between rounded-md bg-card border border-border px-2.5 py-1.5">
-                <span className="text-muted-foreground">{c.name}</span>
-                <span className={effective == null ? 'text-amber-500 font-semibold' : 'text-foreground font-semibold'}>
-                  {effective == null ? '— blocked' : `$${(effective / 100).toFixed(2)}`}
-                </span>
+              <div key={listing.id} className="rounded-lg border border-border bg-card">
+                <div className="flex items-center gap-3 p-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground truncate">{listing.title}</p>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{listing.type}</span>
+                      {!listing.isActive && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500">Draft</span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs">
+                      {hasRates ? (
+                        fullyCovered ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-500">
+                            <CheckCircle2 className="size-3.5" /> Covers all SEA + ROW fallback
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">{ratesSummary(map)}</span>
+                        )
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-amber-500">
+                          <AlertTriangle className="size-3.5" /> No rates set — listing won&apos;t accept orders
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(isEditing ? null : listing.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {isEditing ? (<><X className="size-3.5" /> Close</>) : (<><Pencil className="size-3.5" /> Edit</>)}
+                  </button>
+                </div>
+
+                {isEditing && (
+                  <div className="border-t border-border p-3">
+                    <ListingShippingEditor
+                      listing={listing}
+                      onSave={rates => saveListing(listing.id, rates)}
+                      onCancel={() => setEditingId(null)}
+                    />
+                  </div>
+                )}
               </div>
             )
           })}
-          <div className="text-xs flex items-center justify-between rounded-md bg-card border border-border px-2.5 py-1.5">
-            <span className="text-muted-foreground">Rest of World</span>
-            <span className={expandedRates[ROW_KEY] == null ? 'text-amber-500 font-semibold' : 'text-foreground font-semibold'}>
-              {expandedRates[ROW_KEY] == null ? '— blocked' : `$${(expandedRates[ROW_KEY]! / 100).toFixed(2)}`}
-            </span>
-          </div>
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Save bar */}
-      <div className="flex items-center gap-3 sticky bottom-4 bg-card border border-border rounded-lg px-4 py-3 shadow-lg">
+function ListingShippingEditor({
+  listing,
+  onSave,
+  onCancel,
+}: {
+  listing: ListingRow
+  onSave: (rates: ShippingRateMap | null) => Promise<boolean>
+  onCancel: () => void
+}) {
+  const initial = parseShippingMap(listing.shippingByCountry)
+  const [enabled, setEnabled] = useState<boolean>(initial != null)
+  const [rateMap, setRateMap] = useState<ShippingRateMap | null>(initial)
+  const [saving, setSaving] = useState(false)
+
+  return (
+    <div className="space-y-3">
+      <ShippingRateInputs
+        enabled={enabled}
+        rateMap={rateMap}
+        onEnabledChange={setEnabled}
+        onRateMapChange={setRateMap}
+        showCommissionHint={false}
+        disabled={saving}
+      />
+      <div className="flex items-center gap-2">
         <button
-          suppressHydrationWarning
-          onClick={() => void handleSave()}
+          type="button"
           disabled={saving}
-          className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-60"
+          onClick={async () => {
+            setSaving(true)
+            const ok = await onSave(enabled && rateMap && Object.keys(rateMap).length > 0 ? rateMap : null)
+            setSaving(false)
+            if (!ok) return
+          }}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-white text-xs font-medium disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save shipping rates'}
+          {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+          Save rates
         </button>
-        {savedAt && Date.now() - savedAt < 4000 && (
-          <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle2 className="size-3" /> Saved.</span>
-        )}
-        <span className="ml-auto text-[11px] text-muted-foreground">
-          Per-listing overrides available on each listing's edit page.
-        </span>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onCancel}
+          className="px-3 py-1.5 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   )

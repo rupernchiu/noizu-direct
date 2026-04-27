@@ -1,13 +1,13 @@
-// Shipping cost helpers (sprint shipping-1, 2026-04-26).
+// Shipping cost helpers (sprint shipping-2, per-product model, 2026-04-27).
 //
-// noizu.direct is plumbing-only — creators set rates, ship goods, and receive
-// the full shipping fee at payout. Platform charges no fee on shipping and
-// applies no tax to it. This module:
-//   • normalizes country names ↔ ISO-3166 alpha-2
-//   • parses/serializes the JSON map stored in CreatorProfile/Product
-//   • resolves the effective rate for a (creator, product, destination) tuple
-//   • combines a multi-item cart under the creator's combined-shipping rules
-//   • applies free-shipping thresholds
+// noizu.direct is plumbing-only — creators set rates per product, ship goods,
+// and receive the full shipping fee at payout. Platform charges no fee on
+// shipping and applies no tax to it.
+//
+// Rates live ONLY on Product.shippingByCountry. CreatorProfile.shippingByCountry
+// is soft-deprecated — kept nullable in the schema but no longer read at
+// runtime. The free-shipping threshold and combined-cart toggle remain
+// creator-level (cart-wide concepts).
 //
 // Rates are stored as USD cents.
 
@@ -137,9 +137,7 @@ export function serializeShippingMap(map: ShippingRateMap | null | undefined): s
 
 export interface ShippingRateLookupInput {
   productShippingByCountry?: string | null
-  productShippingFreeThresholdUsd?: number | null
-  creatorShippingByCountry?: string | null
-  creatorShippingFreeThresholdUsd?: number | null
+  creatorShippingFreeThresholdUsd?: number | null // creator-level free-ship threshold (cart-wide)
   destinationCountry: string | null | undefined // ISO-2 OR full name
 }
 
@@ -147,30 +145,19 @@ export interface ShippingRateLookupResult {
   rateUsdCents: number | null // null = no rate set for this destination → block
   freeThresholdUsdCents: number | null
   resolvedCountryCode: string | null
-  source: 'product' | 'creator' | null
   appliedRowFallback: boolean
 }
 
 export function resolveShippingRate(input: ShippingRateLookupInput): ShippingRateLookupResult {
   const code = normalizeCountryToCode(input.destinationCountry)
-  const productMap = parseShippingMap(input.productShippingByCountry)
-  const creatorMap = parseShippingMap(input.creatorShippingByCountry)
-
-  const map = productMap ?? creatorMap
-  const source: 'product' | 'creator' | null =
-    productMap ? 'product' : creatorMap ? 'creator' : null
-
-  const freeThresholdUsdCents =
-    input.productShippingFreeThresholdUsd ??
-    input.creatorShippingFreeThresholdUsd ??
-    null
+  const map = parseShippingMap(input.productShippingByCountry)
+  const freeThresholdUsdCents = input.creatorShippingFreeThresholdUsd ?? null
 
   if (!map || !code) {
     return {
       rateUsdCents: null,
       freeThresholdUsdCents,
       resolvedCountryCode: code,
-      source,
       appliedRowFallback: false,
     }
   }
@@ -181,7 +168,6 @@ export function resolveShippingRate(input: ShippingRateLookupInput): ShippingRat
       rateUsdCents: direct,
       freeThresholdUsdCents,
       resolvedCountryCode: code,
-      source,
       appliedRowFallback: false,
     }
   }
@@ -192,7 +178,6 @@ export function resolveShippingRate(input: ShippingRateLookupInput): ShippingRat
       rateUsdCents: row,
       freeThresholdUsdCents,
       resolvedCountryCode: code,
-      source,
       appliedRowFallback: true,
     }
   }
@@ -201,7 +186,6 @@ export function resolveShippingRate(input: ShippingRateLookupInput): ShippingRat
     rateUsdCents: null,
     freeThresholdUsdCents,
     resolvedCountryCode: code,
-    source,
     appliedRowFallback: false,
   }
 }
@@ -214,13 +198,11 @@ export function resolveShippingRate(input: ShippingRateLookupInput): ShippingRat
 export interface CartShippingItem {
   productId: string
   productShippingByCountry?: string | null
-  productShippingFreeThresholdUsd?: number | null
   itemSubtotalUsdCents: number // line subtotal *before* shipping (price × qty)
   isPhysical: boolean // false for DIGITAL/COMMISSION — those don't ship
 }
 
 export interface CombinedShippingInput {
-  creatorShippingByCountry?: string | null
   creatorShippingFreeThresholdUsd?: number | null
   combinedShippingEnabled: boolean
   destinationCountry: string | null | undefined
@@ -262,8 +244,6 @@ export function combineCartShipping(input: CombinedShippingInput): CombinedShipp
   for (const item of physical) {
     const lookup = resolveShippingRate({
       productShippingByCountry: item.productShippingByCountry,
-      productShippingFreeThresholdUsd: item.productShippingFreeThresholdUsd,
-      creatorShippingByCountry: input.creatorShippingByCountry,
       creatorShippingFreeThresholdUsd: input.creatorShippingFreeThresholdUsd,
       destinationCountry: code,
     })
@@ -293,13 +273,7 @@ export function combineCartShipping(input: CombinedShippingInput): CombinedShipp
     : rates.reduce((sum, r) => sum + r, 0)
 
   const physicalSubtotal = physical.reduce((sum, i) => sum + i.itemSubtotalUsdCents, 0)
-  const threshold =
-    input.creatorShippingFreeThresholdUsd ?? null
-
-  const productThreshold = physical
-    .map(i => i.productShippingFreeThresholdUsd ?? null)
-    .find(t => t != null) ?? null
-  const effectiveThreshold = productThreshold ?? threshold
+  const effectiveThreshold = input.creatorShippingFreeThresholdUsd ?? null
 
   if (effectiveThreshold != null && physicalSubtotal >= effectiveThreshold) {
     return {
@@ -334,28 +308,10 @@ export function isPhysicalType(type: string | null | undefined): boolean {
   return (PHYSICAL_PRODUCT_TYPES as readonly string[]).includes(type.toUpperCase())
 }
 
-// Returns true when the input has at least one country rate set.
-// Accepts either a raw JSON string or an object with creator/product fields.
-// Used to block-publish PHYSICAL/POD listings.
-export function hasAnyShippingRate(
-  input:
-    | string
-    | null
-    | undefined
-    | {
-        creatorShippingByCountry?: string | null
-        productShippingByCountry?: string | null
-      },
-): boolean {
-  let map: ShippingRateMap | null = null
-  if (input == null) return false
-  if (typeof input === 'string') {
-    map = parseShippingMap(input)
-  } else {
-    map =
-      parseShippingMap(input.productShippingByCountry) ??
-      parseShippingMap(input.creatorShippingByCountry)
-  }
+// Returns true when the product's rate map has at least one country rate set.
+// Used to block-publish PHYSICAL/POD listings without shipping configured.
+export function hasAnyShippingRate(productShippingByCountry: string | null | undefined): boolean {
+  const map = parseShippingMap(productShippingByCountry)
   if (!map) return false
   return Object.values(map).some(v => typeof v === 'number')
 }
@@ -373,13 +329,10 @@ export function computeMaxRefundableUsd(order: {
   return shipped ? order.amountUsd - (order.shippingCostUsd ?? 0) : order.amountUsd
 }
 
-// True if creator (or product override) has a ROW fallback or covers every
-// SEA country we operate in. Used by the dashboard "you're good to go" badge.
-export function shippingCoversAllSEA(input: {
-  creatorShippingByCountry?: string | null
-  productShippingByCountry?: string | null
-}): boolean {
-  const map = parseShippingMap(input.productShippingByCountry) ?? parseShippingMap(input.creatorShippingByCountry)
+// True if the product has a ROW fallback or covers every SEA country we
+// operate in. Used by the dashboard CRUD table's "fully covered" badge.
+export function shippingCoversAllSEA(productShippingByCountry: string | null | undefined): boolean {
+  const map = parseShippingMap(productShippingByCountry)
   if (!map) return false
   if (typeof map[ROW_KEY] === 'number') return true
   return SHIPPING_COUNTRIES.every(c => typeof map[c.code] === 'number')

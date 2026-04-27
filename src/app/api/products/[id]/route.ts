@@ -52,27 +52,21 @@ export async function PATCH(
     }
   }
 
-  // Block publish for PHYSICAL/POD listings unless either the product override
-  // OR the creator default has at least one shipping rate. We allow the edit
-  // when isActive isn't being flipped to true, so creators can still tweak
-  // unpublished/archived drafts.
+  // Block publish for PHYSICAL/POD listings unless this product has at least
+  // one shipping rate set. Edits to unpublished drafts are allowed without it.
   if (body.isActive === true && isPhysicalType(product.type)) {
-    const incomingProductMap = body.shippingByCountry !== undefined
-      ? body.shippingByCountry
+    const incoming = body.shippingByCountry !== undefined
+      ? (typeof body.shippingByCountry === 'string'
+          ? body.shippingByCountry
+          : body.shippingByCountry == null
+            ? null
+            : JSON.stringify(body.shippingByCountry))
       : product.shippingByCountry
-    let creatorDefault: string | null = null
-    if (!hasAnyShippingRate(incomingProductMap as any)) {
-      const creator = await prisma.creatorProfile.findUnique({
-        where: { id: product.creatorId },
-        select: { shippingByCountry: true },
-      })
-      creatorDefault = creator?.shippingByCountry ?? null
-    }
-    if (!hasAnyShippingRate(incomingProductMap as any) && !hasAnyShippingRate(creatorDefault)) {
+    if (!hasAnyShippingRate(incoming as string | null | undefined)) {
       return NextResponse.json(
         {
           error:
-            'Set shipping rates before publishing physical or POD listings. Add per-country rates in this listing or in Dashboard → Shipping.',
+            'Set at least one country shipping rate on this listing before publishing.',
         },
         { status: 400 },
       )
@@ -132,8 +126,7 @@ export async function PATCH(
       ...(body.podExternalUrl !== undefined && {
         podExternalUrl: body.podExternalUrl == null ? null : (body.podExternalUrl as string),
       }),
-      // Per-listing shipping overrides (sprint shipping-1).
-      // null on either field means inherit from CreatorProfile.
+      // Per-product shipping rates (Shipping V2).
       ...(body.shippingByCountry !== undefined && {
         shippingByCountry: (() => {
           const v = body.shippingByCountry
@@ -151,12 +144,6 @@ export async function PATCH(
           }
           return serializeShippingMap(cleaned)
         })(),
-      }),
-      ...(body.shippingFreeThresholdUsd !== undefined && {
-        shippingFreeThresholdUsd:
-          body.shippingFreeThresholdUsd == null || body.shippingFreeThresholdUsd === ''
-            ? null
-            : Math.round(Number(body.shippingFreeThresholdUsd)),
       }),
       // Commission fields
       ...(body.commissionDepositPercent !== undefined && {

@@ -5,11 +5,10 @@ import { Truck, ChevronDown, ChevronUp, BadgeCheck, AlertTriangle } from 'lucide
 import { SHIPPING_COUNTRIES, ROW_KEY, type ShippingRateMap } from '@/lib/shipping'
 
 interface Props {
-  rates: ShippingRateMap                 // resolved (product override ?? creator)
+  rates: ShippingRateMap                 // per-product rates (Shipping V2)
   freeThresholdUsdCents: number | null
   combinedShippingEnabled: boolean
   detectedCountryCode: string | null     // ISO-2 best guess
-  source: 'product' | 'creator'
 }
 
 function formatUsd(cents: number): string {
@@ -21,7 +20,6 @@ export function ShippingRatesPanel({
   freeThresholdUsdCents,
   combinedShippingEnabled,
   detectedCountryCode,
-  source,
 }: Props) {
   const [expanded, setExpanded] = useState(false)
 
@@ -38,16 +36,9 @@ export function ShippingRatesPanel({
 
   return (
     <div className="rounded-xl bg-card border border-border p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Truck className="size-4 text-foreground" />
-          <h2 className="text-sm font-semibold text-foreground">Shipping</h2>
-        </div>
-        {source === 'product' && (
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-surface border border-border rounded px-1.5 py-0.5">
-            Listing rate
-          </span>
-        )}
+      <div className="flex items-center gap-2 mb-3">
+        <Truck className="size-4 text-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">Shipping</h2>
       </div>
 
       {/* Detected destination */}

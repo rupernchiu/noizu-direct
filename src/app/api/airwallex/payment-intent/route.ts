@@ -150,14 +150,13 @@ export async function POST(req: Request) {
     },
   })
 
-  // Per-creator shipping config — fetched here so groups can resolve their rate
-  // without an N+1. Indexed by creatorId (CreatorProfile.id).
+  // Creator-level cart prefs only (free-ship threshold + combined toggle).
+  // Per-product rates live on Product and come in via the cart-item join.
   const creatorIdsForShipping = Array.from(new Set(cartItems.map(i => i.product.creatorId)))
   const shippingProfiles = await prisma.creatorProfile.findMany({
     where: { id: { in: creatorIdsForShipping } },
     select: {
       id: true,
-      shippingByCountry: true,
       shippingFreeThresholdUsd: true,
       combinedShippingEnabled: true,
     },
@@ -361,23 +360,22 @@ export async function POST(req: Request) {
     const groupFee = Math.round((groupSubtotal / subtotal) * processingFee)
     const isPhysicalGroup = items.some(i => i.product.type === 'PHYSICAL' || i.product.type === 'POD')
 
-    // ── Shipping snapshot (sprint shipping-1) ───────────────────────────────
-    // Plumbing-only: rate is set by the creator, the platform takes no fee on
-    // it, and the full amount is added to the creator payout at webhook time.
+    // ── Shipping snapshot (Shipping V2, per-product) ─────────────────────────
+    // Plumbing-only: rate is set per product, the platform takes no fee on it,
+    // and the full amount is added to the creator payout at webhook time. The
+    // free-shipping threshold and combined-cart toggle stay creator-level.
     let groupShippingUsd = 0
     let groupShippingFreeApplied = false
     if (isPhysicalGroup) {
       const creatorProfileId = items[0].product.creatorId
       const sp = shippingProfileById.get(creatorProfileId)
       const shipResult = combineCartShipping({
-        creatorShippingByCountry: sp?.shippingByCountry,
         creatorShippingFreeThresholdUsd: sp?.shippingFreeThresholdUsd ?? null,
         combinedShippingEnabled: sp?.combinedShippingEnabled ?? true,
         destinationCountry: buyerCountry,
         items: items.map(i => ({
           productId: i.productId,
           productShippingByCountry: (i.product as any).shippingByCountry,
-          productShippingFreeThresholdUsd: (i.product as any).shippingFreeThresholdUsd ?? null,
           itemSubtotalUsdCents: i.product.price * i.quantity,
           isPhysical: isPhysicalType(i.product.type),
         })),

@@ -6,6 +6,8 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
 import { DigitalFilesUpload, type DigitalFile } from '@/components/ui/DigitalFilesUpload'
+import { ShippingRateInputs } from '@/components/dashboard/ShippingRateInputs'
+import type { ShippingRateMap } from '@/lib/shipping'
 
 const schema = z.object({
   title: z.string().min(3).max(100),
@@ -61,6 +63,8 @@ export default function NewListingPage() {
   const [podProviders, setPodProviders] = useState<PodProvider[]>([])
   const [podProviderId, setPodProviderId] = useState<string>('')
   const [showProviderPublic, setShowProviderPublic] = useState(false)
+  const [shipEnabled, setShipEnabled] = useState(false)
+  const [shipMap, setShipMap] = useState<ShippingRateMap | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const {
@@ -102,6 +106,11 @@ export default function NewListingPage() {
       setError('Select a POD provider (set one up in POD Settings first)')
       return
     }
+    const isPhysicalLike = data.type === 'PHYSICAL' || data.type === 'POD'
+    if (isPhysicalLike && (!shipEnabled || !shipMap || Object.keys(shipMap).length === 0)) {
+      setError('Set at least one country shipping rate before publishing this listing.')
+      return
+    }
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
@@ -112,6 +121,7 @@ export default function NewListingPage() {
           digitalFiles,
           podProviderId: data.type === 'POD' ? podProviderId : null,
           showProviderPublic: data.type === 'POD' ? showProviderPublic : false,
+          shippingByCountry: isPhysicalLike && shipEnabled ? shipMap : null,
         }),
       })
       if (!res.ok) {
@@ -350,6 +360,16 @@ export default function NewListingPage() {
               <span className="text-sm text-foreground">Show provider name publicly on product page</span>
             </label>
           </div>
+        )}
+
+        {(type === 'PHYSICAL' || type === 'POD') && (
+          <ShippingRateInputs
+            enabled={shipEnabled}
+            rateMap={shipMap}
+            onEnabledChange={setShipEnabled}
+            onRateMapChange={setShipMap}
+            disabled={isSubmitting}
+          />
         )}
 
         {type === 'COMMISSION' && (

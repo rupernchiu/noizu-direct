@@ -2,7 +2,6 @@ import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { EditListingForm } from './EditListingForm'
-import { hasAnyShippingRate } from '@/lib/shipping'
 
 export default async function EditListingPage({
   params,
@@ -42,7 +41,7 @@ export default async function EditListingPage({
         <h1 className="text-2xl font-bold text-foreground">Edit Listing</h1>
         <p className="text-sm text-muted-foreground mt-1">Update your product details</p>
       </div>
-      <EditListingForm product={serialized as any} creatorHasShipping={hasAnyShippingRate(profile.shippingByCountry)} />
+      <EditListingForm product={serialized as any} />
     </div>
   )
 }
